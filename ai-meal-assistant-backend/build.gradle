@@ -1,0 +1,70 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.5.12'
+	id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'capstone'
+version = '0.0.1-SNAPSHOT'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(17)
+	}
+}
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	// 1. Web & Core (REST API 및 데이터 유효성 검사)
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+	// 2. Database & ORM (JPA 및 MySQL 연동)
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	runtimeOnly 'com.mysql:mysql-connector-j'
+
+	// 3. Cache (Redis 연동)
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+	// 4. HTTP Client (Python AI 서버 및 외부 공공 API 통신용)
+	// FeignClient를 사용하기 위한 의존성
+	implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
+
+	// 5. Security & JWT (보안 및 토큰 기반 로그인)
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+	implementation 'io.jsonwebtoken:jjwt-api:0.12.5'
+	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5'
+	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.5'
+
+	// 6. Lombok (코드 간소화)
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+
+	// 7. Test (테스트 환경)
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.security:spring-security-test'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
+
+// 스프링 클라우드 버전을 관리해 주는 설정
+ext {
+	set('springCloudVersion', "2024.0.0") // 현재 스프링 부트 3.x 버전에 맞는 클라우드 버전
+}
+
+dependencyManagement {
+	imports {
+		mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+	}
+}
