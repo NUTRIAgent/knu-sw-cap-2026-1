@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: ai-meal-assistant-backend
+    # 1. MySQL 연결 설정
+  datasource:
+    url: jdbc:mysql://localhost:3306/meal_assistant?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
+    username: root
+    password: meal_assistant123! # docker-compose.yml에 적었던 비밀번호랑 똑같이
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update # 도커 안에는 아직 테이블이 없으니까 update로 설정해서 스프링이 테이블을 만들게 하거나, 직접 DataGrip 등으로 쿼리를 날려도 돼.
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+#  # 2. Redis 연결 설정
+#  data:
+#    redis:
+#      host: localhost
+#      port: 6379
