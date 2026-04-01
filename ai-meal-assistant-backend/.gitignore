@@ -35,3 +35,6 @@ out/
 
 ### VS Code ###
 .vscode/
+
+# application.yml 비밀번호 유출 방지
+src/main/resources/application.yml
