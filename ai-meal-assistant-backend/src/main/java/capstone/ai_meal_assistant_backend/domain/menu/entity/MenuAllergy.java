@@ -2,7 +2,7 @@ package capstone.ai_meal_assistant_backend.domain.menu.entity;
 
 import capstone.ai_meal_assistant_backend.global.entity.BaseEntity;
 import jakarta.persistence.*;
-
+//깃허브 설명서 작성을 위한 주석 추가
 @Entity
 @Table(name = "menu_allergies")
 public class MenuAllergy extends BaseEntity {
