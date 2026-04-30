@@ -1,6 +1,7 @@
+// lib/main.dart
 import 'package:flutter/material.dart';
-import 'theme.dart';
-import 'screens/dashboard_screen.dart';
+import 'theme.dart'; // 우리가 만든 공통 테마
+import 'screens/dashboard_screen.dart'; // 대시보드 화면 불러오기
 
 void main() {
   runApp(const NutriAgentApp());
@@ -14,8 +15,54 @@ class NutriAgentApp extends StatelessWidget {
     return MaterialApp(
       title: 'NUTRI Agent',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme, // 분리한 테마 적용
-      home: const DashboardScreen(), // 초기 화면 설정
+      theme: AppTheme.lightTheme,
+      home: const MainScreen(),
+    );
+  }
+}
+
+class MainScreen extends StatefulWidget {
+  const MainScreen({super.key});
+
+  @override
+  State<MainScreen> createState() => _MainScreenState();
+}
+
+class _MainScreenState extends State<MainScreen> {
+  int _selectedIndex = 0;
+
+  // 탭별로 보여줄 화면 목록 (여기에 DashboardScreen을 넣어줌)
+  static const List<Widget> _widgetOptions = <Widget>[
+    DashboardScreen(),
+    Center(child: Text('마이페이지 화면입니다')), // 임시 마이페이지
+  ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor, 
+      body: _widgetOptions.elementAt(_selectedIndex),
+      
+      bottomNavigationBar: BottomNavigationBar(
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_filled),
+            label: '대시보드',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: '마이페이지',
+          ),
+        ],
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+      ),
     );
   }
 }
