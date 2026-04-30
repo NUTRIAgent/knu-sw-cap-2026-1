@@ -4,13 +4,17 @@ import capstone.ai_meal_assistant_backend.domain.menu.entity.Menu;
 import capstone.ai_meal_assistant_backend.domain.user.entity.User;
 import capstone.ai_meal_assistant_backend.global.entity.BaseEntity;
 import jakarta.persistence.*;
+import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.util.List;
 
 @Entity
-@Table(name = "recommendation_logs")
+@Table(name = "recommendation_logs")@Getter
+@Builder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class RecommendationLog extends BaseEntity {
 
     @Id

@@ -2,11 +2,15 @@ package capstone.ai_meal_assistant_backend.domain.user.entity;
 
 import capstone.ai_meal_assistant_backend.global.entity.BaseEntity;
 import jakarta.persistence.*;
+import lombok.*;
 
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "user_health_profiles")
+@Table(name = "user_health_profiles")@Getter
+@Builder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class UserHealthProfile extends BaseEntity{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -15,6 +19,10 @@ public class UserHealthProfile extends BaseEntity{
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", unique = true)
     private User user;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Gender gender;
 
     private Double height;
     private Double weight;

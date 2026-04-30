@@ -2,9 +2,13 @@ package capstone.ai_meal_assistant_backend.domain.user.entity;
 
 import capstone.ai_meal_assistant_backend.global.entity.BaseEntity;
 import jakarta.persistence.*;
+import lombok.*;
 
 @Entity
-@Table(name = "user_preferences")
+@Table(name = "user_preferences")@Getter
+@Builder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class UserPreference extends BaseEntity {
 
     @Id

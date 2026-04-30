@@ -2,10 +2,14 @@ package capstone.ai_meal_assistant_backend.domain.user.entity;
 
 import capstone.ai_meal_assistant_backend.global.entity.BaseEntity;
 import jakarta.persistence.*;
-import org.apache.catalina.users.AbstractUser;
+import lombok.*;
 
 @Entity
 @Table(name = "users")
+@Getter
+@Builder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class User extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
