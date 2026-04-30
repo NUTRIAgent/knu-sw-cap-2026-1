@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'theme.dart';
-import 'screens/dashboard_screen.dart';
+// import 'screens/dashboard_screen.dart';
+import 'screens/onboarding_screen.dart';
 
 void main() {
   runApp(const NutriAgentApp());
@@ -15,7 +16,8 @@ class NutriAgentApp extends StatelessWidget {
       title: 'NUTRI Agent',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme, // 분리한 테마 적용
-      home: const DashboardScreen(), // 초기 화면 설정
+      home: const OnboardingScreen(),
+      // home: const DashboardScreen(), // 초기 화면 설정
     );
   }
 }
