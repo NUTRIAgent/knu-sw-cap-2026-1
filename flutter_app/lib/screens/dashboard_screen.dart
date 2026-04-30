@@ -1,85 +1,5 @@
 import 'package:flutter/material.dart';
 
-void main() {
-  runApp(const NutriAgentApp());
-}
-
-class NutriAgentApp extends StatelessWidget {
-  const NutriAgentApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'NUTRI Agent',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        // 포인트 컬러: 올리브 (Olive Green)
-        primaryColor: const Color(0xFF6B8E23),
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF6B8E23),
-          primary: const Color(0xFF6B8E23),
-          surface: Colors.white,
-          background: const Color(0xFFF5F6F5), // 완전히 순백색보다 눈이 편안한 오프화이트
-        ),
-        scaffoldBackgroundColor: const Color(0xFFF5F6F5),
-        useMaterial3: true,
-      ),
-      home: const MainScreen(),
-    );
-  }
-}
-
-// 1. 하단 네비게이션 바를 관리하는 메인 스크린
-class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
-
-  @override
-  State<MainScreen> createState() => _MainScreenState();
-}
-
-class _MainScreenState extends State<MainScreen> {
-  int _selectedIndex = 0;
-
-  // 탭별로 보여줄 화면 목록
-  static const List<Widget> _widgetOptions = <Widget>[
-    DashboardScreen(),
-    MyPageScreen(),
-  ];
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: _widgetOptions.elementAt(_selectedIndex),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_filled),
-            label: '대시보드',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: '마이페이지',
-          ),
-        ],
-        currentIndex: _selectedIndex,
-        selectedItemColor: Theme.of(context).primaryColor,
-        unselectedItemColor: Colors.grey,
-        backgroundColor: Colors.white,
-        onTap: _onItemTapped,
-      ),
-    );
-  }
-}
-
-// 2. 대시보드 (첫 화면)
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
@@ -91,18 +11,18 @@ class DashboardScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 상단: 앱 타이틀 또는 로고 영역
+            // 상단: 앱 타이틀
             const Text(
               'NUTRI Agent',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF6B8E23),
+                color: Color(0xFF6B8E23), 
               ),
             ),
             const SizedBox(height: 24),
 
-            // 상단: 날씨 및 오늘 하루 브리핑 공간
+            // 상단: 날씨 및 브리핑 카드
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -155,9 +75,9 @@ class DashboardScreen extends StatelessWidget {
               ),
             ),
             
-            const SizedBox(height: 16), // 브리핑 카드와 예산 카드 사이 간격
+            const SizedBox(height: 16),
 
-            // 중앙: 끼니당 목표 예산 카드 추가
+            // 중앙: 예산 카드
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -176,7 +96,6 @@ class DashboardScreen extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      // 아이콘 배경 동그라미
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
@@ -203,7 +122,7 @@ class DashboardScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           const Text(
-                            '8,000 원', // TODO: 백엔드 API 연동 시 실제 데이터로 교체
+                            '8,000 원',
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
@@ -214,11 +133,8 @@ class DashboardScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  // 설정(수정) 아이콘 버튼
                   IconButton(
-                    onPressed: () {
-                      // TODO: 예산 수정 바텀 시트 또는 페이지 띄우기
-                    },
+                    onPressed: () {},
                     icon: const Icon(Icons.edit_outlined, color: Colors.grey),
                   ),
                 ],
@@ -232,15 +148,6 @@ class DashboardScreen extends StatelessWidget {
               onPressed: () {
                 // TODO: 메뉴 추천 API 호출 및 로직 연결
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 2,
-              ),
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -248,10 +155,7 @@ class DashboardScreen extends StatelessWidget {
                   SizedBox(width: 12),
                   Text(
                     '맞춤 메뉴 추천 받기',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -259,21 +163,6 @@ class DashboardScreen extends StatelessWidget {
             const SizedBox(height: 20),
           ],
         ),
-      ),
-    );
-  }
-}
-
-// 3. 마이페이지 (임시 빈 화면)
-class MyPageScreen extends StatelessWidget {
-  const MyPageScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Text(
-        '마이페이지 화면입니다.',
-        style: TextStyle(fontSize: 18, color: Colors.grey),
       ),
     );
   }
