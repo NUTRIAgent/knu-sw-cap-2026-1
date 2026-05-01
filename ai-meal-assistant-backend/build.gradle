@@ -52,6 +52,9 @@ dependencies {
 	// 7. Test (테스트 환경)
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
+
+	// 8. WebClient를 쓰기 위한 webflux 라이브러리
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 }
 
 tasks.named('test') {
