@@ -1,8 +1,12 @@
-// lib/main.dart
 import 'package:flutter/material.dart';
 import 'theme.dart';
+<<<<<<< HEAD
 import 'screens/dashboard_screen.dart'; // 대시보드 화면 불러오기
 // import 'screens/login_screen.dart'; // 로그인 화면 불러오기
+=======
+import 'screens/main_screen.dart';
+// import 'screens/login_screen.dart'; 
+>>>>>>> dev
 
 void main() {
   runApp(const NutriAgentApp());
@@ -17,6 +21,7 @@ class NutriAgentApp extends StatelessWidget {
       title: 'NUTRI Agent',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
+<<<<<<< HEAD
       home: const MainScreen(),
       // home: const LoginScreen(),
     );
@@ -50,21 +55,11 @@ class _MainScreenState extends State<MainScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor, 
       body: _widgetOptions.elementAt(_selectedIndex),
+=======
+>>>>>>> dev
       
-      bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_filled),
-            label: '대시보드',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: '마이페이지',
-          ),
-        ],
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-      ),
+      home: const MainScreen(),
+      // home: const LoginScreen(),
     );
   }
 }
