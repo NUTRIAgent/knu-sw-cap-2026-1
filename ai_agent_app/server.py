@@ -1,5 +1,5 @@
 # fastapi.py (파일명을 가급적 app_server.py 등으로 바꾸는 걸 추천해요!)
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnableLambda
@@ -7,12 +7,13 @@ from typing import List, Optional
 import re, json, os
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
+from langchain_core.output_parsers import JsonOutputParser
 # 분리된 클래스들을 가져옵니다 (파일명에 맞춰 임포트 경로 수정 필요)
-from DataLoader import RecipeDataLoader
-from getMarketPrices import getMarketPrices
-from selectCandidates import selectCandidates
-from processDynamicInputs import processDynamicInputs
-from prompts import get_recipe_prompt
+from ai_agent_app.DataLoader import RecipeDataLoader
+from ai_agent_app.getMarketPrices import getMarketPrices
+from ai_agent_app.selectCandidates import selectCandidates
+from ai_agent_app.processDynamicInputs import processDynamicInputs
+from ai_agent_app.prompts import get_recipe_prompt
 
 load_dotenv()
 app = FastAPI(title="Recipe AI API")
@@ -38,8 +39,8 @@ class UserRequest(BaseModel):
     preferences: List[str] = Field(default_factory=list, example=["매운맛"])
     
 
-recipe_path = "all_recipe_nutrition_data.json"
-price_path = "seoul_prices_weekly_2026-04-05.json"
+recipe_path = "ai_agent_app/all_recipe_nutrition_data.json"
+price_path = "ai_agent_app/seoul_prices_weekly_2026-04-05.json"
 
 recipes = RecipeDataLoader.load_json(recipe_path)
 price_list = RecipeDataLoader.load_json(price_path)
@@ -71,25 +72,27 @@ orchestrator = processDynamicInputs(
 
 @app.post("/recommend")
 async def get_recommendation(user_input: UserRequest):
-    data = user_input.dict()
-    
-    chain = (
-        RunnableLambda(orchestrator.process_dynamic_inputs)
-        | get_recipe_prompt()
-        | model
-        | StrOutputParser()
-    )
-    
-    result = chain.invoke(data)
-    clean_json = re.sub(r'```json\s?|```', '', result).strip()
-    final_result = json.loads(clean_json)
-    if "market_prices" in final_result and isinstance(final_result["market_prices"], list):
-        # 각 항목의 calculated_cost를 정수로 변환하여 합산
-        total_cost = sum(
-            float(item.get("calculated_cost", 0)) 
-            for item in final_result["market_prices"]
+    try:
+        data = user_input.dict()
+        
+        chain = (
+            RunnableLambda(orchestrator.process_dynamic_inputs)
+            | get_recipe_prompt()
+            | model
+            | JsonOutputParser()
         )
-        # 최종 필드 업데이트
-        final_result["total_estimated_cost"] = total_cost
-    return final_result 
+        
+        final_result = await chain.ainvoke(data)
 
+        if "market_prices" in final_result and isinstance(final_result["market_prices"], list):
+            # 각 항목의 calculated_cost를 정수로 변환하여 합산
+            total_cost = sum(
+                float(item.get("calculated_cost", 0)) 
+                for item in final_result["market_prices"]
+            )
+            # 최종 필드 업데이트
+            final_result["total_estimated_cost"] = total_cost
+        return final_result 
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI 에이전트 실행 중 오류 발생: {str(e)}")
