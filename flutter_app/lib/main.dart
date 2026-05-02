@@ -1,7 +1,8 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
-import 'theme.dart'; // 우리가 만든 공통 테마
+import 'theme.dart';
 import 'screens/dashboard_screen.dart'; // 대시보드 화면 불러오기
+
 
 void main() {
   runApp(const NutriAgentApp());

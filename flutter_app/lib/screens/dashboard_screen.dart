@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'recommendation_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -146,6 +147,10 @@ class DashboardScreen extends StatelessWidget {
             // 하단: 메뉴 추천 바로가기 버튼
             ElevatedButton(
               onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const RecommendationScreen()),
+                );
                 // TODO: 메뉴 추천 API 호출 및 로직 연결
               },
               child: const Row(
