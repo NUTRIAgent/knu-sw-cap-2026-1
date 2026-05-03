@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'theme.dart';
-// import 'screens/dashboard_screen.dart'; // 대시보드 화면 불러오기
+// import 'screens/dashboard_screen.dart';
 import 'screens/main_screen.dart';
 // import 'screens/login_screen.dart'; 
 
