@@ -10,10 +10,10 @@ from dotenv import load_dotenv
 from langchain_core.output_parsers import JsonOutputParser
 # 분리된 클래스들을 가져옵니다 (파일명에 맞춰 임포트 경로 수정 필요)
 from ai_agent_app.DataLoader import RecipeDataLoader
-from ai_agent_app.getMarketPrices import getMarketPrices
-from ai_agent_app.selectCandidates import selectCandidates
-from ai_agent_app.processDynamicInputs import processDynamicInputs
-from ai_agent_app.prompts import get_recipe_prompt
+from ai_agent_app.GetMarketPrices import GetMarketPrices
+from ai_agent_app.SelectCandidates import SelectCandidates
+from ai_agent_app.ProcessDynamicInputs import ProcessDynamicInputs
+from ai_agent_app.Prompts import get_recipe_prompt
 
 load_dotenv()
 app = FastAPI(title="Recipe AI API")
@@ -59,11 +59,11 @@ model = ChatOpenAI(
             }
         )
 
-get_market_prices = getMarketPrices(price_list)
-select_candidates = selectCandidates(recipes, model)
+get_market_prices = GetMarketPrices(price_list)
+select_candidates = SelectCandidates(model)
 
 # 메인 오케스트레이터 생성
-orchestrator = processDynamicInputs(
+orchestrator = ProcessDynamicInputs(
     recipes=recipes,
     get_market_prices=get_market_prices,
     select_candidates=select_candidates,

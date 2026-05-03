@@ -1,12 +1,9 @@
-import re
 from typing import List, Dict
-from pydantic import BaseModel, Field
 from langchain_openai import ChatOpenAI
-from langchain.schema import SystemMessage, HumanMessage
 from langchain.output_parsers import ResponseSchema, StructuredOutputParser
 from langchain.prompts import ChatPromptTemplate
 
-class selectCandidates:
+class SelectCandidates:
     def __init__(self, model: ChatOpenAI):
         response_schemas = [
             ResponseSchema(name="candidate_ids", description="선택된 레시피의 ID 리스트 (최대 10개)", type="list[int]")
