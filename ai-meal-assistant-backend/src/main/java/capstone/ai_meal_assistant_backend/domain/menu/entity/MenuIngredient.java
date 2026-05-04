@@ -26,6 +26,9 @@ public class MenuIngredient extends BaseEntity {
     @JoinColumn(name = "ingredient_id", nullable = false)
     private Ingredient ingredient;
 
+    @Column(length = 50)
+    private String subCategory; // "오이무침", "순두부사과 소스" 등이 저장됨
+
     @Column(nullable = false)
     private Double requiredWeight; // 1인분에 필요한 해당 재료의 양 (g 단위)
 }
