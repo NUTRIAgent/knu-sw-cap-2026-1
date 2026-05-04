@@ -13,19 +13,13 @@ RECIPE_ANALYST_TEMPLATE = """
 - 메뉴 이름: {menu_name}
 - 메뉴 재료: {ingredients}
 - 실시간 물가 정보: {price_info}
-- 영양 데이터: {nutrition_info}
-- 메뉴 이미지: {main_img}
-- 나트륨 팁: {na_tip}
-- 레시피 조리과정: {recipe_steps}
 - 프로필: {user_profile}
 - 제한사항: {user_restrictions}
 
 
 # 반드시 아래 JSON 구조를 지키세요:
 {{
-    "menu_name": {menu_name},
-    "main_image": {main_img},
-    "selection_reason": "선택 이유",
+    "selection_reason": "이 메뉴를 추천한 이유를 사용자 프로필과 제한사항을 근거로 2~3문장으로 서술",
     "total_estimated_cost": 0,
     "market_prices": [
         {{
@@ -33,14 +27,10 @@ RECIPE_ANALYST_TEMPLATE = """
             "recipe_amount": "레시피상 사용량",
             "market_unit": "마트 판매 단위",
             "market_price": 0,
-            "calculated_cost": 0,
+            "calculation_reasoning": "1망(10개)에 5000원이므로 1개당 500원. 레시피에서 2개 사용하므로 1000원",
+            "calculated_cost": 0
         }}
-    ],
-    "nutrition": {nutrition_info},
-    "recipe_steps": [
-        {recipe_steps}
-    ],
-    "health_tip" : {na_tip}
+    ]
 }}
 """
 

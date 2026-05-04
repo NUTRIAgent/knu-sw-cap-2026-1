@@ -1,19 +1,16 @@
 # fastapi.py (파일명을 가급적 app_server.py 등으로 바꾸는 걸 추천해요!)
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnableLambda
-from typing import List, Optional
-import re, json, os
+from typing import List
+import os
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
-from langchain_core.output_parsers import JsonOutputParser
+import asyncio
 # 분리된 클래스들을 가져옵니다 (파일명에 맞춰 임포트 경로 수정 필요)
 from ai_agent_app.DataLoader import RecipeDataLoader
 from ai_agent_app.GetMarketPrices import GetMarketPrices
 from ai_agent_app.SelectCandidates import SelectCandidates
 from ai_agent_app.ProcessDynamicInputs import ProcessDynamicInputs
-from ai_agent_app.Prompts import get_recipe_prompt
 
 load_dotenv()
 app = FastAPI(title="Recipe AI API")
@@ -73,16 +70,9 @@ orchestrator = ProcessDynamicInputs(
 @app.post("/recommend")
 async def get_recommendation(user_input: UserRequest):
     try:
-        data = user_input.dict()
-        
-        chain = (
-            RunnableLambda(orchestrator.process_dynamic_inputs)
-            | get_recipe_prompt()
-            | model
-            | JsonOutputParser()
+        final_result: dict = await asyncio.get_running_loop().run_in_executor(
+            None, orchestrator.process_dynamic_inputs, user_input.dict()
         )
-        
-        final_result = await chain.ainvoke(data)
 
         if "market_prices" in final_result and isinstance(final_result["market_prices"], list):
             # 각 항목의 calculated_cost를 정수로 변환하여 합산
@@ -93,6 +83,8 @@ async def get_recommendation(user_input: UserRequest):
             # 최종 필드 업데이트
             final_result["total_estimated_cost"] = total_cost
         return final_result 
-    
+    except ValueError as e:
+        # ID 범위 오류, JSON 파싱 실패 등 orchestrator 내부에서 명시적으로 던진 오류
+        raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI 에이전트 실행 중 오류 발생: {str(e)}")
