@@ -61,7 +61,7 @@ class _MyPageScreenState extends State<MyPageScreen> {
     super.dispose();
   }
 
-  // ✏️ 수정 모드 켜기 (현재 데이터 백업)
+  // 수정 모드 켜기 (현재 데이터 백업)
   void _enableEditMode() {
     _bkNickname = _nicknameController.text;
     _bkGender = _selectedGender;
@@ -81,7 +81,7 @@ class _MyPageScreenState extends State<MyPageScreen> {
     });
   }
 
-  // ❌ 수정 취소하기 (백업 데이터로 원상 복구)
+  // 수정 취소하기 (백업 데이터로 원상 복구)
   void _cancelEdit() {
     _nicknameController.text = _bkNickname;
     _selectedGender = _bkGender;
@@ -101,11 +101,11 @@ class _MyPageScreenState extends State<MyPageScreen> {
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('수정이 취소되어 원래 정보로 복구되었습니다.')),
+      const SnackBar(content: Text('수정이 취소되었습니다.')),
     );
   }
 
-  // 💾 변경사항 저장하기
+  // 변경사항 저장하기
   void _saveProfile() {
     if (_formKey.currentState!.validate()) {
       setState(() {
@@ -131,7 +131,7 @@ class _MyPageScreenState extends State<MyPageScreen> {
         'allergies': _selectedAllergies.toList(),
       };
 
-      print('서버로 전송될 수정 데이터: $updatedData');
+      print('서버로 전송될 (수정된) 데이터: $updatedData');
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('프로필 정보가 성공적으로 업데이트되었습니다!')),
@@ -259,12 +259,12 @@ class _MyPageScreenState extends State<MyPageScreen> {
                           label: Text(
                             allergy,
                             style: TextStyle(
-                              // 💡 텍스트 색상도 읽기 전용일 땐 회색으로 변경
+                              // 텍스트 색상도 읽기 전용일 땐 회색으로 변경
                               color: _isEditMode ? Colors.black87 : Colors.grey.shade600,
                             ),
                           ),
                           selected: isSelected,
-                          // 💡 핵심 수정: 배경색과 선택된 색상 모두 음영 처리
+                          // 핵심 수정: 배경색과 선택된 색상 모두 음영 처리
                           backgroundColor: _isEditMode ? Colors.white : Colors.grey.shade200,
                           selectedColor: _isEditMode 
                               ? Theme.of(context).primaryColor.withOpacity(0.2) 
