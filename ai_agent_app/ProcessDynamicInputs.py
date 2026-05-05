@@ -45,16 +45,19 @@ class ProcessDynamicInputs:
             f"사용자 예산: {user_query['budget']}원\n"
             f"사용자 목표: {user_query.get('fitness_goal', '일반식단')}\n"
             f"건강 상태: {user_query.get('health_conditions', '없음')}\n"
-            f"아래 후보 리스트 중 예산 내에서 사용자 목표와 건강 상태에 가장 적합한 레시피 ID 하나만 숫자로 대답하세요.\n"
-            f"주의: 다른 설명은 절대 하지 말고 오직 'ID 숫자'만 답하세요.\n"
+            f"아래 후보 리스트 중 예산 내에서 사용자 목표와 건강 상태에 가장 적합한 레시피를 하나 선택하세요.\n"
+            f"반드시 마지막 줄에 다음 형식으로만 답하세요 (다른 설명 금지):\n"
+            f"선택ID: <숫자>\n"
             "----------------------\n"
             + "\n".join(enriched)
         )
-        raw_id = re.search(r"\d+", self.model.invoke(final_prompt).content)
-        if raw_id is None:
-            raise ValueError("LLM이 유효한 레시피 ID를 반환하지 않았습니다.")
+        raw = self.model.invoke(final_prompt).content
+        match = re.search(r"선택ID:\s*(\d+)", raw)
+        if match is None:
+            raise ValueError(f"LLM 응답에서 '선택ID:' 앵커를 찾을 수 없습니다. 응답: {raw!r}")
 
-        final_id = int(raw_id.group())
+
+        final_id = int(match.group(1))
         # LLM이 후보 범위 밖의 ID를 반환했을 경우 방어
         if final_id not in candidate_ids:
             raise ValueError(
