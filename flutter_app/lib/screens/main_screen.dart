@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dashboard_screen.dart';
+import 'mypage_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -14,7 +15,7 @@ class _MainScreenState extends State<MainScreen> {
   // 탭별로 보여줄 화면 목록
   static const List<Widget> _widgetOptions = <Widget>[
     DashboardScreen(),
-    Center(child: Text('마이페이지 화면입니다')),
+    MyPageScreen(),
   ];
 
   void _onItemTapped(int index) {
