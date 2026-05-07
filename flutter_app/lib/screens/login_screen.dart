@@ -1,16 +1,11 @@
 import 'package:flutter/material.dart';
-import 'onboarding_screen.dart';
+import 'signup_screen.dart';
+import 'email_login_screen.dart';
+// import 'onboarding_screen.dart';
 
+// 직접 가입 or 소셜 로그인을 선택할 수 있는 페이지 입니다.
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
-
-  // 온보딩 화면으로 이동
-  void _navigateToOnboarding(BuildContext context) {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const OnboardingScreen()),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,18 +33,23 @@ class LoginScreen extends StatelessWidget {
               const Spacer(flex: 2),
               
               _buildLoginButton(
-                text: '이메일로 계속하기',
+                text: '가입하기',
                 backgroundColor: const Color(0xFF8CA384), 
                 textColor: Colors.white,
-                onPressed: () => _navigateToOnboarding(context),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const SignupScreen()),
+                  );
+                },
               ),
               const SizedBox(height: 16),
 
               _buildLoginButton(
                 text: '카카오로 계속하기',
                 backgroundColor: const Color(0xFFEAE145),
-                textColor: Colors.white,
-                onPressed: () => _navigateToOnboarding(context),
+                textColor: Colors.black87,
+                onPressed: () {},
               ),
               const SizedBox(height: 16),
 
@@ -57,7 +57,7 @@ class LoginScreen extends StatelessWidget {
                 text: '네이버로 계속하기',
                 backgroundColor: const Color(0xFF5CC959), 
                 textColor: Colors.white,
-                onPressed: () => _navigateToOnboarding(context),
+                onPressed: () {},
               ),
               const SizedBox(height: 16),
 
@@ -65,7 +65,7 @@ class LoginScreen extends StatelessWidget {
                 text: 'Google로 계속하기',
                 backgroundColor: const Color(0xFF4A31FF),
                 textColor: Colors.white,
-                onPressed: () => _navigateToOnboarding(context),
+                onPressed: () {},
               ),
               const SizedBox(height: 16),
 
@@ -73,9 +73,30 @@ class LoginScreen extends StatelessWidget {
                 text: 'Apple로 계속하기',
                 backgroundColor: Colors.black,
                 textColor: Colors.white,
-                onPressed: () => _navigateToOnboarding(context),
+                onPressed: () {},
               ),
-              const Spacer(flex: 3),
+
+              const Spacer(flex: 2),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('이미 계정이 있으신가요?', style: TextStyle(color: Colors.grey)),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const EmailLoginScreen()),
+                      );
+                    },
+                    child: const Text(
+                      '로그인하기', 
+                      style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF8CA384))
+                    ),
+                  ),
+                ],
+              ),
+              const Spacer(flex: 1),
             ],
           ),
         ),
@@ -83,12 +104,7 @@ class LoginScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildLoginButton({
-    required String text,
-    required Color backgroundColor,
-    required Color textColor,
-    required VoidCallback onPressed,
-  }) {
+  Widget _buildLoginButton({required String text, required Color backgroundColor, required Color textColor, required VoidCallback onPressed}) {
     return SizedBox(
       height: 56,
       child: ElevatedButton(
