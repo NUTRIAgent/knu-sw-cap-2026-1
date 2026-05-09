@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app/services/auth_service.dart';
 import 'onboarding_screen.dart';
 
 // 직접 가입 선택 후 회원가입을 진행하는 페이지입니다.
@@ -15,31 +16,41 @@ class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _nicknameController = TextEditingController();
+  bool _isLoading = false;
 
-  void _submitSignup() {
+  void _submitSignup() async {
     if (_formKey.currentState!.validate()) {
-      // 백엔드 전송용 데이터 맵핑 (이슈 명세 준수)
-      final signupData = {
-        'email': _emailController.text,
-        'password': _passwordController.text,
-        'nickname': _nicknameController.text,
-        'role': 'USER', // 기본값
-        'provider': null, // 직접 가입이므로 null
-        'providerId': null,
-      };
+      setState(() {
+        _isLoading = true;
+      });
 
-      print('회원가입 요청 데이터: $signupData');
-      // TODO: 백엔드 API 연동 (POST /api/v1/auth/signup)
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('회원가입 성공! 추가 정보를 입력해주세요.')),
+      final response = await AuthService.signup(
+        email: _emailController.text,
+        password: _passwordController.text,
+        nickname: _nicknameController.text,
       );
 
-      // 가입 성공 시 온보딩(기초 정보 입력) 페이지로 이동
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const OnboardingScreen()),
-      );
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (!mounted) return;
+
+      if (response.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('회원가입 성공! 추가 정보를 입력해주세요.')),
+        );
+
+        // 가입 성공 시 온보딩(기초 정보 입력) 페이지로 이동
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response.error ?? '회원가입 실패했습니다.')),
+        );
+      }
     }
   }
 
@@ -110,13 +121,22 @@ class _SignupScreenState extends State<SignupScreen> {
                 const SizedBox(height: 40),
 
                 ElevatedButton(
-                  onPressed: _submitSignup,
+                  onPressed: _isLoading ? null : _submitSignup,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF8CA384),
                     minimumSize: const Size(double.infinity, 56),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: const Text('가입 완료하기', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Text('가입 완료하기', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                 ),
               ],
             ),
