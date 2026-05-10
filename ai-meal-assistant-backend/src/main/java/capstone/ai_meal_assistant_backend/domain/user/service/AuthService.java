@@ -32,6 +32,7 @@ public class AuthService {
                     .password(passwordEncoder.encode(request.getPassword()))
                     .nickname(request.getNickname())
                     .role(Role.USER) // 기본값 USER
+                    .provider("local") // 직접 회원가입
                     .build();
             
             // 저장
