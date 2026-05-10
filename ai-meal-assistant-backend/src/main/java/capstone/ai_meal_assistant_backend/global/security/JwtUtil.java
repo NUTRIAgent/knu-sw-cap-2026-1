@@ -16,7 +16,7 @@ public class JwtUtil {
     private final long accessTokenExpiration = 1000 * 60 * 60; // 1시간
     private final long refreshTokenExpiration = 1000 * 60 * 60 * 24 * 7; // 7일
     
-    public JwtUtil(@Value("${jwt.secret:my-secret-key-for-jwt-must-be-at-least-32-characters-long}") String secret) {
+    public JwtUtil(@Value("${jwt.secret}") String secret) {
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
     

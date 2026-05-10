@@ -46,3 +46,12 @@ out/
 ### Operating System ###
 .DS_Store
 Thumbs.db
+
+### Flutter/Dart ###
+# iOS/macOS 설정 파일
+**/ios/Runner.xcworkspace/
+**/ios/Runner.xcodeproj/project.pbxproj
+**/ios/Runner/GeneratedPluginRegistrant.*
+**/macos/Runner.xcworkspace/
+**/macos/Runner.xcodeproj/project.pbxproj
+**/macos/Runner/GeneratedPluginRegistrant.*

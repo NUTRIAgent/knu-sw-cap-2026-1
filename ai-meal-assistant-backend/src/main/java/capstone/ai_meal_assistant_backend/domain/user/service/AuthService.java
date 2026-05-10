@@ -51,7 +51,9 @@ public class AuthService {
             return AuthResponse.success(authData);
             
         } catch (Exception e) {
-            return AuthResponse.failure("회원가입 중 오류가 발생했습니다: " + e.getMessage());
+            // 로그에는 상세 에러 기록 (실제 운영에서는 로거 사용 권장)
+            e.printStackTrace();
+            return AuthResponse.failure("회원가입 중 알 수 없는 오류가 발생했습니다");
         }
     }
     
@@ -84,7 +86,9 @@ public class AuthService {
             return AuthResponse.success(authData);
             
         } catch (Exception e) {
-            return AuthResponse.failure("로그인 중 오류가 발생했습니다: " + e.getMessage());
+            // 로그에는 상세 에러 기록 (실제 운영에서는 로거 사용 권장)
+            e.printStackTrace();
+            return AuthResponse.failure("로그인 중 알 수 없는 오류가 발생했습니다");
         }
     }
 }
