@@ -1,37 +1,36 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
-.DS_Store
-.atom/
-.build/
-.buildlog/
-.history
-.svn/
-.swiftpm/
-migrate_working_dir/
+# =======================================================
+# 1. Environment & Secrets (환경 변수 및 보안 파일)
+# =======================================================
+.env
+.env.*
+*.env
 
-# IntelliJ related
-*.iml
-*.ipr
-*.iws
-.idea/
+# 민감한 정보가 담긴 yml 파일 (필요에 따라 이름 수정)
+secrets.yml
+secrets.yaml
+config.yml
+config.yaml
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# Android 서명 키 및 설정 (매우 중요)
+*.keystore
+*.jks
+key.properties
+**/*.keystore
+**/*.jks
+**/key.properties
+/android/local.properties
 
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
+# =======================================================
+# 2. Flutter/Dart/Pub
+# =======================================================
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
 /build/
 /coverage/
+**/doc/api/
 
 # Symbolication related
 app.*.symbols
@@ -39,7 +38,70 @@ app.*.symbols
 # Obfuscation related
 app.*.map.json
 
-# Android Studio will place build artifacts here
+# =======================================================
+# 3. Android
+# =======================================================
+.gradle/
+/android/.gradle/
+/android/app/build/
+/android/build/
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# =======================================================
+# 4. iOS / macOS
+# =======================================================
+.DS_Store
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/.last_build_id
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/app.flx
+**/ios/Flutter/app.zip
+**/ios/Flutter/flutter_assets/
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/ServiceDefinitions.json
+**/ios/Runner/GeneratedPluginRegistrant.*
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+
+# =======================================================
+# 5. IDE & Editors (VS Code, IntelliJ, Android Studio)
+# =======================================================
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# VS Code (개인 설정만 무시, 팀 공유용 디버깅 설정은 포함)
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+.atom/
+.history/
+
+# =======================================================
+# 6. Miscellaneous (로그, 빌드 캐시 및 기타 시스템 파일)
+# =======================================================
+*.class
+*.log
+*.pyc
+*.swp
+.build/
+.buildlog/
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# Windows
+Thumbs.db
+ehthumbs.db
+$RECYCLE.BIN/
+
+GeneratedPluginRegistrant.swift

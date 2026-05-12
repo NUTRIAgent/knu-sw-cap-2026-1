@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app/services/auth_service.dart';
 import 'main_screen.dart';
 
 // 직접 로그인을 진행하는 페이지입니다. (소셜로그인X)
@@ -14,23 +15,40 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  bool _isLoading = false;
 
-  void _submitLogin() {
+  void _submitLogin() async {
     if (_formKey.currentState!.validate()) {
-      final loginData = {
-        'email': _emailController.text,
-        'password': _passwordController.text,
-      };
+      setState(() {
+        _isLoading = true;
+      });
 
-      print('로그인 요청: $loginData');
-      // TODO: 백엔드 API 연동 (POST /api/v1/auth/login)
-      
-      // 로그인 성공 시 온보딩을 건너뛰고 바로 대시보드로 이동
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => const MainScreen()),
-        (route) => false, // 이전 로그인/가입 화면 라우팅 스택 모두 제거
+      final response = await AuthService.login(
+        email: _emailController.text,
+        password: _passwordController.text,
       );
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (!mounted) return;
+
+      if (response.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('로그인 성공!')),
+        );
+        // 로그인 성공 시 온보딩을 건너뛰고 바로 대시보드로 이동
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const MainScreen()),
+          (route) => false, // 이전 로그인/가입 화면 라우팅 스택 모두 제거
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response.error ?? '로그인 실패했습니다.')),
+        );
+      }
     }
   }
 
@@ -87,13 +105,22 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
                 const SizedBox(height: 40),
 
                 ElevatedButton(
-                  onPressed: _submitLogin,
+                  onPressed: _isLoading ? null : _submitLogin,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF8CA384),
                     minimumSize: const Size(double.infinity, 56),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: const Text('로그인하기', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Text('로그인하기', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                 ),
               ],
             ),
