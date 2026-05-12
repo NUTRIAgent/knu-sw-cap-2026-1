@@ -103,3 +103,5 @@ migrate_working_dir/
 Thumbs.db
 ehthumbs.db
 $RECYCLE.BIN/
+
+GeneratedPluginRegistrant.swift
