@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'ingredient_shopping_flow_screen.dart';
+
 class RecommendationScreen extends StatefulWidget {
   const RecommendationScreen({super.key});
 
@@ -17,23 +19,78 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
       "name": "연어 포케",
       "price": 9500,
       "calories": 550,
-      "reason": "예산 범위 내이며, 러닝 후 근손실 방지를 위한 고단백 메뉴입니다."
+      "reason": "예산 범위 내이며, 러닝 후 근손실 방지를 위한 고단백 메뉴입니다.",
+      "ingredients": [
+        {"name": "연어", "note": "생연어/훈제연어 원하는 타입으로 선택"},
+        {"name": "현미밥", "note": "즉석밥으로 대체 가능"},
+        {"name": "아보카도", "note": "숙성된 제품 추천"},
+        {"name": "샐러드 채소 믹스", "note": "양상추/어린잎 혼합"},
+        {"name": "간장/포케소스", "note": "기호에 따라 스리라차 추가"},
+      ],
     },
     {
       "id": 42,
       "name": "닭가슴살 샐러드와 호밀빵",
       "price": 8000,
       "calories": 480,
-      "reason": "현재 물가가 저렴한 양상추를 듬뿍 활용한 가성비 식단입니다."
+      "reason": "현재 물가가 저렴한 양상추를 듬뿍 활용한 가성비 식단입니다.",
+      "ingredients": [
+        {"name": "닭가슴살", "note": "훈제/스팀 아무거나 OK"},
+        {"name": "양상추", "note": "대용량 가성비"},
+        {"name": "방울토마토", "note": "세척된 제품이면 편함"},
+        {"name": "호밀빵", "note": "통밀빵으로 대체 가능"},
+        {"name": "발사믹 드레싱", "note": "저당 제품 추천"},
+      ],
     },
     {
       "id": 8,
       "name": "소고기 버섯 덮밥",
       "price": 9000,
       "calories": 620,
-      "reason": "철분 보충에 좋으며 매운맛을 선호하지 않는 취향을 반영했습니다."
+      "reason": "철분 보충에 좋으며 매운맛을 선호하지 않는 취향을 반영했습니다.",
+      "ingredients": [
+        {"name": "소고기 불고기용", "note": "얇은 슬라이스 추천"},
+        {"name": "버섯(표고/새송이)", "note": "혼합팩이면 편함"},
+        {"name": "양파", "note": "중간 크기 1개"},
+        {"name": "간장", "note": "국간장/진간장 상관없음"},
+        {"name": "즉석밥/쌀", "note": "잡곡밥도 OK"},
+      ],
     }
   ];
+
+  List<IngredientShoppingItem> _itemsFromMenu(Map<String, dynamic> menu) {
+    final raw = (menu['ingredients'] as List<dynamic>? ?? const []);
+    return raw
+        .whereType<Map<String, dynamic>>()
+        .map(
+          (e) => IngredientShoppingItem(
+            name: (e['name'] ?? '').toString(),
+            note: e['note']?.toString(),
+          ),
+        )
+        .where((e) => e.name.trim().isNotEmpty)
+        .toList();
+  }
+
+  void _startShoppingForMenu(Map<String, dynamic> menu) {
+    final items = _itemsFromMenu(menu);
+    if (items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('재료 정보가 없어서 쇼핑을 시작할 수 없어요.')),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => IngredientShoppingFlowScreen(
+          menuName: menu['name'].toString(),
+          ingredients: items,
+        ),
+      ),
+    );
+  }
 
   @override
   void dispose() {
@@ -123,7 +180,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                     }),
                   ),
                   const SizedBox(height: 16),
-                  
+                
                   // 피드백 텍스트
                   TextField(
                     controller: _feedbackController,
@@ -195,6 +252,19 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                                 children: [
                                   Text(menu['name'], style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
                                   Text('${menu['price']}원', style: TextStyle(color: Colors.grey[600])),
+                                  const SizedBox(height: 10),
+                                  SizedBox(
+                                    height: 36,
+                                    child: OutlinedButton.icon(
+                                      onPressed: () => _startShoppingForMenu(menu),
+                                      icon: const Icon(Icons.shopping_bag_outlined, size: 18),
+                                      label: const Text('재료 쇼핑 시작'),
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                      ),
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
