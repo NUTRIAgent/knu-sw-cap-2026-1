@@ -28,11 +28,11 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
         password: _passwordController.text,
       );
 
+  if (!mounted) return;
+
       setState(() {
         _isLoading = false;
       });
-
-      if (!mounted) return;
 
       if (response.success) {
         ScaffoldMessenger.of(context).showSnackBar(
