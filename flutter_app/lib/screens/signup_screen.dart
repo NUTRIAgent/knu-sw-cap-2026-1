@@ -31,11 +31,11 @@ class _SignupScreenState extends State<SignupScreen> {
         nickname: _nicknameController.text,
       );
 
+  if (!mounted) return;
+
       setState(() {
         _isLoading = false;
       });
-
-      if (!mounted) return;
 
       if (response.success) {
         ScaffoldMessenger.of(context).showSnackBar(
