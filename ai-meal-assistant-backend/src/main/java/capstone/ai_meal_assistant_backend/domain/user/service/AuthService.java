@@ -6,10 +6,12 @@ import capstone.ai_meal_assistant_backend.domain.user.entity.User;
 import capstone.ai_meal_assistant_backend.domain.user.repository.UserRepository;
 import capstone.ai_meal_assistant_backend.global.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -51,8 +53,7 @@ public class AuthService {
             return AuthResponse.success(authData);
             
         } catch (Exception e) {
-            // 로그에는 상세 에러 기록 (실제 운영에서는 로거 사용 권장)
-            e.printStackTrace();
+            log.error("회원가입 중 오류 발생", e);
             return AuthResponse.failure("회원가입 중 알 수 없는 오류가 발생했습니다");
         }
     }
@@ -86,8 +87,7 @@ public class AuthService {
             return AuthResponse.success(authData);
             
         } catch (Exception e) {
-            // 로그에는 상세 에러 기록 (실제 운영에서는 로거 사용 권장)
-            e.printStackTrace();
+            log.error("로그인 중 오류 발생", e);
             return AuthResponse.failure("로그인 중 알 수 없는 오류가 발생했습니다");
         }
     }
