@@ -1,5 +1,6 @@
 package capstone.ai_meal_assistant_backend.domain.user.dto;
 
+import capstone.ai_meal_assistant_backend.domain.user.entity.Gender;
 import capstone.ai_meal_assistant_backend.domain.user.entity.ProteinLevel;
 import capstone.ai_meal_assistant_backend.domain.user.entity.VegetarianType;
 import lombok.AllArgsConstructor;
@@ -15,6 +16,11 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class UserProfileResponse {
+    
+    // 유저 기본 정보 (마이페이지 화면 표시용)
+    private String nickname;
+    private Gender gender;
+
     // 건강 정보 (인바디)
     private Double height;
     private Double weight;

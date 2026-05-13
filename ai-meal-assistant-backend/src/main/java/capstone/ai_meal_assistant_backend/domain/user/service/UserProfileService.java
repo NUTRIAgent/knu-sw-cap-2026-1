@@ -31,9 +31,15 @@ public class UserProfileService {
     private final UserAllergyRepository userAllergyRepository;
 
     @Transactional
-    public UserProfileResponse saveOrUpdateProfile(Long userId, UserProfileRequest request) {
-        User user = userRepository.findById(userId)
+    public UserProfileResponse saveOrUpdateProfile(String email, UserProfileRequest request) {
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        // 온보딩 때는 null이 들어오겠지만, 엔티티 내부에 방어막이 있어서 DB가 터지지 않음.
+        // 마이페이지 수정 때는 값이 들어오므로 정상적으로 업데이트됨
+        if (request.getNickname() != null || request.getGender() != null) {
+            user.updateNicknameAndGender(request.getNickname(), request.getGender());
+        } 
 
         // 1. 건강 정보 저장/수정
         UserHealthProfile healthProfile = healthProfileRepository.findByUser(user)
@@ -119,8 +125,8 @@ public class UserProfileService {
         return buildProfileResponse(user);
     }
 
-    public UserProfileResponse getProfile(Long userId) {
-        User user = userRepository.findById(userId)
+    public UserProfileResponse getProfile(String email) {
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
         return buildProfileResponse(user);
@@ -140,6 +146,8 @@ public class UserProfileService {
                 .collect(Collectors.toList());
 
         return UserProfileResponse.builder()
+                .nickname(user.getNickname()) // 응답에는 유저의 기존 닉네임과 성별을 담아서 줌
+                .gender(user.getGender())
                 .height(healthProfile != null ? healthProfile.getHeight() : null)
                 .weight(healthProfile != null ? healthProfile.getWeight() : null)
                 .skeletalMuscleMass(healthProfile != null ? healthProfile.getSkeletalMuscleMass() : null)
