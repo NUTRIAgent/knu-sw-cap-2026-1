@@ -98,12 +98,14 @@ class User {
   final int? id;
   final String email;
   final String nickname;
+  final String? gender;
   final String? role;
 
   User({
     this.id,
     required this.email,
     required this.nickname,
+  this.gender,
     this.role,
   });
 
@@ -112,6 +114,7 @@ class User {
       id: json['id'],
       email: json['email'],
       nickname: json['nickname'],
+  gender: json['gender'],
       role: json['role'],
     );
   }

@@ -37,6 +37,10 @@ class AuthService {
       final jsonResponse = jsonDecode(response.body);
       final authResponse = AuthResponse.fromJson(jsonResponse);
 
+  // 디버깅: 서버 응답에 user.id가 포함되는지 확인
+  // ignore: avoid_print
+  print('[AuthService.login] status=${response.statusCode} body=${response.body}');
+
       // 성공 시 토큰 저장
       if (authResponse.success && authResponse.data?.accessToken != null) {
         await TokenStorage.saveTokens(
@@ -47,6 +51,8 @@ class AuthService {
           await TokenStorage.saveUserInfo(
             email: authResponse.data!.user!.email,
             nickname: authResponse.data!.user!.nickname,
+            gender: authResponse.data!.user!.gender,
+            userId: authResponse.data!.user!.id,
           );
         }
       }
@@ -65,6 +71,7 @@ class AuthService {
     required String email,
     required String password,
     required String nickname,
+    required String? gender,
   }) async {
     try {
       final url = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.apiVersion}/auth/signup');
@@ -78,6 +85,7 @@ class AuthService {
           'email': email,
           'password': password,
           'nickname': nickname,
+          'gender': gender,
           'role': 'USER',
           'provider': null,
           'providerId': null,
@@ -90,6 +98,10 @@ class AuthService {
       final jsonResponse = jsonDecode(response.body);
       final authResponse = AuthResponse.fromJson(jsonResponse);
 
+  // 디버깅: 서버 응답에 user.id가 포함되는지 확인
+  // ignore: avoid_print
+  print('[AuthService.signup] status=${response.statusCode} body=${response.body}');
+
       // 성공 시 토큰 저장
       if (authResponse.success && authResponse.data?.accessToken != null) {
         await TokenStorage.saveTokens(
@@ -100,6 +112,8 @@ class AuthService {
           await TokenStorage.saveUserInfo(
             email: authResponse.data!.user!.email,
             nickname: authResponse.data!.user!.nickname,
+            gender: authResponse.data!.user!.gender,
+            userId: authResponse.data!.user!.id,
           );
         }
       }

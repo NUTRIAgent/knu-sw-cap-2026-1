@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'main_screen.dart'; 
+import 'package:flutter_app/models/user_profile_models.dart';
+import 'package:flutter_app/services/user_profile_service.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -11,11 +13,9 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  // 1. 기본 정보 컨트롤러
-  final TextEditingController _nicknameController = TextEditingController();
-  String _selectedGender = '남성';
+  bool _isLoading = false;
 
-  // 2. 인바디 정보 컨트롤러
+  // 1. 인바디 정보 컨트롤러
   final TextEditingController _heightController = TextEditingController();
   final TextEditingController _weightController = TextEditingController();
   final TextEditingController _muscleController = TextEditingController();
@@ -23,12 +23,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final TextEditingController _bmrController = TextEditingController();
   final TextEditingController _inbodyScoreController = TextEditingController();
 
-  // 3. 식습관 및 예산 컨트롤러
+  // 2. 식습관 및 예산 컨트롤러
   final TextEditingController _budgetController = TextEditingController();
   String _selectedVegType = 'NONE';
   double _spicyLevel = 3;
 
-  // 4. 알레르기 정보
+  // 3. 알레르기 정보
   final Set<String> _selectedAllergies = {};
   
   final List<String> _allergyOptions = ['땅콩', '갑각류', '대두', '우유', '밀가루', '계란', '견과류', '생선'];
@@ -42,7 +42,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   void dispose() {
-    _nicknameController.dispose();
     _heightController.dispose();
     _weightController.dispose();
     _muscleController.dispose();
@@ -54,40 +53,51 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   // 💡 정보 저장 및 대시보드로 이동
-  void _finishOnboarding() {
-    if (_formKey.currentState!.validate()) {
-      // 1. 수집된 데이터를 백엔드로 보낼 JSON 형태로 정리 (마이페이지와 동일한 구조)
-      final initialData = {
-        'nickname': _nicknameController.text,
-        'gender': _selectedGender,
-        'health': {
-          'height': double.parse(_heightController.text),
-          'weight': double.parse(_weightController.text),
-          'muscle': double.parse(_muscleController.text),
-          'fat': double.parse(_fatController.text),
-          'bmr': int.parse(_bmrController.text),
-          'score': int.parse(_inbodyScoreController.text),
-        },
-        'preference': {
-          'budget': int.parse(_budgetController.text),
-          'vegType': _selectedVegType,
-          'spicy': _spicyLevel.toInt(),
-        },
-        'allergies': _selectedAllergies.toList(),
-      };
+  Future<void> _finishOnboarding() async {
+    if (_isLoading) return;
 
-      print('서버로 전송될 초기 가입 데이터: $initialData');
-      // TODO: 백엔드 API (POST /api/v1/users/profile) 호출 로직 추가
+    if (!_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('입력하지 않은 필수 항목이 있습니다.')),
+      );
+      return;
+    }
 
-      // 2. 대시보드로 이동 (뒤로 가기 방지)
+    setState(() => _isLoading = true);
+    try {
+      final request = UserProfileRequest(
+        height: double.tryParse(_heightController.text),
+        weight: double.tryParse(_weightController.text),
+        skeletalMuscleMass: double.tryParse(_muscleController.text),
+        bodyFatPercentage: double.tryParse(_fatController.text),
+        bmr: int.tryParse(_bmrController.text),
+        inbodyScore: int.tryParse(_inbodyScoreController.text),
+        measurementDate: DateTime.now().toIso8601String().substring(0, 10),
+        mealBudget: int.tryParse(_budgetController.text),
+        vegetarianType: _selectedVegType,
+        spicyPreference: _spicyLevel.toInt(),
+        proteinLevel: 'NORMAL',
+        allergies: _selectedAllergies.toList(),
+      );
+
+      final result = await UserProfileService.saveProfile(request: request);
+      if (!mounted) return;
+
+      if (!result.success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result.error ?? '프로필 저장에 실패했습니다.')),
+        );
+        return;
+      }
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const MainScreen()),
       );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('입력하지 않은 필수 항목이 있습니다.')),
-      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -114,18 +124,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
                 const SizedBox(height: 32),
 
-                _buildSectionTitle('1. 기본 정보'),
-                _buildTextField(_nicknameController, '닉네임', hint: '예: 준용', isNumber: false),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(labelText: '성별', filled: true, fillColor: Colors.white),
-                  value: _selectedGender,
-                  onChanged: (v) => setState(() => _selectedGender = v!),
-                  items: ['남성', '여성'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-                ),
-                const SizedBox(height: 32),
-
-                _buildSectionTitle('2. 체성분 (InBody) 정보'),
+                // 💡 기본 정보 섹션 완전 삭제, 인바디 정보부터 시작
+                _buildSectionTitle('1. 체성분 (InBody) 정보'),
                 Row(
                   children: [
                     Expanded(child: _buildTextField(_heightController, '키', suffix: 'cm', hint: '175')),
@@ -151,7 +151,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
                 const SizedBox(height: 32),
 
-                _buildSectionTitle('3. 식습관 및 예산 설정'),
+                _buildSectionTitle('2. 식습관 및 예산 설정'),
                 _buildTextField(_budgetController, '끼니당 허용 예산', suffix: '원', hint: '8000'),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
@@ -170,7 +170,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
                 const SizedBox(height: 32),
 
-                _buildSectionTitle('4. 알레르기 유발 물질 (해당 시 선택)'),
+                _buildSectionTitle('3. 알레르기 유발 물질 (해당 시 선택)'),
                 Wrap(
                   spacing: 8.0,
                   runSpacing: 8.0,
@@ -196,12 +196,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 const SizedBox(height: 48),
 
                 ElevatedButton(
-                  onPressed: _finishOnboarding,
+                  onPressed: _isLoading ? null : _finishOnboarding,
                   style: ElevatedButton.styleFrom(
                     minimumSize: const Size(double.infinity, 56),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: const Text('정보 저장하고 시작하기', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 22,
+                          width: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('정보 저장하고 시작하기', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 ),
                 const SizedBox(height: 20),
               ],
