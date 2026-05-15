@@ -31,4 +31,7 @@ public class MenuIngredient extends BaseEntity {
 
     @Column(nullable = false)
     private Double requiredWeight; // 1인분에 필요한 해당 재료의 양 (g 단위)
+
+    @Column(length = 100)
+    private String amountText;  // "1/2개", "약간" 등의 원본 텍스트를 저장
 }

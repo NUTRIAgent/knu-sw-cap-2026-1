@@ -11,8 +11,6 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 class RecipeDataSyncServiceTest {
 
     FoodSafetyApiFetcher apiFetcher = new FoodSafetyApiFetcher(WebClient.builder());

@@ -1,6 +1,6 @@
 package capstone.ai_meal_assistant_backend.domain.etl.controller;
 
-import capstone.ai_meal_assistant_backend.domain.history.service.RecipeDataSyncService;
+import capstone.ai_meal_assistant_backend.domain.ingredient.service.RecipeDataSyncService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
