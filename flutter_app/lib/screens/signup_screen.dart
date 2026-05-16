@@ -17,6 +17,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _passwordConfirmController = TextEditingController();
   final TextEditingController _nicknameController = TextEditingController();
+  String? _selectedGender = '남성';
   bool _isLoading = false;
 
   void _submitSignup() async {
@@ -29,6 +30,7 @@ class _SignupScreenState extends State<SignupScreen> {
         email: _emailController.text,
         password: _passwordController.text,
         nickname: _nicknameController.text,
+  gender: _mapGenderToApiValue(_selectedGender),
       );
 
   if (!mounted) return;
@@ -133,6 +135,37 @@ class _SignupScreenState extends State<SignupScreen> {
                     return null;
                   },
                 ),
+                const SizedBox(height: 20),
+
+                DropdownButtonFormField<String>(
+                  decoration: InputDecoration(
+                    labelText: '성별',
+                    hintText: '성별을 선택해 주세요',
+                    filled: true,
+                    fillColor: Colors.grey.shade100,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: Color(0xFF8CA384),
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                  value: _selectedGender,
+                  onChanged: (v) => setState(() => _selectedGender = v),
+                  items: const [
+                    DropdownMenuItem(value: '남성', child: Text('남성')),
+                    DropdownMenuItem(value: '여성', child: Text('여성')),
+                  ],
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return '성별을 선택해 주세요.';
+                    return null;
+                  },
+                ),
                 const SizedBox(height: 40),
 
                 ElevatedButton(
@@ -183,5 +216,13 @@ class _SignupScreenState extends State<SignupScreen> {
       ),
       validator: validator,
     );
+  }
+
+  String? _mapGenderToApiValue(String? uiGender) {
+    // 서버 enum(Gender) 컨벤션 추정: MALE/FEMALE
+    if (uiGender == null) return null;
+    if (uiGender == '남성') return 'MALE';
+    if (uiGender == '여성') return 'FEMALE';
+    return null;
   }
 }

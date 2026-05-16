@@ -6,6 +6,8 @@ class TokenStorage {
   static const String _refreshTokenKey = 'refresh_token';
   static const String _userEmailKey = 'user_email';
   static const String _userNicknameKey = 'user_nickname';
+  static const String _userGenderKey = 'user_gender';
+  static const String _userIdKey = 'user_id';
 
   // 토큰 저장
   static Future<void> saveTokens({
@@ -23,10 +25,39 @@ class TokenStorage {
   static Future<void> saveUserInfo({
     required String email,
     required String nickname,
+    String? gender,
+    int? userId,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_userEmailKey, email);
     await prefs.setString(_userNicknameKey, nickname);
+    if (gender != null) {
+      await prefs.setString(_userGenderKey, gender);
+    }
+    if (userId != null) {
+      await prefs.setInt(_userIdKey, userId);
+    }
+  }
+
+  static Future<void> saveGender(String gender) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_userGenderKey, gender);
+  }
+
+  static Future<void> saveNickname(String nickname) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_userNicknameKey, nickname);
+  }
+
+  static Future<String?> getGender() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_userGenderKey);
+  }
+
+  // 사용자 ID 조회
+  static Future<int?> getUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_userIdKey);
   }
 
   // Access Token 조회
@@ -60,6 +91,8 @@ class TokenStorage {
     await prefs.remove(_refreshTokenKey);
     await prefs.remove(_userEmailKey);
     await prefs.remove(_userNicknameKey);
+  await prefs.remove(_userGenderKey);
+  await prefs.remove(_userIdKey);
   }
 
   // 토큰 존재 여부 확인

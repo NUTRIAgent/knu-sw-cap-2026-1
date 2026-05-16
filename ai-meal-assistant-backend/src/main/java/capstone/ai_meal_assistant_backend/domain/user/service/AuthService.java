@@ -33,6 +33,7 @@ public class AuthService {
                     .email(request.getEmail())
                     .password(passwordEncoder.encode(request.getPassword()))
                     .nickname(request.getNickname())
+                    .gender(request.getGender())
                     .role(Role.USER) // 기본값 USER
                     .provider("local") // 직접 회원가입
                     .build();

@@ -2,9 +2,14 @@ package capstone.ai_meal_assistant_backend.domain.menu.entity;
 
 import capstone.ai_meal_assistant_backend.global.entity.BaseEntity;
 import jakarta.persistence.*;
+import lombok.*;
 
 @Entity
 @Table(name = "allergies")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@Builder
 public class Allergy extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
