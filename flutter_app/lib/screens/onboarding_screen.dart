@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'main_screen.dart'; 
 import 'package:flutter_app/models/user_profile_models.dart';
 import 'package:flutter_app/services/user_profile_service.dart';
+import 'package:flutter_app/theme.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -155,7 +156,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 _buildTextField(_budgetController, '끼니당 허용 예산', suffix: '원', hint: '8000'),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(labelText: '채식 유형 선택', filled: true, fillColor: Colors.white),
+                  decoration: const InputDecoration(
+                    labelText: '채식 유형 선택', 
+                    filled: true, 
+                    fillColor: Colors.white,
+                    // 💡 theme.dart의 16px 라운딩이 자동으로 적용됨
+                  ),
                   value: _selectedVegType,
                   onChanged: (v) => setState(() => _selectedVegType = v!),
                   items: _vegOptions.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
@@ -165,7 +171,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 Slider(
                   value: _spicyLevel,
                   min: 1, max: 5, divisions: 4,
-                  activeColor: Theme.of(context).primaryColor,
+                  activeColor: AppTheme.primaryColor, // 💡 슬라이더 포인트 컬러 적용
                   onChanged: (v) => setState(() => _spicyLevel = v),
                 ),
                 const SizedBox(height: 32),
@@ -179,10 +185,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     return FilterChip(
                       label: Text(allergy),
                       selected: isSelected,
-                      selectedColor: Theme.of(context).primaryColor.withOpacity(0.2),
-                      checkmarkColor: Theme.of(context).primaryColor,
+                      selectedColor: AppTheme.primaryColor.withOpacity(0.2), // 💡 선택 시 배경색 적용
+                      checkmarkColor: AppTheme.primaryColor,                 // 💡 체크마크 색상 적용
                       shape: RoundedRectangleBorder(
-                        side: BorderSide(color: isSelected ? Theme.of(context).primaryColor : Colors.grey.shade300),
+                        side: BorderSide(color: isSelected ? AppTheme.primaryColor : Colors.grey.shade300),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       onSelected: (bool selected) {
@@ -195,19 +201,45 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
                 const SizedBox(height: 48),
 
-                ElevatedButton(
-                  onPressed: _isLoading ? null : _finishOnboarding,
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 56),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                // 💡 완료 버튼을 캡슐형 그라데이션 디자인으로 교체
+                Container(
+                  width: double.infinity,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: _isLoading ? Colors.grey.shade400 : null,
+                    gradient: _isLoading ? null : AppTheme.aiGradient,
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [
+                      if (!_isLoading)
+                        BoxShadow(
+                          color: AppTheme.primaryColor.withOpacity(0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                    ],
                   ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 22,
-                          width: 22,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('정보 저장하고 시작하기', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _finishOnboarding,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent, // 투명 처리해 뒤쪽 그라데이션 노출
+                      shadowColor: Colors.transparent,     // 기본 그림자 제거
+                      shape: const StadiumBorder(),
+                      padding: EdgeInsets.zero,
+                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Text(
+                            '정보 저장하고 시작하기', 
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)
+                          ),
+                  ),
                 ),
                 const SizedBox(height: 20),
               ],
@@ -223,7 +255,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       padding: const EdgeInsets.only(bottom: 12.0),
       child: Text(
         title,
-        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Theme.of(context).primaryColor),
+        style: const TextStyle(
+          fontSize: 18, 
+          fontWeight: FontWeight.w900, 
+          color: AppTheme.primaryColor // 💡 섹션 타이틀에 포인트 컬러 적용
+        ),
       ),
     );
   }
@@ -238,6 +274,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         suffixText: suffix,
         filled: true,
         fillColor: Colors.white,
+        // 💡 theme.dart의 16px 라운딩 규칙이 전역으로 적용됨
       ),
       validator: (value) {
         if (value == null || value.isEmpty) return '필수 입력 항목입니다.';

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/services/auth_service.dart';
 import 'onboarding_screen.dart';
+import 'package:flutter_app/theme.dart';
 
 // 직접 가입 선택 후 회원가입을 진행하는 페이지입니다.
 
@@ -30,10 +31,10 @@ class _SignupScreenState extends State<SignupScreen> {
         email: _emailController.text,
         password: _passwordController.text,
         nickname: _nicknameController.text,
-  gender: _mapGenderToApiValue(_selectedGender),
+        gender: _mapGenderToApiValue(_selectedGender),
       );
 
-  if (!mounted) return;
+      if (!mounted) return;
 
       setState(() {
         _isLoading = false;
@@ -82,7 +83,10 @@ class _SignupScreenState extends State<SignupScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text('NUTRI Agent 가입을 위해\n정보를 입력해 주세요.', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, height: 1.4)),
+                const Text(
+                  'NUTRI Agent 가입을 위해\n정보를 입력해 주세요.', 
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, height: 1.4)
+                ),
                 const SizedBox(height: 40),
 
                 _buildTextField(
@@ -143,14 +147,16 @@ class _SignupScreenState extends State<SignupScreen> {
                     hintText: '성별을 선택해 주세요',
                     filled: true,
                     fillColor: Colors.grey.shade100,
+                    // 💡 라운딩 16px 통일
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(16),
                       borderSide: BorderSide.none,
                     ),
+                    // 💡 포커스 시 테두리 색상을 AppTheme.primaryColor 로 통일
                     focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(16),
                       borderSide: const BorderSide(
-                        color: Color(0xFF8CA384),
+                        color: AppTheme.primaryColor,
                         width: 2,
                       ),
                     ),
@@ -168,23 +174,45 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
                 const SizedBox(height: 40),
 
-                ElevatedButton(
-                  onPressed: _isLoading ? null : _submitSignup,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF8CA384),
-                    minimumSize: const Size(double.infinity, 56),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                // 💡 가입 완료 버튼: 캡슐형 그라데이션 적용
+                Container(
+                  width: double.infinity,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: _isLoading ? Colors.grey.shade400 : null,
+                    gradient: _isLoading ? null : AppTheme.aiGradient,
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [
+                      if (!_isLoading)
+                        BoxShadow(
+                          color: AppTheme.primaryColor.withOpacity(0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                    ],
                   ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _submitSignup,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent, // 투명 처리해 뒤쪽 그라데이션 노출
+                      shadowColor: Colors.transparent,     // 기본 그림자 제거
+                      shape: const StadiumBorder(),
+                      padding: EdgeInsets.zero,
+                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Text(
+                            '가입 완료하기', 
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)
                           ),
-                        )
-                      : const Text('가입 완료하기', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                  ),
                 ),
               ],
             ),
@@ -194,6 +222,7 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
+  // 💡 TextField 공통 위젯도 16px 라운딩 및 AppTheme 색상으로 업데이트
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -211,15 +240,20 @@ class _SignupScreenState extends State<SignupScreen> {
         hintText: hint,
         filled: true,
         fillColor: Colors.grey.shade100,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF8CA384), width: 2)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16), 
+          borderSide: BorderSide.none
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16), 
+          borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2)
+        ),
       ),
       validator: validator,
     );
   }
 
   String? _mapGenderToApiValue(String? uiGender) {
-    // 서버 enum(Gender) 컨벤션 추정: MALE/FEMALE
     if (uiGender == null) return null;
     if (uiGender == '남성') return 'MALE';
     if (uiGender == '여성') return 'FEMALE';

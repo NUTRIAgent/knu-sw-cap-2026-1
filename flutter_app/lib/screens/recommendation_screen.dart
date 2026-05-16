@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app/theme.dart';
 
 class RecommendationScreen extends StatefulWidget {
   const RecommendationScreen({super.key});
@@ -41,35 +42,51 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
     super.dispose();
   }
 
-  // 메뉴 상세 팝업 (기존과 동일)
+  // 메뉴 상세 팝업
   void _showMenuDetailDialog(Map<String, dynamic> menu) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), // 💡 팝업 모서리 20px 라운딩
           title: Text(menu['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('💰 가격: ${menu['price']}원'),
+              Text('💰 가격: ${menu['price']}원', style: const TextStyle(fontSize: 16)),
               const SizedBox(height: 8),
-              Text('🔥 칼로리: ${menu['calories']} kcal'),
+              Text('🔥 칼로리: ${menu['calories']} kcal', style: const TextStyle(fontSize: 16)),
               const SizedBox(height: 16),
-              const Text('🤖 AI 추천 사유:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('🤖 AI 추천 사유:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               const SizedBox(height: 4),
-              Text(menu['reason'], style: TextStyle(color: Colors.grey[700], height: 1.4)),
+              Text(menu['reason'], style: TextStyle(color: Colors.grey[700], height: 1.4, fontSize: 15)),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('닫기')),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${menu['name']} 선택 완료!')));
-              },
-              child: const Text('선택'),
+            TextButton(
+              onPressed: () => Navigator.pop(context), 
+              child: const Text('닫기', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold))
+            ),
+            // 💡 선택 버튼에 그라데이션 캡슐 디자인 적용
+            Container(
+              decoration: BoxDecoration(
+                gradient: AppTheme.aiGradient,
+                borderRadius: BorderRadius.circular(30),
+              ),
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${menu['name']} 선택 완료!')));
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  shape: const StadiumBorder(),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+                child: const Text('선택', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+              ),
             ),
           ],
         );
@@ -77,23 +94,27 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
     );
   }
 
-  // 💡 핵심: 피드백 입력창을 바텀 시트로 띄우는 함수
+  // 피드백 입력창 (바텀 시트)
   void _showFeedbackBottomSheet() {
+    // 시트를 열 때 별점 초기화
+    _rating = 0;
+    _feedbackController.clear();
+
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true, // 키보드가 올라올 때 시트도 같이 올라가게 설정
+      isScrollControlled: true, 
       backgroundColor: Colors.transparent,
       builder: (context) {
-        return StatefulBuilder( // 시트 안에서 별점 상태를 변경하기 위해 필요
+        return StatefulBuilder( 
           builder: (BuildContext context, StateSetter setModalState) {
             return Container(
               padding: EdgeInsets.only(
-                left: 24, right: 24, top: 24,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 24, // 키보드 높이만큼 여백 추가
+                left: 24, right: 24, top: 32,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24, 
               ),
               decoration: const BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)), // 💡 시트 상단 부드러운 라운딩
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -102,9 +123,9 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                   const Text(
                     '이번 추천은 어떠셨나요?',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
                   
                   // 별점 선택
                   Row(
@@ -113,7 +134,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                       return IconButton(
                         icon: Icon(
                           index < _rating ? Icons.star_rounded : Icons.star_outline_rounded,
-                          size: 40,
+                          size: 48, // 별 크기 약간 증가
                           color: index < _rating ? Colors.amber : Colors.grey[300],
                         ),
                         onPressed: () {
@@ -122,27 +143,58 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                       );
                     }),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
                   
-                  // 피드백 텍스트
+                  // 💡 피드백 텍스트 필드 디자인 적용 (16px 라운딩)
                   TextField(
                     controller: _feedbackController,
                     maxLines: 3,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: '아쉬운 점이 있다면 알려주세요...',
+                      filled: true,
+                      fillColor: Colors.grey.shade100,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: const BorderSide(color: AppTheme.primaryColor, width: 2),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
                   
-                  ElevatedButton(
-                    onPressed: () {
-                      print('피드백: $_rating점, ${_feedbackController.text}');
-                      Navigator.pop(context); // 시트 닫기
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('소중한 피드백 감사합니다!')),
-                      );
-                    },
-                    child: const Text('피드백 제출하기'),
+                  // 💡 피드백 제출 버튼 그라데이션 적용
+                  Container(
+                    height: 56,
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.aiGradient,
+                      borderRadius: BorderRadius.circular(30),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.primaryColor.withOpacity(0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ElevatedButton(
+                      onPressed: () {
+                        // ignore: avoid_print
+                        print('피드백: $_rating점, ${_feedbackController.text}');
+                        Navigator.pop(context); 
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('소중한 피드백 감사합니다!')),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        shape: const StadiumBorder(),
+                      ),
+                      child: const Text('피드백 제출하기', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                    ),
                   ),
                 ],
               ),
@@ -159,42 +211,46 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
       appBar: AppBar(
         title: const Text('맞춤 메뉴 추천', style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
+        elevation: 0,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       ),
       body: SafeArea(
         child: Column(
           children: [
-            // 1. 추천 메뉴 리스트 (화면 대부분을 차지)
+            // 1. 추천 메뉴 리스트
             Expanded(
               child: ListView.builder(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(20.0),
                 itemCount: _recommendedMenus.length,
                 itemBuilder: (context, index) {
                   final menu = _recommendedMenus[index];
                   return Card(
                     margin: const EdgeInsets.only(bottom: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    // 💡 글로벌 테마가 적용되지만 혹시 몰라 명시적 처리
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(20), // 💡 클릭 시 물결 효과 라운딩 통일
                       onTap: () => _showMenuDetailDialog(menu),
                       child: Padding(
-                        padding: const EdgeInsets.all(16.0),
+                        padding: const EdgeInsets.all(20.0),
                         child: Row(
                           children: [
                             Container(
-                              width: 50, height: 50,
+                              width: 56, height: 56,
                               decoration: BoxDecoration(
-                                color: Theme.of(context).primaryColor.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
+                                color: AppTheme.primaryColor.withOpacity(0.1), // 💡 AppTheme 색상 적용
+                                borderRadius: BorderRadius.circular(16),
                               ),
-                              child: Icon(Icons.restaurant, color: Theme.of(context).primaryColor),
+                              child: const Icon(Icons.restaurant, color: AppTheme.primaryColor, size: 28),
                             ),
                             const SizedBox(width: 16),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(menu['name'], style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-                                  Text('${menu['price']}원', style: TextStyle(color: Colors.grey[600])),
+                                  Text(menu['name'], style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                  const SizedBox(height: 4),
+                                  Text('${menu['price']}원', style: TextStyle(color: Colors.grey[600], fontSize: 15)),
                                 ],
                               ),
                             ),
@@ -208,19 +264,19 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
               ),
             ),
             
-            // 2. 하단 고정 버튼 (피드백을 필요할 때만 띄우기 위함)
+            // 2. 하단 고정 버튼 (피드백)
             Padding(
               padding: const EdgeInsets.all(20.0),
               child: OutlinedButton(
-                onPressed: _showFeedbackBottomSheet, // 버튼 클릭 시 바텀 시트 호출
+                onPressed: _showFeedbackBottomSheet, 
                 style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: Theme.of(context).primaryColor),
-                  minimumSize: const Size(double.infinity, 50),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  side: const BorderSide(color: AppTheme.primaryColor, width: 1.5), // 💡 AppTheme 색상
+                  minimumSize: const Size(double.infinity, 56),
+                  shape: const StadiumBorder(), // 💡 캡슐 모양으로 통일
                 ),
-                child: Text(
+                child: const Text(
                   '메뉴 추천 결과 피드백 남기기',
-                  style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: AppTheme.primaryColor, fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
             ),

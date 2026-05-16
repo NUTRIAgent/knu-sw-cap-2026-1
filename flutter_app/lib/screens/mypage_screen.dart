@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_app/models/user_profile_models.dart';
 import 'package:flutter_app/services/user_profile_service.dart';
 import 'package:flutter_app/services/token_storage.dart';
+import 'package:flutter_app/theme.dart';
 
 class MyPageScreen extends StatefulWidget {
   const MyPageScreen({super.key});
@@ -92,7 +93,7 @@ class _MyPageScreenState extends State<MyPageScreen> {
 
   Future<void> _loadBasicUserInfoFromLocal() async {
     try {
-  final nickname = await TokenStorage.getUserNickname();
+      final nickname = await TokenStorage.getUserNickname();
       final gender = await TokenStorage.getGender();
 
       if (!mounted) return;
@@ -145,7 +146,7 @@ class _MyPageScreenState extends State<MyPageScreen> {
       _nicknameController.text = data.nickname!;
       // 서버 값이 최신이면 로컬에도 동기화
       // ignore: discarded_futures
-  TokenStorage.saveNickname(data.nickname!);
+      TokenStorage.saveNickname(data.nickname!);
     }
     final normalizedGender = _normalizeGender(data.gender);
     if (normalizedGender != null) {
@@ -287,6 +288,23 @@ class _MyPageScreenState extends State<MyPageScreen> {
     return null;
   }
 
+  // 💡 데이터가 변경되었는지 확인하는 함수 추가
+  bool get _hasChanges {
+    if (!_isEditMode) return false;
+    return _nicknameController.text != _bkNickname ||
+        _selectedGender != _bkGender ||
+        _heightController.text != _bkHeight ||
+        _weightController.text != _bkWeight ||
+        _muscleController.text != _bkMuscle ||
+        _fatController.text != _bkFat ||
+        _bmrController.text != _bkBmr ||
+        _inbodyScoreController.text != _bkScore ||
+        _budgetController.text != _bkBudget ||
+        _selectedVegType != _bkVegType ||
+        _spicyLevel != _bkSpicy ||
+        _selectedAllergies.length != _bkAllergies.length ||
+        !_selectedAllergies.containsAll(_bkAllergies);
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -298,19 +316,47 @@ class _MyPageScreenState extends State<MyPageScreen> {
         centerTitle: true,
         elevation: 0,
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        actions: [
+                actions: [
           if (!_isEditMode)
             TextButton(
               onPressed: _enableEditMode,
-              child: Text(
+              child: const Text(
                 '수정',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
-                  color: Theme.of(context).primaryColor,
+                  color: AppTheme.primaryColor,
+                ),
+              ),
+            )
+          else ...[
+            TextButton(
+              onPressed: _cancelEdit,
+              child: const Text(
+                '취소',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Colors.grey,
                 ),
               ),
             ),
+            TextButton(
+              // 💡 변경된 게 없거나 로딩 중이면 버튼 기능 비활성화(null)
+              onPressed: (_hasChanges && !_isLoading) ? _saveProfile : null,
+              child: Text(
+                '저장',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  // 💡 변경사항이 있으면 파란색, 없으면 회색으로 표시
+                  color: (_hasChanges && !_isLoading) 
+                      ? AppTheme.primaryColor 
+                      : Colors.grey.shade400,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
       body: SafeArea(
@@ -444,7 +490,7 @@ class _MyPageScreenState extends State<MyPageScreen> {
                         min: 1,
                         max: 5,
                         divisions: 4,
-                        activeColor: Theme.of(context).primaryColor,
+                        activeColor: AppTheme.primaryColor, // 💡 슬라이더 색상 변경
                         onChanged: _isEditMode
                             ? (v) => setState(() => _spicyLevel = v)
                             : null,
@@ -462,7 +508,7 @@ class _MyPageScreenState extends State<MyPageScreen> {
                     color: _isEditMode
                         ? Colors.transparent
                         : Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(16), // 💡 16px로 맞춤
                     border: _isEditMode
                         ? null
                         : Border.all(color: Colors.grey.shade300),
@@ -478,22 +524,20 @@ class _MyPageScreenState extends State<MyPageScreen> {
                           label: Text(
                             allergy,
                             style: TextStyle(
-                              // 텍스트 색상도 읽기 전용일 땐 회색으로 변경
                               color: _isEditMode
                                   ? Colors.black87
                                   : Colors.grey.shade600,
                             ),
                           ),
                           selected: isSelected,
-                          // 핵심 수정: 배경색과 선택된 색상 모두 음영 처리
                           backgroundColor: _isEditMode
                               ? Colors.white
                               : Colors.grey.shade200,
                           selectedColor: _isEditMode
-                              ? Theme.of(context).primaryColor.withOpacity(0.2)
+                              ? AppTheme.primaryColor.withOpacity(0.2) // 💡 선택 색상 변경
                               : Colors.grey.shade300,
                           checkmarkColor: _isEditMode
-                              ? Theme.of(context).primaryColor
+                              ? AppTheme.primaryColor // 💡 체크 아이콘 색상 변경
                               : Colors.grey.shade600,
                           shape: RoundedRectangleBorder(
                             side: BorderSide(
@@ -516,46 +560,6 @@ class _MyPageScreenState extends State<MyPageScreen> {
                   ),
                 ),
                 const SizedBox(height: 40),
-
-                if (_isEditMode)
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: _cancelEdit,
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 18),
-                            side: BorderSide(color: Colors.grey.shade400),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: const Text(
-                            '취소',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: _saveProfile,
-                          child: const Text(
-                            '변경사항 저장',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                const SizedBox(height: 20),
               ],
             ),
           ),
@@ -569,10 +573,10 @@ class _MyPageScreenState extends State<MyPageScreen> {
       padding: const EdgeInsets.only(bottom: 12.0),
       child: Text(
         title,
-        style: TextStyle(
+        style: const TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.w900,
-          color: Theme.of(context).primaryColor,
+          color: AppTheme.primaryColor, // 💡 섹션 타이틀 색상 변경
         ),
       ),
     );
@@ -590,11 +594,16 @@ class _MyPageScreenState extends State<MyPageScreen> {
       keyboardType: isNumber
           ? const TextInputType.numberWithOptions(decimal: true)
           : TextInputType.text,
+      // 💡 키보드 입력 시 실시간으로 화면을 갱신해 저장 버튼 활성화 여부를 업데이트함
+      onChanged: (value) {
+        if (_isEditMode) setState(() {}); 
+      },
       decoration: InputDecoration(
         labelText: label,
         suffixText: suffix,
         filled: true,
         fillColor: _isEditMode ? Colors.white : Colors.grey.shade100,
+        // 💡 텍스트필드 공통 라운딩(16px)은 theme.dart에서 적용됨
       ),
       validator: (value) {
         if (value == null || value.isEmpty) return '필수 입력 항목입니다.';
