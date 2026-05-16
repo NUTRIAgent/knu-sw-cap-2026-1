@@ -1,6 +1,11 @@
 package capstone.ai_meal_assistant_batch.job.kamis;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
 
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
@@ -16,9 +21,12 @@ import lombok.RequiredArgsConstructor;
 public class KamisPriceUpdateService {
 
 	private static final String SOURCE_API = "KAMIS";
+	private static final DateTimeFormatter REGDAY_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.S", Locale.KOREA);
 
 	private final IngredientRepository ingredientRepository;
 	private final IngredientPriceRepository ingredientPriceRepository;
+	private final KamisNaturePriceListClient client;
+	private final KamisNaturePriceListXmlParser parser;
 
 	/**
 	 * TODO: KAMIS API 연동 후 구현
@@ -27,25 +35,143 @@ public class KamisPriceUpdateService {
 	 */
 	@Transactional
 	public KamisPriceUpdateResult updateTodayPrices() {
-		/*
-		 * 지금은 외부 API 연동 전이라 샘플 1건을 upsert만 해두는 형태로 구현해둡니다.
-		 * - 운영에서는 fetch 한 리스트를 돌면서 upsertPrice(...)를 호출하면 됩니다.
-		 */
-		int totalFetched = 1;
-		UpsertOutcome outcome = upsertPrice(
-				"양파",
-				120.0 / 1000.0, // 1000g 120원 가정 -> 1g당 0.12원
-				5000,
-				"1kg",
-				"남부골목시장",
-				"전통시장",
-				LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0));
+		return updateTodayPrices(false);
+	}
 
-		return new KamisPriceUpdateResult(
-				totalFetched,
-				outcome == UpsertOutcome.INSERTED ? 1 : 0,
-				outcome == UpsertOutcome.UPDATED ? 1 : 0,
-				outcome == UpsertOutcome.SKIPPED ? 1 : 0);
+	/**
+	 * @param dryRun true면 DB upsert를 수행하지 않고, 파싱/정규화/집계만 수행합니다.
+	 */
+	@Transactional
+	public KamisPriceUpdateResult updateTodayPrices(boolean dryRun) {
+		// TODO: 카테고리/품목/품종/등급/지역 코드는 추후 운영 정책에 맞춰 확장
+		// 여기선 파이프라인(호출 -> 파싱 -> 정규화 -> upsert) 연결을 먼저 완성
+		Map<String, String> params = defaultRequestParams();
+		String xml = client.fetchXml(params);
+		var parsed = parser.parse(xml);
+		if (parsed.errorCode() != null && !"000".equals(parsed.errorCode())) {
+			throw new IllegalStateException("KAMIS API error_code=" + parsed.errorCode());
+		}
+
+		int inserted = 0;
+		int updated = 0;
+		int skipped = 0;
+
+		for (var item : parsed.items()) {
+			NormalizedRow row = normalize(item);
+			if (row == null) {
+				skipped++;
+				continue;
+			}
+
+			if (dryRun) {
+				// DB 저장 없이 파싱/정규화 성공 건 집계만
+				skipped++;
+				continue;
+			}
+
+			UpsertOutcome outcome = upsertPrice(
+					row.ingredientName(),
+					row.pricePerGram(),
+					row.originalPrice(),
+					row.originalUnit(),
+					row.marketName(),
+					row.marketType(),
+					row.baseDate());
+
+			switch (outcome) {
+				case INSERTED -> inserted++;
+				case UPDATED -> updated++;
+				case SKIPPED -> skipped++;
+			}
+		}
+
+		return new KamisPriceUpdateResult(parsed.items().size(), inserted, updated, skipped);
+	}
+
+	private Map<String, String> defaultRequestParams() {
+		LocalDate today = LocalDate.now();
+		Map<String, String> p = new HashMap<>();
+		// 최소 파이프라인 검증용 값(실제 값은 운영정책/설정으로 대체 권장)
+		p.put("p_regday", today.toString());
+		p.put("p_itemcategorycode", "100");
+		p.put("p_itemcode", "111");
+		p.put("p_kindcode", "01");
+		p.put("p_productrankcode", "07");
+		p.put("p_countrycode", "1101");
+		p.put("p_convert_kg_yn", "Y");
+		return p;
+	}
+
+	private NormalizedRow normalize(KamisNaturePriceListXmlParser.KamisNaturePriceItem item) {
+		Integer originalPrice = parsePrice(item.price());
+		if (originalPrice == null) {
+			return null;
+		}
+
+		String originalUnit = item.unit();
+		Double pricePerGram = convertToPricePerGram(originalPrice, originalUnit);
+		if (pricePerGram == null) {
+			return null;
+		}
+
+		LocalDateTime baseDate;
+		try {
+			baseDate = LocalDateTime.parse(item.regday(), REGDAY_FMT);
+		} catch (Exception e) {
+			return null;
+		}
+
+		// 지금 API는 재료명(itemname)을 주지 않으므로, 현재는 itemcode를 이름으로 매핑하는 전략이 필요함.
+		// 우선 MVP로 itemcode 기반 임시 이름을 생성(운영에서는 code->name 테이블/매핑 필요)
+		String ingredientName = "KAMIS_ITEM_" + (item.seqnum() == null ? "UNKNOWN" : item.seqnum());
+
+		String marketName = item.marketname();
+		String marketType = item.countyname();
+		return new NormalizedRow(ingredientName, pricePerGram, originalPrice, originalUnit, marketName, marketType, baseDate);
+	}
+
+	private static Integer parsePrice(String raw) {
+		if (raw == null) {
+			return null;
+		}
+		String digits = raw.replaceAll("[^0-9]", "");
+		if (digits.isBlank()) {
+			return null;
+		}
+		try {
+			return Integer.parseInt(digits);
+		} catch (NumberFormatException e) {
+			return null;
+		}
+	}
+
+	private static Double convertToPricePerGram(Integer price, String unit) {
+		if (price == null || unit == null || unit.isBlank()) {
+			return null;
+		}
+		String u = unit.trim().toLowerCase(Locale.KOREA);
+		// 현 응답 샘플: 1kg
+		if (u.endsWith("kg")) {
+			String n = u.replace("kg", "").trim();
+			double kg = n.isBlank() ? 1.0 : Double.parseDouble(n);
+			return price / (kg * 1000.0);
+		}
+		if (u.endsWith("g")) {
+			String n = u.replace("g", "").trim();
+			double g = n.isBlank() ? 1.0 : Double.parseDouble(n);
+			return price / g;
+		}
+		return null;
+	}
+
+	private record NormalizedRow(
+			String ingredientName,
+			double pricePerGram,
+			Integer originalPrice,
+			String originalUnit,
+			String marketName,
+			String marketType,
+			LocalDateTime baseDate) {
 	}
 
 	private enum UpsertOutcome {
@@ -61,7 +187,10 @@ public class KamisPriceUpdateService {
 			String marketType,
 			LocalDateTime baseDate) {
 		Ingredient ingredient = ingredientRepository.findByName(ingredientName)
-				.orElseGet(() -> ingredientRepository.save(Ingredient.builder().name(ingredientName).build()));
+				.orElseGet(() -> {
+					Ingredient saved = ingredientRepository.save(Ingredient.builder().name(ingredientName).build());
+					return saved;
+				});
 
 		var existing = ingredientPriceRepository
 				.findByIngredientIdAndSourceApiAndMarketNameAndMarketTypeAndOriginalUnitAndBaseDate(

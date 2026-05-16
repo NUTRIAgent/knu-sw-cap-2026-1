@@ -69,10 +69,11 @@ cd ai-meal-assistant-batch
 
 아직 미구현 스텁입니다. 구현 시 아래 형태를 권장합니다.
 
-- `KAMIS_API_KEY`
+- `KAMIS_API_KEY` (환경변수)
 - `MFDS_API_KEY`
 
 ## DDL 정책
 
-본 모듈은 `spring.jpa.hibernate.ddl-auto=validate`로 설정되어 스키마를 변경하지 않습니다.
-스키마 변경은 단일 소스(예: 운영 서버 + Flyway)에서 관리하는 것을 권장합니다.
+본 모듈은 현재 `spring.jpa.hibernate.ddl-auto=update`로 설정되어 실행 시 테이블을 자동 생성/갱신합니다.
+
+- 운영 환경에서는 `validate` 또는 마이그레이션 도구(Flyway/Liquibase) 사용을 권장합니다.
