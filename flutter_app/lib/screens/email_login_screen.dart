@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/services/auth_service.dart';
 import 'main_screen.dart';
+import 'package:flutter_app/theme.dart';
 
 // 직접 로그인을 진행하는 페이지입니다. (소셜로그인X)
 
@@ -28,7 +29,7 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
         password: _passwordController.text,
       );
 
-  if (!mounted) return;
+      if (!mounted) return;
 
       setState(() {
         _isLoading = false;
@@ -75,7 +76,10 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text('다시 오신 것을 환영합니다!\n계정 정보를 입력해 주세요.', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, height: 1.4)),
+                const Text(
+                  '다시 오신 것을 환영합니다!\n계정 정보를 입력해 주세요.', 
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, height: 1.4)
+                ),
                 const SizedBox(height: 40),
 
                 TextFormField(
@@ -85,7 +89,8 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
                     labelText: '이메일',
                     filled: true,
                     fillColor: Colors.grey.shade100,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    // 💡 입력창 모서리를 글로벌 테마와 동일하게 16px로 맞춤
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                   ),
                   validator: (value) => (value == null || value.isEmpty) ? '이메일을 입력해 주세요.' : null,
                 ),
@@ -98,29 +103,53 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
                     labelText: '비밀번호',
                     filled: true,
                     fillColor: Colors.grey.shade100,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    // 💡 입력창 모서리를 글로벌 테마와 동일하게 16px로 맞춤
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                   ),
                   validator: (value) => (value == null || value.isEmpty) ? '비밀번호를 입력해 주세요.' : null,
                 ),
                 const SizedBox(height: 40),
 
-                ElevatedButton(
-                  onPressed: _isLoading ? null : _submitLogin,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF8CA384),
-                    minimumSize: const Size(double.infinity, 56),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                // 💡 로그인 버튼에 그라데이션 및 캡슐형 디자인 적용
+                Container(
+                  width: double.infinity,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    // 로딩 중일 때는 회색 처리, 아닐 때는 그라데이션
+                    color: _isLoading ? Colors.grey.shade400 : null,
+                    gradient: _isLoading ? null : AppTheme.aiGradient,
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [
+                      if (!_isLoading)
+                        BoxShadow(
+                          color: AppTheme.primaryColor.withOpacity(0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                    ],
                   ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _submitLogin,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent, // 투명하게 처리해 뒤쪽 그라데이션 노출
+                      shadowColor: Colors.transparent,     // 기본 그림자 제거
+                      shape: const StadiumBorder(),
+                      padding: EdgeInsets.zero,
+                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 24,
+                            width: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Text(
+                            '로그인하기', 
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)
                           ),
-                        )
-                      : const Text('로그인하기', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                  ),
                 ),
               ],
             ),

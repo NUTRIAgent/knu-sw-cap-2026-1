@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'recommendation_screen.dart';
+import 'package:flutter_app/theme.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -12,13 +13,18 @@ class DashboardScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 상단: 앱 타이틀
-            const Text(
-              'NUTRI Agent',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF6B8E23), 
+            // 상단: 앱 타이틀 (💡 ShaderMask를 이용해 텍스트에 그라데이션 적용)
+            ShaderMask(
+              blendMode: BlendMode.srcIn,
+              shaderCallback: (Rect bounds) {
+                return AppTheme.aiGradient.createShader(bounds);
+              },
+              child: const Text(
+                'NUTRI Agent',
+                style: TextStyle(
+                  fontSize: 28, // 로고 느낌을 주기 위해 폰트 사이즈 살짝 증가
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ),
             const SizedBox(height: 24),
@@ -144,25 +150,46 @@ class DashboardScreen extends StatelessWidget {
 
             const Spacer(),
 
-            // 하단: 메뉴 추천 바로가기 버튼
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const RecommendationScreen()),
-                );
-                // TODO: 메뉴 추천 API 호출 및 로직 연결
-              },
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.restaurant_menu, size: 24),
-                  SizedBox(width: 12),
-                  Text(
-                    '맞춤 메뉴 추천 받기',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            // 하단: 메뉴 추천 바로가기 버튼 (💡 Container를 이용해 그라데이션 적용)
+            Container(
+              width: double.infinity,
+              height: 56, // 통일된 캡슐 형태의 높이
+              decoration: BoxDecoration(
+                gradient: AppTheme.aiGradient,
+                borderRadius: BorderRadius.circular(30),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.primaryColor.withOpacity(0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
                 ],
+              ),
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const RecommendationScreen()),
+                  );
+                  // TODO: 메뉴 추천 API 호출 및 로직 연결
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent, // 배경 투명 처리 (그라데이션 노출)
+                  shadowColor: Colors.transparent,     // 기본 그림자 제거
+                  shape: const StadiumBorder(),
+                  padding: EdgeInsets.zero,            // Container 제어 따름
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.restaurant_menu, size: 24, color: Colors.white),
+                    SizedBox(width: 12),
+                    Text(
+                      '맞춤 메뉴 추천 받기',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 20),
