@@ -9,7 +9,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 @ConfigurationPropertiesScan
 public class AiMealAssistantBatchApplication {
-
 	public static void main(String[] args) {
 		SpringApplication.run(AiMealAssistantBatchApplication.class, args);
 	}
