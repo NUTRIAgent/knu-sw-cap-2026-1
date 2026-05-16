@@ -43,6 +43,14 @@ dependencies {
 
 	testRuntimeOnly 'com.h2database:h2'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+	// WebClient 및 ExchangeStrategies 사용을 위한 WebFlux 의존성 추가
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
+	// Spring Security 의존성 추가
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+
+
 }
 
 tasks.named('test') {
