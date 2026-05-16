@@ -5,11 +5,10 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "user_preferences")
-@Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor
+@Table(name = "user_preferences")@Getter
 @Builder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class UserPreference extends BaseEntity {
 
     @Id
@@ -30,11 +29,4 @@ public class UserPreference extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private ProteinLevel proteinLevel; // enum { LOW, NORMAL, HIGH } (단백질 단계)
 
-    public void updatePreference(Integer mealBudget, VegetarianType vegetarianType,
-                               Integer spicyPreference, ProteinLevel proteinLevel) {
-        this.mealBudget = mealBudget;
-        this.vegetarianType = vegetarianType;
-        this.spicyPreference = spicyPreference;
-        this.proteinLevel = proteinLevel;
-    }
 }

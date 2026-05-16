@@ -6,11 +6,10 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "user_allergies")
-@Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
-@AllArgsConstructor
+@Table(name = "user_allergies")@Getter
 @Builder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class UserAllergy extends BaseEntity {
 
     @Id
