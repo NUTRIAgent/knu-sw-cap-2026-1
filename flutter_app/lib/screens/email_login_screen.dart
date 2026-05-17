@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_app/services/auth_service.dart';
 import 'main_screen.dart';
 import 'package:flutter_app/theme.dart';
+import 'package:flutter_app/services/user_profile_service.dart';
+import 'onboarding_screen.dart';
 
 // 직접 로그인을 진행하는 페이지입니다. (소셜로그인X)
-
 class EmailLoginScreen extends StatefulWidget {
   const EmailLoginScreen({super.key});
 
@@ -18,12 +19,13 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
 
-  void _submitLogin() async {
+    void _submitLogin() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
       });
 
+      // 1. 로그인 API 호출 (이 안에서 토큰이 로컬에 저장됨)
       final response = await AuthService.login(
         email: _emailController.text,
         password: _passwordController.text,
@@ -31,21 +33,48 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
 
       if (!mounted) return;
 
-      setState(() {
-        _isLoading = false;
-      });
-
       if (response.success) {
+        // 💡 2. 토큰이 저장되었으니, 프로필 정보를 찔러서 온보딩 필요 여부 확인
+        final profileResponse = await UserProfileService.getProfile();
+        
+        if (!mounted) return;
+        
+        setState(() {
+          _isLoading = false;
+        });
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('로그인 성공!')),
         );
-        // 로그인 성공 시 온보딩을 건너뛰고 바로 대시보드로 이동
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const MainScreen()),
-          (route) => false, // 이전 로그인/가입 화면 라우팅 스택 모두 제거
-        );
+
+        // 💡 3. 필수 데이터(예: 키, 몸무게)가 없으면 온보딩 대상으로 간주
+        // 백엔드에서 아직 프로필이 안 만들어졌거나, height가 null인 경우
+        // 💡 키 값이 null이거나, 백엔드 초기값인 999(또는 999.0)인 경우 온보딩으로 보냅니다
+        bool needsOnboarding = profileResponse.data == null || 
+                              profileResponse.data?.height == null || 
+                              profileResponse.data?.height == 999 || 
+                              profileResponse.data?.height == 999.0;
+
+        if (needsOnboarding) {
+          // 첫 로그인 유저 -> 온보딩 화면으로 이동 (뒤로 가기 방지)
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+            (route) => false,
+          );
+        } else {
+          // 기존 유저 -> 메인 대시보드로 이동 (뒤로 가기 방지)
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const MainScreen()),
+            (route) => false,
+          );
+        }
       } else {
+        // 로그인 실패 시
+        setState(() {
+          _isLoading = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(response.error ?? '로그인 실패했습니다.')),
         );
