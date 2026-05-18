@@ -30,8 +30,15 @@ public class KamisNaturePriceListXmlParser {
 			var doc = builder.parse(new InputSource(new StringReader(xml)));
 			doc.getDocumentElement().normalize();
 
-			String errorCode = textContentOfFirst(doc.getDocumentElement(), "error_code");
-			List<KamisNaturePriceItem> items = new ArrayList<>();
+			String errorCode = firstNonBlank(
+					textContentOfFirst(doc.getDocumentElement(), "error_code"),
+					textContentOfFirst(doc.getDocumentElement(), "result_code")
+			);
+			String errorMsg = firstNonBlank(
+					textContentOfFirst(doc.getDocumentElement(), "error_msg"),
+					textContentOfFirst(doc.getDocumentElement(), "result_msg")
+			);
+			List<KamisDailySalesItem> items = new ArrayList<>();
 
 			NodeList itemNodes = doc.getElementsByTagName("item");
 			for (int i = 0; i < itemNodes.getLength(); i++) {
@@ -41,67 +48,65 @@ public class KamisNaturePriceListXmlParser {
 				}
 
 				Element el = (Element) n;
-				// condition.item도 "item"이라서, 가격 필드(price)가 없으면 스킵
-				String price = textContent(el, "price");
-				String unit = textContent(el, "unit");
-				String regday = textContent(el, "regday");
-				String marketname = textContent(el, "marketname");
-				String countyname = textContent(el, "countyname");
+				String productClsName = textContent(el, "product_cls_name"); // 도매/소매 구분
+				String categoryName = textContent(el, "category_name"); // 부류명
+				String productno = textContent(el, "productno"); // 품목코드
+				String itemName = textContent(el, "item_name"); // 품목명
+				String unit = textContent(el, "unit"); // 단위
+				String day1 = textContent(el, "day1"); // 최근 조사일자
+				String dpr1 = textContent(el, "dpr1"); // 최근 조사일자 가격
 
-				if ((price == null || price.isBlank()) && (unit == null || unit.isBlank())
-						&& (regday == null || regday.isBlank())
-						&& (marketname == null || marketname.isBlank())
-						&& (countyname == null || countyname.isBlank())) {
+				// 가격이나 코드가 없으면(또는 "-" 처리되어 있으면) 스킵
+				if ((dpr1 == null || dpr1.isBlank() || "-".equals(dpr1)) || productno == null) {
 					continue;
 				}
 
-				// 통계성(평균/null market) 데이터는 제외(필요하면 설정으로 열어둘 수 있음)
-				if ("평균".equals(countyname)) {
-					continue;
-				}
-
-				items.add(new KamisNaturePriceItem(
-						textContent(el, "seqnum"),
-						countyname,
-						marketname,
+				items.add(new KamisDailySalesItem(
+						productClsName,
+						categoryName,
+						productno,
+						itemName,
 						unit,
-						regday,
-						price));
+						day1,
+						dpr1));
 			}
 
-			return new ParsedKamisResponse(errorCode, items);
+			return new ParsedKamisResponse(errorCode, errorMsg, items);
 		} catch (Exception e) {
 			throw new IllegalArgumentException("Failed to parse KAMIS XML", e);
 		}
 	}
 
+	private static String firstNonBlank(String... candidates) {
+		if (candidates == null) return null;
+		for (String c : candidates) {
+			if (c != null && !c.isBlank()) return c;
+		}
+		return null;
+	}
+
 	private static String textContentOfFirst(Element root, String tag) {
 		NodeList list = root.getElementsByTagName(tag);
-		if (list.getLength() == 0) {
-			return null;
-		}
+		if (list.getLength() == 0) return null;
 		Node n = list.item(0);
 		return n == null ? null : n.getTextContent();
 	}
 
 	private static String textContent(Element root, String tag) {
 		NodeList list = root.getElementsByTagName(tag);
-		if (list.getLength() == 0) {
-			return null;
-		}
+		if (list.getLength() == 0) return null;
 		Node n = list.item(0);
 		return n == null ? null : n.getTextContent();
 	}
 
-	public record ParsedKamisResponse(String errorCode, List<KamisNaturePriceItem> items) {
-	}
+	public record ParsedKamisResponse(String errorCode, String errorMsg, List<KamisDailySalesItem> items) {}
 
-	public record KamisNaturePriceItem(
-			String seqnum,
-			String countyname,
-			String marketname,
+	public record KamisDailySalesItem(
+			String productClsName,
+			String categoryName,
+			String productno,
+			String itemName,
 			String unit,
-			String regday,
-			String price) {
-	}
+			String day1,
+			String dpr1) {}
 }

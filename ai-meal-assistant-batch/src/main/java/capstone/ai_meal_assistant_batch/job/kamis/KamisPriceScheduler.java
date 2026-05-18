@@ -11,7 +11,11 @@ import lombok.RequiredArgsConstructor;
 
 @Component
 @RequiredArgsConstructor
-@ConditionalOnProperty(prefix = "batch.kamis", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(
+		prefix = "batch.kamis",
+		name = {"enabled", "run-once"},
+		havingValue = "true,false",
+		matchIfMissing = true)
 public class KamisPriceScheduler {
 
 	private static final String JOB_NAME = "kamisPriceUpdate";
