@@ -42,14 +42,18 @@ class _SignupScreenState extends State<SignupScreen> {
 
       if (response.success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('회원가입 성공! 추가 정보를 입력해주세요.')),
+          const SnackBar(content: Text('회원가입 성공! 로그인을 진행해 주세요.')), // 문구 수정
         );
 
-        // 가입 성공 시 온보딩(기초 정보 입력) 페이지로 이동
+        // 가입 성공 시 로그인 화면으로
+        Navigator.pop(context); 
+        
+        /* 만약 pop()으로 안 되는 라우팅 구조라면 명시적으로 이동
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
         );
+        */
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(response.error ?? '회원가입 실패했습니다.')),
