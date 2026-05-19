@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'signup_screen.dart';
 import 'email_login_screen.dart';
-import 'package:flutter_app/theme.dart'; // 💡 AppTheme 임포트 추가
+import 'package:flutter_app/theme.dart';
 
 // 직접 가입 or 소셜 로그인을 선택할 수 있는 페이지 입니다.
 class LoginScreen extends StatelessWidget {
