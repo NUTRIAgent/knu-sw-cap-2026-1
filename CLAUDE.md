@@ -49,3 +49,7 @@
 @import docs/claude/modules/backend.md
 @import docs/claude/modules/batch.md
 @import docs/claude/modules/flutter.md
+@import docs/claude/modules/ai_agent.md
+@import docs/claude/rules/code-style.md
+@import docs/claude/rules/api.md
+@import docs/claude/rules/test.md
