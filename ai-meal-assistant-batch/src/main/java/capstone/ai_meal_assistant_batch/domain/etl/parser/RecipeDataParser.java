@@ -80,7 +80,7 @@ public class RecipeDataParser {
             String amount = "";
             boolean isAbsolute = false;
 
-            String[] absoluteBases = {"물녹말", "녹말물", "채소 육수", "다시마 육수", "멸치 육수", "닭 육수", "고기 육수", "사골 육수", "육수"};
+            String[] absoluteBases = {"물녹말", "녹말물", "흰살 생선", "채소 육수", "다시마 육수", "멸치 육수", "닭 육수", "고기 육수", "사골 육수", "육수"};
             for (String base : absoluteBases) {
                 if (part.equals(base) || part.startsWith(base + " ") || part.startsWith(base + "(")) {
                     name = base;
@@ -118,7 +118,7 @@ public class RecipeDataParser {
                     "데친", "삶은", "볶은", "부순",
                     "마른것", "마른 것", "마른", "말린", "불린것", "불린 것", "불린",
                     "따뜻한", "미지근한",
-                    "생것", "생 것", "생", "갠것", "갠 것", "갠", "중간 크기", "중간크기", "큰", "작은"
+                    "생것", "생 것", "갠것", "갠 것", "갠", "중간 크기", "중간크기", "큰", "작은"
             };
 
             for (String mod : modifiers) {
@@ -135,6 +135,12 @@ public class RecipeDataParser {
                     extracted.append(formattedMod).append(" ");
                     name = name.replace(mod, "").trim();
                 }
+            }
+
+            // '생' 수식어: 단어 경계 보장 (생선·생강·생크림 등 복합어 오탐 방지)
+            if (name.startsWith("생 ")) {
+                extracted.append("생 ");
+                name = name.substring(2).trim();
             }
 
             String[] purposes = {"쓴맛 제거용", "데치는용", "양념장용", "반죽용", "기호에따라", "필요량", "제거용", "장식용"};
