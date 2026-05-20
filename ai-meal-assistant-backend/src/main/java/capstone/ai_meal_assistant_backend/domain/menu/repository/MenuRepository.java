@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
@@ -28,4 +29,15 @@ public interface MenuRepository extends JpaRepository<Menu, Long> {
             @Param("maxCal")     Integer maxCalories,
             @Param("limit")      int limit
     );
+
+    @Query(value = """
+            SELECT mi.menu_id,
+                   GROUP_CONCAT(CONCAT(i.name, ' ', COALESCE(mi.amount_text, ''))
+                                ORDER BY i.name SEPARATOR ', ') AS ingredients_text
+            FROM menu_ingredients mi
+            JOIN ingredients i ON mi.ingredient_id = i.id
+            WHERE mi.menu_id IN (:menuIds)
+            GROUP BY mi.menu_id
+            """, nativeQuery = true)
+    List<Object[]> findIngredientsTextByMenuIds(@Param("menuIds") Collection<Long> menuIds);
 }

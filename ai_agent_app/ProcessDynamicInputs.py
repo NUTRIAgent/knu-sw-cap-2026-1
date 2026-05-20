@@ -14,12 +14,12 @@ class ProcessDynamicInputs:
         self.model = model
         self.chain = get_recipe_prompt() | self.model | JsonOutputParser()
         
-    def _enrich_candidates(self, candidate_ids, user_location) -> tuple[list[str], dict]:
+    def _enrich_candidates(self, candidate_ids, user_location, active_recipes) -> tuple[list[str], dict]:
         """후보별 물가 조회 + enriched 문자열 생성"""
         price_cache: Dict[int, str] = {}
         enriched: List[str] = []
         for cid in candidate_ids:
-            r = self.recipes[cid]
+            r = active_recipes[cid]
             try:
                 p_info = self.get_market_prices.get_market_prices(
                     r['RCP_PARTS_DTLS'], 
@@ -123,7 +123,7 @@ class ProcessDynamicInputs:
         if not candidate_ids:
             raise ValueError("적합한 레시피 후보가 없습니다.")
 
-        enriched, price_cache = self._enrich_candidates(candidate_ids, user_query.get("location"))
+        enriched, price_cache = self._enrich_candidates(candidate_ids, user_query.get("location"), active_recipes)
         final_id    = self._select_final_id(user_query, enriched, candidate_ids)
         print(f"최종 선정된 레시피 ID: {final_id}")
         final_recipe = active_recipes[final_id]

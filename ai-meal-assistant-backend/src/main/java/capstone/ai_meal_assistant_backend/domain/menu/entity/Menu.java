@@ -14,13 +14,23 @@ public class Menu {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private String foodCode;
+
     @Column(nullable = false)
     private String name;
 
     private String category;
-    private Integer calories;
+    private String cookingMethod;
+    private Double calories;
     private Double protein;
     private Double fat;
     private Double carbs;
+    private Double sodium;
     private Integer basePrice;
+
+    @Column(length = 500)
+    private String mainImageUrl;
+
+    @Column(length = 1000)
+    private String healthTip;
 }

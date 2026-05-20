@@ -2,6 +2,7 @@ package capstone.ai_meal_assistant_backend.domain.menu.service;
 
 import capstone.ai_meal_assistant_backend.domain.menu.dto.MenuCandidateDto;
 import capstone.ai_meal_assistant_backend.domain.menu.entity.Allergy;
+import capstone.ai_meal_assistant_backend.domain.menu.entity.Menu;
 import capstone.ai_meal_assistant_backend.domain.menu.entity.UserAllergy;
 import capstone.ai_meal_assistant_backend.domain.menu.repository.MenuAllergyRepository;
 import capstone.ai_meal_assistant_backend.domain.menu.repository.MenuRepository;
@@ -15,9 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -39,21 +38,38 @@ public class MenuCandidateService {
 
         UserPreference pref = preferenceRepository.findByUser(user).orElse(null);
 
-        // 1. 사용자 알레르기 메뉴 ID 수집
         Set<Long> excludeMenuIds = getExcludeMenuIds(user);
-
-        // 2. 선호 조건 추출
         Integer budget     = pref != null ? pref.getMealBudget() : null;
         Double  minProtein = resolveMinProtein(pref);
-        Integer maxCal     = null; // fitnessGoal 병합 후 확장 예정
 
-        // 3. 후보 조회 (DB에서 RAND() + LIMIT)
-        // 빈 Set은 NOT IN () → SQL 오류 발생. -1L은 실제 메뉴 ID와 겹치지 않으므로 안전한 더미값
         Set<Long> queryExclude = excludeMenuIds.isEmpty() ? Set.of(-1L) : excludeMenuIds;
-        return menuRepository
-                .findCandidates(queryExclude, budget, minProtein, maxCal, CANDIDATE_LIMIT)
-                .stream()
-                .map(MenuCandidateDto::from)
+        List<Menu> menus = menuRepository.findCandidates(queryExclude, budget, minProtein, null, CANDIDATE_LIMIT);
+        return buildDtos(menus);
+    }
+
+    public List<MenuCandidateDto> getRandomCandidates() {
+        List<Menu> menus = menuRepository.findCandidates(Set.of(-1L), null, null, null, CANDIDATE_LIMIT);
+        return buildDtos(menus);
+    }
+
+    private List<MenuCandidateDto> buildDtos(List<Menu> menus) {
+        if (menus.isEmpty()) return Collections.emptyList();
+
+        List<Long> menuIds = menus.stream().map(Menu::getId).collect(Collectors.toList());
+
+        // 재료 텍스트 일괄 조회 (쿼리 1번)
+        Map<Long, String> ingredientsMap = new HashMap<>();
+        for (Object[] row : menuRepository.findIngredientsTextByMenuIds(menuIds)) {
+            Long menuId = ((Number) row[0]).longValue();
+            ingredientsMap.put(menuId, (String) row[1]);
+        }
+
+        return menus.stream()
+                .map(m -> MenuCandidateDto.from(
+                        m,
+                        ingredientsMap.getOrDefault(m.getId(), ""),
+                        Collections.emptyList() // TODO: menu_steps 테이블 추가 후 연결
+                ))
                 .collect(Collectors.toList());
     }
 
@@ -67,7 +83,6 @@ public class MenuCandidateService {
         return menuAllergyRepository.findMenuIdsByAllergyIn(userAllergies);
     }
 
-    // proteinLevel → 최소 단백질(g) 변환
     private Double resolveMinProtein(UserPreference pref) {
         if (pref == null || pref.getProteinLevel() == null) return null;
         if (pref.getProteinLevel() == ProteinLevel.HIGH) return 25.0;
