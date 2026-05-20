@@ -1,5 +1,6 @@
 package capstone.ai_meal_assistant_backend.domain.user.dto;
 
+import capstone.ai_meal_assistant_backend.domain.user.entity.FitnessGoal;
 import capstone.ai_meal_assistant_backend.domain.user.entity.Gender;
 import capstone.ai_meal_assistant_backend.domain.user.entity.ProteinLevel;
 import capstone.ai_meal_assistant_backend.domain.user.entity.VegetarianType;
@@ -16,7 +17,7 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class UserProfileResponse {
-    
+
     // 유저 기본 정보 (마이페이지 화면 표시용)
     private String nickname;
     private Gender gender;
@@ -36,6 +37,8 @@ public class UserProfileResponse {
     private VegetarianType vegetarianType;
     private Integer spicyPreference;
     private ProteinLevel proteinLevel;
+    private FitnessGoal fitnessGoal;
+    private List<String> foodPreferences;
 
     // 알러지 정보 (이름 리스트)
     private List<String> allergies;
