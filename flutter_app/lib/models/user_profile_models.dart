@@ -16,6 +16,8 @@ class UserProfileRequest {
   final String? vegetarianType; // e.g. NONE, VEGAN...
   final int? spicyPreference; // 1~5
   final String? proteinLevel; // e.g. LOW, NORMAL, HIGH
+  final String? fitnessGoal; // e.g. DIET, MUSCLE_GAIN, MAINTAIN, GENERAL
+  final List<String>? foodPreferences;
   final List<String>? allergies;
 
   UserProfileRequest({
@@ -33,6 +35,8 @@ class UserProfileRequest {
     this.vegetarianType,
     this.spicyPreference,
     this.proteinLevel,
+    this.fitnessGoal,
+    this.foodPreferences,
     this.allergies,
   });
 
@@ -52,6 +56,8 @@ class UserProfileRequest {
     if (vegetarianType != null) data['vegetarianType'] = vegetarianType;
     if (spicyPreference != null) data['spicyPreference'] = spicyPreference;
     if (proteinLevel != null) data['proteinLevel'] = proteinLevel;
+    if (fitnessGoal != null) data['fitnessGoal'] = fitnessGoal;
+    if (foodPreferences != null) data['foodPreferences'] = foodPreferences;
     if (allergies != null) data['allergies'] = allergies;
     return data;
   }
@@ -100,13 +106,15 @@ class UserProfileData {
   final String? vegetarianType;
   final int? spicyPreference;
   final String? proteinLevel;
+  final String? fitnessGoal;
+  final List<String> foodPreferences;
 
   final List<String> allergies;
 
   const UserProfileData({
     this.userId,
-  this.nickname,
-  this.gender,
+    this.nickname,
+    this.gender,
     this.height,
     this.weight,
     this.skeletalMuscleMass,
@@ -119,6 +127,8 @@ class UserProfileData {
     this.vegetarianType,
     this.spicyPreference,
     this.proteinLevel,
+    this.fitnessGoal,
+    this.foodPreferences = const [],
     this.allergies = const [],
   });
 
@@ -139,6 +149,8 @@ class UserProfileData {
       vegetarianType: json['vegetarianType'],
       spicyPreference: json['spicyPreference'],
       proteinLevel: json['proteinLevel'],
+      fitnessGoal: json['fitnessGoal'],
+      foodPreferences: (json['foodPreferences'] as List?)?.map((e) => e.toString()).toList() ?? const [],
       allergies: (json['allergies'] as List?)?.map((e) => e.toString()).toList() ?? const [],
     );
   }

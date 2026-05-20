@@ -6,6 +6,7 @@ import capstone.ai_meal_assistant_backend.domain.menu.repository.AllergyReposito
 import capstone.ai_meal_assistant_backend.domain.menu.repository.UserAllergyRepository;
 import capstone.ai_meal_assistant_backend.domain.user.dto.UserProfileRequest;
 import capstone.ai_meal_assistant_backend.domain.user.dto.UserProfileResponse;
+import capstone.ai_meal_assistant_backend.domain.user.entity.FitnessGoal;
 import capstone.ai_meal_assistant_backend.domain.user.entity.User;
 import capstone.ai_meal_assistant_backend.domain.user.entity.UserHealthProfile;
 import capstone.ai_meal_assistant_backend.domain.user.entity.UserPreference;
@@ -85,6 +86,8 @@ public class UserProfileService {
                     .vegetarianType(request.getVegetarianType())
                     .spicyPreference(request.getSpicyPreference())
                     .proteinLevel(request.getProteinLevel())
+                    .fitnessGoal(request.getFitnessGoal() != null ? request.getFitnessGoal() : FitnessGoal.GENERAL)
+                    .foodPreferences(request.getFoodPreferences() != null ? request.getFoodPreferences() : new java.util.ArrayList<>())
                     .build();
             preferenceRepository.save(preference);
         } else {
@@ -93,7 +96,9 @@ public class UserProfileService {
                     request.getMealBudget(),
                     request.getVegetarianType(),
                     request.getSpicyPreference(),
-                    request.getProteinLevel()
+                    request.getProteinLevel(),
+                    request.getFitnessGoal(),
+                    request.getFoodPreferences()
             );
         }
 
@@ -146,7 +151,7 @@ public class UserProfileService {
                 .collect(Collectors.toList());
 
         return UserProfileResponse.builder()
-                .nickname(user.getNickname()) // 응답에는 유저의 기존 닉네임과 성별을 담아서 줌
+                .nickname(user.getNickname())
                 .gender(user.getGender())
                 .height(healthProfile != null ? healthProfile.getHeight() : null)
                 .weight(healthProfile != null ? healthProfile.getWeight() : null)
@@ -160,6 +165,8 @@ public class UserProfileService {
                 .vegetarianType(preference != null ? preference.getVegetarianType() : null)
                 .spicyPreference(preference != null ? preference.getSpicyPreference() : null)
                 .proteinLevel(preference != null ? preference.getProteinLevel() : null)
+                .fitnessGoal(preference != null ? preference.getFitnessGoal() : null)
+                .foodPreferences(preference != null ? preference.getFoodPreferences() : List.of())
                 .allergies(allergies)
                 .build();
     }
