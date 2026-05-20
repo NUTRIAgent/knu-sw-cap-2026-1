@@ -116,16 +116,17 @@ class ProcessDynamicInputs:
         }
         return self.chain.invoke(llm_input)
     
-    def process_dynamic_inputs(self, user_query: Dict) -> Dict[str, Any]:
-        candidate_ids = self.select_candidates.select_candidates(self.recipes, user_query)
+    def process_dynamic_inputs(self, user_query: Dict, recipes: List[Dict] = None) -> Dict[str, Any]:
+        active_recipes = recipes if recipes is not None else self.recipes
+        candidate_ids = self.select_candidates.select_candidates(active_recipes, user_query)
 
         if not candidate_ids:
             raise ValueError("적합한 레시피 후보가 없습니다.")
-        
+
         enriched, price_cache = self._enrich_candidates(candidate_ids, user_query.get("location"))
         final_id    = self._select_final_id(user_query, enriched, candidate_ids)
-        print(f"최종 선정된 레시피 ID: {final_id}")  # 최종 선정된 ID 확인용
-        final_recipe = self.recipes[final_id]
+        print(f"최종 선정된 레시피 ID: {final_id}")
+        final_recipe = active_recipes[final_id]
         
         static_data = self._build_static_data(final_recipe)
         llm_data    = self._build_llm_data(final_recipe, price_cache[final_id], user_query)

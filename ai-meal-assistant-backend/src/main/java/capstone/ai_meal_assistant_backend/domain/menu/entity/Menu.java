@@ -1,9 +1,13 @@
 package capstone.ai_meal_assistant_backend.domain.menu.entity;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "menus")
+@Getter
+@NoArgsConstructor
 public class Menu {
 
     @Id
