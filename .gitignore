@@ -19,3 +19,14 @@ build/
 # OS / temp
 *.tmp
 *.swp
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+*.egg-info/
+
+# Environment secrets
+.env
+!.env.example

@@ -8,6 +8,7 @@ class ApiConfig {
   // TODO: 실제 서버 주소로 변경
   static const String baseUrl = 'http://localhost:8080';
   static const String apiVersion = '/api/v1';
+  static const String aiBaseUrl = 'http://localhost:8000';
 }
 
 // 인증 관련 API 서비스

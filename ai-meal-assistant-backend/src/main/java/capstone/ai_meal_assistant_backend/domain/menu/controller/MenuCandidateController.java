@@ -44,17 +44,15 @@ public class MenuCandidateController {
      */
     @GetMapping("/candidates")
     public ResponseEntity<ApiResponse<List<MenuCandidateDto>>> getCandidates(
-            @RequestHeader("Authorization") String authHeader) {
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
 
-        String email = extractEmail(authHeader);
-        List<MenuCandidateDto> candidates = menuCandidateService.getCandidates(email);
-        return ResponseEntity.ok(ApiResponse.ok(candidates));
-    }
-
-    private String extractEmail(String authHeader) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new IllegalArgumentException("유효하지 않은 인증 헤더입니다.");
+        List<MenuCandidateDto> candidates;
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String email = jwtUtil.getEmailFromToken(authHeader.substring(7));
+            candidates = menuCandidateService.getCandidates(email);
+        } else {
+            candidates = menuCandidateService.getRandomCandidates();
         }
-        return jwtUtil.getEmailFromToken(authHeader.substring(7));
+        return ResponseEntity.ok(ApiResponse.ok(candidates));
     }
 }

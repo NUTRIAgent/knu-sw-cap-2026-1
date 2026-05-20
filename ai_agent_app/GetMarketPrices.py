@@ -1,5 +1,5 @@
 import re
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 from collections import defaultdict
 
 class GetMarketPrices:
@@ -42,7 +42,7 @@ class GetMarketPrices:
                 )
             return self._national_pool, self._national_index
         
-    def _match_item(self, word: str, pool: List[Dict], index: Dict[str, Dict]) -> Dict | None:
+    def _match_item(self, word: str, pool: List[Dict], index: Dict[str, Dict]) -> Optional[Dict]:
         """정확히 일치 → 부분 일치 순으로 탐색."""
         if exact := index.get(word):
             return exact

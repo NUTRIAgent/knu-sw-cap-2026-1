@@ -1,9 +1,90 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app/models/recommendation_models.dart';
+import 'package:flutter_app/models/user_profile_models.dart';
+import 'package:flutter_app/services/recommendation_service.dart';
+import 'package:flutter_app/services/token_storage.dart';
+import 'package:flutter_app/services/user_profile_service.dart';
 import 'recommendation_screen.dart';
 import 'package:flutter_app/theme.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  bool _isLoading = false;
+
+  static const Map<String, String> _fitnessGoalMap = {
+    'DIET': '다이어트',
+    'MUSCLE_GAIN': '근력운동',
+    'MAINTAIN': '체중유지',
+    'GENERAL': '일반식단',
+  };
+
+  Future<void> _requestRecommendation() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final profileResp = await UserProfileService.getProfile();
+      if (!profileResp.success || profileResp.data == null) {
+        _showError('프로필 정보를 불러오지 못했습니다.\n마이페이지에서 프로필을 먼저 입력해주세요.');
+        return;
+      }
+      final UserProfileData profile = profileResp.data!;
+      final jwt = await TokenStorage.getAccessToken();
+
+      final request = RecommendationRequest(
+        heightCm: profile.height ?? 170.0,
+        weightKg: profile.weight ?? 65.0,
+        location: '서울', // TODO: 사용자 위치 필드 추가 시 교체
+        budget: (profile.mealBudget ?? 8000).toDouble(),
+        fitnessGoal: _fitnessGoalMap[profile.fitnessGoal] ?? '일반식단',
+        healthConditions: const [], // TODO: health_conditions 필드 추가 시 연결
+        allergies: profile.allergies,
+        preferences: profile.foodPreferences,
+        jwtToken: jwt,
+      );
+
+      // 후보 목록 먼저 가져오고 (빠름), AI 추천은 화면에서 처리
+      final candidates = await RecommendationService.fetchCandidates(jwt);
+
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => RecommendationScreen(
+            candidates: candidates,
+            request: request,
+          ),
+        ),
+      );
+    } catch (e) {
+      _showError('추천 중 오류가 발생했습니다.\n$e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('오류', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('확인'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -13,23 +94,17 @@ class DashboardScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 상단: 앱 타이틀 (💡 ShaderMask를 이용해 텍스트에 그라데이션 적용)
             ShaderMask(
               blendMode: BlendMode.srcIn,
-              shaderCallback: (Rect bounds) {
-                return AppTheme.aiGradient.createShader(bounds);
-              },
+              shaderCallback: (Rect bounds) => AppTheme.aiGradient.createShader(bounds),
               child: const Text(
                 'NUTRI Agent',
-                style: TextStyle(
-                  fontSize: 28, // 로고 느낌을 주기 위해 폰트 사이즈 살짝 증가
-                  fontWeight: FontWeight.w900,
-                ),
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
               ),
             ),
             const SizedBox(height: 24),
 
-            // 상단: 날씨 및 브리핑 카드
+            // 날씨 및 브리핑 카드
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -72,19 +147,15 @@ class DashboardScreen extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     '상쾌한 날씨입니다. 매일 하시는 5km 러닝 후 근손실 방지를 위해 오늘은 단백질이 풍부하고 예산에 맞는 메뉴를 추천해 드릴 준비가 되었습니다.',
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: Colors.grey[700],
-                      height: 1.5,
-                    ),
+                    style: TextStyle(fontSize: 15, color: Colors.grey[700], height: 1.5),
                   ),
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 16),
 
-            // 중앙: 예산 카드
+            // 예산 카드
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -150,46 +221,70 @@ class DashboardScreen extends StatelessWidget {
 
             const Spacer(),
 
-            // 하단: 메뉴 추천 바로가기 버튼 (💡 Container를 이용해 그라데이션 적용)
+            // 메뉴 추천 버튼
             Container(
               width: double.infinity,
-              height: 56, // 통일된 캡슐 형태의 높이
+              height: 56,
               decoration: BoxDecoration(
-                gradient: AppTheme.aiGradient,
+                gradient: _isLoading ? null : AppTheme.aiGradient,
+                color: _isLoading ? Colors.grey[300] : null,
                 borderRadius: BorderRadius.circular(30),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.primaryColor.withOpacity(0.3),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+                boxShadow: _isLoading
+                    ? null
+                    : [
+                        BoxShadow(
+                          color: AppTheme.primaryColor.withOpacity(0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
               ),
               child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const RecommendationScreen()),
-                  );
-                  // TODO: 메뉴 추천 API 호출 및 로직 연결
-                },
+                onPressed: _isLoading ? null : _requestRecommendation,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent, // 배경 투명 처리 (그라데이션 노출)
-                  shadowColor: Colors.transparent,     // 기본 그림자 제거
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
                   shape: const StadiumBorder(),
-                  padding: EdgeInsets.zero,            // Container 제어 따름
+                  padding: EdgeInsets.zero,
                 ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.restaurant_menu, size: 24, color: Colors.white),
-                    SizedBox(width: 12),
-                    Text(
-                      '맞춤 메뉴 추천 받기',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                    ),
-                  ],
-                ),
+                child: _isLoading
+                    ? const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2.5,
+                            ),
+                          ),
+                          SizedBox(width: 12),
+                          Text(
+                            'AI가 메뉴를 분석 중...',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      )
+                    : const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.restaurant_menu, size: 24, color: Colors.white),
+                          SizedBox(width: 12),
+                          Text(
+                            '맞춤 메뉴 추천 받기',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
               ),
             ),
             const SizedBox(height: 20),
