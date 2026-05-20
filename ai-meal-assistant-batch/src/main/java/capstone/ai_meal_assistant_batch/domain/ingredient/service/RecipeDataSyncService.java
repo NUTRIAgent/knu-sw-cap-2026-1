@@ -46,6 +46,13 @@ public class RecipeDataSyncService {
             JsonNode rootNode = objectMapper.readTree(rawJson);
             JsonNode recipeArray = rootNode.isArray() ? rootNode : rootNode.path("COOKRCP01").path("row");
 
+            // 이전에 잘못 삽입된 '후식' 데이터 정리 (멱등 보장)
+            List<Menu> dessertMenus = menuRepository.findAllByCategory("후식");
+            if (!dessertMenus.isEmpty()) {
+                menuRepository.deleteAll(dessertMenus); // CascadeType.ALL → menu_ingredients 자동 삭제
+                log.info("기존 '후식' 메뉴 {}개 및 연관 재료 삭제", dessertMenus.size());
+            }
+
             // [캐시 준비] DB에 있는 데이터들을 메모리로 한 번에 다 가져옵니다. (SELECT 딱 2번 발생!)
             Map<String, Ingredient> ingredientCache = ingredientRepository.findAll().stream()
                     .collect(Collectors.toMap(Ingredient::getName, i -> i));
@@ -60,6 +67,8 @@ public class RecipeDataSyncService {
             List<Menu> newMenusToSave = new ArrayList<>();
 
             for (JsonNode recipeNode : recipeArray) {
+                if ("후식".equals(recipeNode.path("RCP_PAT2").asText())) continue;
+
                 String foodCode = recipeNode.path("RCP_SEQ").asText();  // 일련번호
 
                 // 캐시에 없는 새로운 레시피만 골라냅니다.
@@ -99,6 +108,8 @@ public class RecipeDataSyncService {
             List<MenuIngredient> menuIngredientsToSave = new ArrayList<>();
 
             for (JsonNode recipeNode : recipeArray) {
+                if ("후식".equals(recipeNode.path("RCP_PAT2").asText())) continue;
+
                 String foodCode = recipeNode.path("RCP_SEQ").asText();
                 String recipeName = recipeNode.path("RCP_NM").asText();
                 String partsDetails = recipeNode.path("RCP_PARTS_DTLS").asText();
