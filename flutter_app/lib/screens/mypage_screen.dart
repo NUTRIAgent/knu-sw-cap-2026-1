@@ -48,6 +48,8 @@ class _MyPageScreenState extends State<MyPageScreen> {
   );
   String _selectedVegType = 'NONE';
   double _spicyLevel = 3;
+  String _selectedFitnessGoal = 'GENERAL';
+  Set<String> _selectedFoodPreferences = {};
 
   // 4. 알레르기 정보
   Set<String> _selectedAllergies = {'우유', '밀가루'};
@@ -69,6 +71,16 @@ class _MyPageScreenState extends State<MyPageScreen> {
     'OVO': '오보 (계란 허용)',
     'PESCO': '페스코 (해산물 허용)',
   };
+  final Map<String, String> _fitnessGoalOptions = {
+    'GENERAL': '일반식단',
+    'DIET': '다이어트',
+    'MUSCLE_GAIN': '근력증가',
+    'MAINTAIN': '체중유지',
+  };
+  final List<String> _foodPreferenceOptions = [
+    '한식', '양식', '일식', '중식', '분식', '동남아식',
+    '매운맛', '담백한맛', '달콤한맛', '고단백', '저칼로리',
+  ];
 
   // 취소 버튼을 위한 데이터 백업 저장소
   late String _bkNickname;
@@ -82,6 +94,8 @@ class _MyPageScreenState extends State<MyPageScreen> {
       _bkBudget;
   late String _bkVegType;
   late double _bkSpicy;
+  late String _bkFitnessGoal;
+  late Set<String> _bkFoodPreferences;
   late Set<String> _bkAllergies;
 
   @override
@@ -172,6 +186,10 @@ class _MyPageScreenState extends State<MyPageScreen> {
     if (data.spicyPreference != null) {
       _spicyLevel = data.spicyPreference!.toDouble();
     }
+    if (data.fitnessGoal != null) {
+      _selectedFitnessGoal = data.fitnessGoal!;
+    }
+    _selectedFoodPreferences = data.foodPreferences.toSet();
     _selectedAllergies = data.allergies.toSet();
   }
 
@@ -201,6 +219,8 @@ class _MyPageScreenState extends State<MyPageScreen> {
     _bkBudget = _budgetController.text;
     _bkVegType = _selectedVegType;
     _bkSpicy = _spicyLevel;
+    _bkFitnessGoal = _selectedFitnessGoal;
+    _bkFoodPreferences = Set.from(_selectedFoodPreferences);
     _bkAllergies = Set.from(_selectedAllergies);
 
     setState(() {
@@ -221,6 +241,8 @@ class _MyPageScreenState extends State<MyPageScreen> {
     _budgetController.text = _bkBudget;
     _selectedVegType = _bkVegType;
     _spicyLevel = _bkSpicy;
+    _selectedFitnessGoal = _bkFitnessGoal;
+    _selectedFoodPreferences = Set.from(_bkFoodPreferences);
     _selectedAllergies = Set.from(_bkAllergies);
 
     setState(() {
@@ -253,6 +275,8 @@ class _MyPageScreenState extends State<MyPageScreen> {
         vegetarianType: _selectedVegType,
         spicyPreference: _spicyLevel.toInt(),
         proteinLevel: 'NORMAL',
+        fitnessGoal: _selectedFitnessGoal,
+        foodPreferences: _selectedFoodPreferences.toList(),
         allergies: _selectedAllergies.toList(),
       );
 
@@ -302,6 +326,9 @@ class _MyPageScreenState extends State<MyPageScreen> {
         _budgetController.text != _bkBudget ||
         _selectedVegType != _bkVegType ||
         _spicyLevel != _bkSpicy ||
+        _selectedFitnessGoal != _bkFitnessGoal ||
+        _selectedFoodPreferences.length != _bkFoodPreferences.length ||
+        !_selectedFoodPreferences.containsAll(_bkFoodPreferences) ||
         _selectedAllergies.length != _bkAllergies.length ||
         !_selectedAllergies.containsAll(_bkAllergies);
   }
@@ -490,12 +517,99 @@ class _MyPageScreenState extends State<MyPageScreen> {
                         min: 1,
                         max: 5,
                         divisions: 4,
-                        activeColor: AppTheme.primaryColor, // 💡 슬라이더 색상 변경
+                        activeColor: AppTheme.primaryColor,
                         onChanged: _isEditMode
                             ? (v) => setState(() => _spicyLevel = v)
                             : null,
                       ),
                     ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                const Text('식단 목표', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                IgnorePointer(
+                  ignoring: !_isEditMode,
+                  child: Opacity(
+                    opacity: _isEditMode ? 1.0 : 0.5,
+                    child: Wrap(
+                      spacing: 8.0,
+                      runSpacing: 8.0,
+                      children: _fitnessGoalOptions.entries.map((e) {
+                        final isSelected = _selectedFitnessGoal == e.key;
+                        return ChoiceChip(
+                          label: Text(
+                            e.value,
+                            style: TextStyle(
+                              color: _isEditMode ? Colors.black87 : Colors.grey.shade600,
+                            ),
+                          ),
+                          selected: isSelected,
+                          selectedColor: _isEditMode
+                              ? AppTheme.primaryColor.withOpacity(0.2)
+                              : Colors.grey.shade300,
+                          checkmarkColor: _isEditMode ? AppTheme.primaryColor : Colors.grey.shade600,
+                          shape: RoundedRectangleBorder(
+                            side: BorderSide(
+                              color: _isEditMode ? Colors.grey.shade300 : Colors.transparent,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          onSelected: (_) => setState(() => _selectedFitnessGoal = e.key),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                const Text('선호하는 음식 스타일 (복수 선택 가능)', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(_isEditMode ? 0 : 16.0),
+                  decoration: BoxDecoration(
+                    color: _isEditMode ? Colors.transparent : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(16),
+                    border: _isEditMode ? null : Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: IgnorePointer(
+                    ignoring: !_isEditMode,
+                    child: Wrap(
+                      spacing: 8.0,
+                      runSpacing: 8.0,
+                      children: _foodPreferenceOptions.map((pref) {
+                        final isSelected = _selectedFoodPreferences.contains(pref);
+                        return FilterChip(
+                          label: Text(
+                            pref,
+                            style: TextStyle(
+                              color: _isEditMode ? Colors.black87 : Colors.grey.shade600,
+                            ),
+                          ),
+                          selected: isSelected,
+                          backgroundColor: _isEditMode ? Colors.white : Colors.grey.shade200,
+                          selectedColor: _isEditMode
+                              ? AppTheme.primaryColor.withOpacity(0.2)
+                              : Colors.grey.shade300,
+                          checkmarkColor: _isEditMode ? AppTheme.primaryColor : Colors.grey.shade600,
+                          shape: RoundedRectangleBorder(
+                            side: BorderSide(
+                              color: _isEditMode ? Colors.grey.shade300 : Colors.transparent,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          onSelected: (bool selected) {
+                            setState(() {
+                              selected
+                                  ? _selectedFoodPreferences.add(pref)
+                                  : _selectedFoodPreferences.remove(pref);
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 32),
