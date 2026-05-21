@@ -36,15 +36,19 @@ public class MenuCandidateController {
     }
 
     /**
-     * AI 추천용 메뉴 후보 25개 반환
-     * - 알레르기 메뉴 제외
-     * - 예산 필터
-     * - 단백질 수준 필터
-     * - 이후 fitnessGoal / foodPreferences 필드 병합 시 확장 예정
+     * AI 추천용 메뉴 후보 반환
+     * - ids 파라미터 제공 시: 해당 ID 목록의 메뉴만 반환 (AI agent 전용)
+     * - ids 없고 JWT 있을 시: 사용자 조건 필터링 후 랜덤 25개
+     * - ids 없고 JWT 없을 시: 랜덤 25개
      */
     @GetMapping("/candidates")
     public ResponseEntity<ApiResponse<List<MenuCandidateDto>>> getCandidates(
-            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestParam(value = "ids", required = false) List<Long> ids) {
+
+        if (ids != null && !ids.isEmpty()) {
+            return ResponseEntity.ok(ApiResponse.ok(menuCandidateService.getCandidatesByIds(ids)));
+        }
 
         List<MenuCandidateDto> candidates;
         if (authHeader != null && authHeader.startsWith("Bearer ")) {

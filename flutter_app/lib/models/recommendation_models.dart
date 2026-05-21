@@ -8,6 +8,7 @@ class RecommendationRequest {
   final List<String> allergies;
   final List<String> preferences;
   final String? jwtToken;
+  final List<int> candidateMenuIds;
 
   const RecommendationRequest({
     required this.heightCm,
@@ -19,7 +20,23 @@ class RecommendationRequest {
     this.allergies = const [],
     this.preferences = const [],
     this.jwtToken,
+    this.candidateMenuIds = const [],
   });
+
+  RecommendationRequest copyWith({List<int>? candidateMenuIds}) {
+    return RecommendationRequest(
+      heightCm: heightCm,
+      weightKg: weightKg,
+      location: location,
+      budget: budget,
+      fitnessGoal: fitnessGoal,
+      healthConditions: healthConditions,
+      allergies: allergies,
+      preferences: preferences,
+      jwtToken: jwtToken,
+      candidateMenuIds: candidateMenuIds ?? this.candidateMenuIds,
+    );
+  }
 
   Map<String, dynamic> toJson() => {
         'height_cm': heightCm,
@@ -31,6 +48,7 @@ class RecommendationRequest {
         'allergies': allergies,
         'preferences': preferences,
         if (jwtToken != null) 'jwt_token': jwtToken,
+        if (candidateMenuIds.isNotEmpty) 'candidate_menu_ids': candidateMenuIds,
       };
 }
 
@@ -137,6 +155,7 @@ class MarketPriceItem {
 }
 
 class RecommendationResult {
+  final int menuId;
   final String menuName;
   final String mainImg;
   final NutritionInfo nutritionInfo;
@@ -147,6 +166,7 @@ class RecommendationResult {
   final List<MarketPriceItem> marketPrices;
 
   const RecommendationResult({
+    required this.menuId,
     required this.menuName,
     required this.mainImg,
     required this.nutritionInfo,
@@ -158,6 +178,7 @@ class RecommendationResult {
   });
 
   factory RecommendationResult.fromJson(Map<String, dynamic> json) => RecommendationResult(
+        menuId: json['menu_id'] ?? 0,
         menuName: json['menu_name'] ?? '',
         mainImg: json['main_img'] ?? '',
         nutritionInfo: NutritionInfo.fromJson(json['nutrition_info'] ?? {}),

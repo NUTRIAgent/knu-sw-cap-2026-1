@@ -46,4 +46,21 @@ class RecommendationService {
     final json = jsonDecode(utf8.decode(response.bodyBytes));
     return RecommendationResult.fromJson(json);
   }
+
+  static Future<void> saveFeedback(int menuId, int feedbackScore, String? jwt) async {
+    if (jwt == null || jwt.isEmpty) return;
+    final uri = Uri.parse('${ApiConfig.baseUrl}/api/recommendation-logs');
+    try {
+      await http
+          .post(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $jwt',
+            },
+            body: jsonEncode({'menuId': menuId, 'feedbackScore': feedbackScore}),
+          )
+          .timeout(const Duration(seconds: 5));
+    } catch (_) {}
+  }
 }

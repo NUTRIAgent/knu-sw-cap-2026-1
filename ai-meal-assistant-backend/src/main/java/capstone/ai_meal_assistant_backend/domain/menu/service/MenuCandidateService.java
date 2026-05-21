@@ -1,5 +1,6 @@
 package capstone.ai_meal_assistant_backend.domain.menu.service;
 
+import capstone.ai_meal_assistant_backend.domain.history.repository.RecommendationLogRepository;
 import capstone.ai_meal_assistant_backend.domain.menu.dto.MenuCandidateDto;
 import capstone.ai_meal_assistant_backend.domain.menu.entity.Allergy;
 import capstone.ai_meal_assistant_backend.domain.menu.entity.Menu;
@@ -31,6 +32,7 @@ public class MenuCandidateService {
     private final UserAllergyRepository userAllergyRepository;
     private final MenuAllergyRepository menuAllergyRepository;
     private final MenuRepository menuRepository;
+    private final RecommendationLogRepository recommendationLogRepository;
 
     public List<MenuCandidateDto> getCandidates(String email) {
         User user = userRepository.findByEmail(email)
@@ -38,7 +40,9 @@ public class MenuCandidateService {
 
         UserPreference pref = preferenceRepository.findByUser(user).orElse(null);
 
-        Set<Long> excludeMenuIds = getExcludeMenuIds(user);
+        Set<Long> excludeMenuIds = new HashSet<>(getExcludeMenuIds(user));
+        excludeMenuIds.addAll(recommendationLogRepository.findNegativeMenuIdsByUser(user));
+
         Integer budget     = pref != null ? pref.getMealBudget() : null;
         Double  minProtein = resolveMinProtein(pref);
 
@@ -52,12 +56,16 @@ public class MenuCandidateService {
         return buildDtos(menus);
     }
 
+    public List<MenuCandidateDto> getCandidatesByIds(List<Long> ids) {
+        List<Menu> menus = menuRepository.findAllById(ids);
+        return buildDtos(menus);
+    }
+
     private List<MenuCandidateDto> buildDtos(List<Menu> menus) {
         if (menus.isEmpty()) return Collections.emptyList();
 
         List<Long> menuIds = menus.stream().map(Menu::getId).collect(Collectors.toList());
 
-        // 재료 텍스트 일괄 조회 (쿼리 1번)
         Map<Long, String> ingredientsMap = new HashMap<>();
         for (Object[] row : menuRepository.findIngredientsTextByMenuIds(menuIds)) {
             Long menuId = ((Number) row[0]).longValue();
@@ -68,7 +76,7 @@ public class MenuCandidateService {
                 .map(m -> MenuCandidateDto.from(
                         m,
                         ingredientsMap.getOrDefault(m.getId(), ""),
-                        Collections.emptyList() // TODO: menu_steps 테이블 추가 후 연결
+                        Collections.emptyList()
                 ))
                 .collect(Collectors.toList());
     }

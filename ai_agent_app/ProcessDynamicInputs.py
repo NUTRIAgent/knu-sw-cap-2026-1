@@ -85,6 +85,7 @@ class ProcessDynamicInputs:
     def _build_static_data(self, final_recipe) -> dict:
         """정적 레시피 데이터 조립"""
         return {
+            "menu_id": final_recipe.get("MENU_ID"),
             "menu_name": final_recipe["RCP_NM"],
             "main_img": final_recipe["ATT_FILE_NO_MAIN"],
             "nutrition_info": {
