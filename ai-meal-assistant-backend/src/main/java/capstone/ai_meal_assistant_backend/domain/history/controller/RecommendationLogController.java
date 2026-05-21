@@ -29,7 +29,8 @@ public class RecommendationLogController {
         }
 
         String email = jwtUtil.getEmailFromToken(authHeader.substring(7));
-        recommendationLogService.saveFeedback(email, request.getMenuId(), request.getFeedbackScore());
+        recommendationLogService.saveFeedback(email, request.getMenuId(),
+                request.getFeedbackScore(), request.getStarRating(), request.getFeedbackReason());
         return ResponseEntity.ok(Map.of("success", true));
     }
 
@@ -38,6 +39,8 @@ public class RecommendationLogController {
     @NoArgsConstructor
     static class FeedbackRequest {
         private Long menuId;
-        private int feedbackScore;
+        private Integer feedbackScore;  // 후보 좋아요/싫어요: 1 or -1
+        private Integer starRating;     // AI 픽 별점: 1~5
+        private String feedbackReason;
     }
 }

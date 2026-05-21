@@ -63,4 +63,24 @@ class RecommendationService {
           .timeout(const Duration(seconds: 5));
     } catch (_) {}
   }
+
+  static Future<void> saveDetailedFeedback(
+      int menuId, int starRating, String feedbackReason, String? jwt) async {
+    if (jwt == null || jwt.isEmpty) return;
+    final uri = Uri.parse('${ApiConfig.baseUrl}/api/recommendation-logs');
+    try {
+      final body = <String, dynamic>{'menuId': menuId, 'starRating': starRating};
+      if (feedbackReason.isNotEmpty) body['feedbackReason'] = feedbackReason;
+      await http
+          .post(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $jwt',
+            },
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 5));
+    } catch (_) {}
+  }
 }

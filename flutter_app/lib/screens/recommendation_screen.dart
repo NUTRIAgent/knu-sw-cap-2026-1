@@ -113,6 +113,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
   void _showFeedbackBottomSheet() {
     _rating = 0;
     _feedbackController.clear();
+    final messenger = ScaffoldMessenger.of(context);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -168,9 +169,16 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                   borderRadius: BorderRadius.circular(30),
                 ),
                 child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
+                    final menuId = _aiResult?.menuId;
+                    final rating = _rating;
+                    final reason = _feedbackController.text;
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    if (menuId != null && menuId > 0 && rating > 0) {
+                      await RecommendationService.saveDetailedFeedback(
+                          menuId, rating, reason, widget.request.jwtToken);
+                    }
+                    messenger.showSnackBar(
                       const SnackBar(content: Text('소중한 피드백 감사합니다!')),
                     );
                   },

@@ -21,7 +21,7 @@ public class RecommendationLogService {
     private final MenuRepository menuRepository;
 
     @Transactional
-    public void saveFeedback(String email, Long menuId, int feedbackScore) {
+    public void saveFeedback(String email, Long menuId, Integer feedbackScore, Integer starRating, String feedbackReason) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
         Menu menu = menuRepository.findById(menuId)
@@ -31,6 +31,8 @@ public class RecommendationLogService {
         log.setUser(user);
         log.setSelectedMenu(menu);
         log.setFeedbackScore(feedbackScore);
+        log.setStarRating(starRating);
+        log.setFeedbackReason(feedbackReason);
         recommendationLogRepository.save(log);
     }
 

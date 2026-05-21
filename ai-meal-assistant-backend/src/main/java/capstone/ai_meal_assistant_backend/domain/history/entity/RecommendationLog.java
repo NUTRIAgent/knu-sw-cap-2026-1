@@ -38,9 +38,11 @@ public class RecommendationLog extends BaseEntity {
     @JoinColumn(name = "selected_menu_id", nullable = false)
     private Menu selectedMenu;
 
-    // 1 = 긍정, -1 = 부정
-    @Column(nullable = false)
+    // 1 = 긍정, -1 = 부정 (후보 메뉴 좋아요/싫어요 — 다음 추천 필터링에 사용)
     private Integer feedbackScore;
+
+    // 1~5 별점 (AI 픽 만족도 — 추후 RAG/분석용)
+    private Integer starRating;
 
     @Column(columnDefinition = "TEXT")
     private String feedbackReason;
