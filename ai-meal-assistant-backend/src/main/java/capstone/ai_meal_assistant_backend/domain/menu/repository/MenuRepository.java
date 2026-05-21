@@ -15,10 +15,10 @@ public interface MenuRepository extends JpaRepository<Menu, Long> {
 
     @Query(value = """
             SELECT * FROM menus m
-            WHERE (:excludeIds IS NULL OR m.id NOT IN (:excludeIds))
-              AND (:budget   IS NULL OR m.base_price IS NULL OR m.base_price <= :budget)
-              AND (:minPro   IS NULL OR m.protein >= :minPro)
-              AND (:maxCal   IS NULL OR m.calories <= :maxCal)
+            WHERE m.id NOT IN (:excludeIds)
+              AND (:budget IS NULL OR m.base_price IS NULL OR m.base_price <= :budget)
+              AND (:minPro IS NULL OR m.protein >= :minPro)
+              AND (:maxCal IS NULL OR m.calories <= :maxCal)
             ORDER BY RAND()
             LIMIT :limit
             """, nativeQuery = true)
