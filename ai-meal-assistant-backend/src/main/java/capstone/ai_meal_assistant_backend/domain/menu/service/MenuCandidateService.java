@@ -14,12 +14,14 @@ import capstone.ai_meal_assistant_backend.domain.user.entity.UserPreference;
 import capstone.ai_meal_assistant_backend.domain.user.repository.UserPreferenceRepository;
 import capstone.ai_meal_assistant_backend.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -41,7 +43,13 @@ public class MenuCandidateService {
         UserPreference pref = preferenceRepository.findByUser(user).orElse(null);
 
         Set<Long> excludeMenuIds = new HashSet<>(getExcludeMenuIds(user));
-        excludeMenuIds.addAll(recommendationLogRepository.findNegativeMenuIdsByUser(user));
+        try {
+            Set<Long> negativeIds = recommendationLogRepository.findNegativeMenuIdsByUser(user);
+            log.debug("[MenuCandidateService] 부정 피드백 제외 메뉴 {}개", negativeIds.size());
+            excludeMenuIds.addAll(negativeIds);
+        } catch (Exception e) {
+            log.error("[MenuCandidateService] 부정 피드백 조회 실패 (필터링 없이 진행): {}", e.getMessage(), e);
+        }
 
         Integer budget     = pref != null ? pref.getMealBudget() : null;
         Double  minProtein = resolveMinProtein(pref);
