@@ -151,6 +151,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
               TextField(
                 controller: _feedbackController,
                 maxLines: 3,
+                onChanged: (_) => setModal(() {}),
                 decoration: InputDecoration(
                   hintText: '아쉬운 점이 있다면 알려주세요...',
                   filled: true,
@@ -162,34 +163,46 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              Container(
-                height: 56,
-                decoration: BoxDecoration(
-                  gradient: AppTheme.aiGradient,
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: ElevatedButton(
-                  onPressed: () async {
-                    final menuId = _aiResult?.menuId;
-                    final rating = _rating;
-                    final reason = _feedbackController.text;
-                    Navigator.pop(context);
-                    if (menuId != null && menuId > 0 && rating > 0) {
-                      await RecommendationService.saveDetailedFeedback(
-                          menuId, rating, reason, widget.request.jwtToken);
-                    }
-                    messenger.showSnackBar(
-                      const SnackBar(content: Text('소중한 피드백 감사합니다!')),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    shape: const StadiumBorder(),
-                  ),
-                  child: const Text('피드백 제출하기',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-                ),
+              Builder(
+                builder: (_) {
+                  final canSubmit =
+                      _rating > 0 && _feedbackController.text.trim().isNotEmpty;
+                  return Container(
+                    height: 56,
+                    decoration: BoxDecoration(
+                      gradient: canSubmit ? AppTheme.aiGradient : null,
+                      color: canSubmit ? null : Colors.grey[300],
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    child: ElevatedButton(
+                      onPressed: canSubmit
+                          ? () async {
+                              final menuId = _aiResult?.menuId;
+                              final rating = _rating;
+                              final reason = _feedbackController.text;
+                              Navigator.pop(context);
+                              if (menuId != null && menuId > 0) {
+                                await RecommendationService.saveDetailedFeedback(
+                                    menuId, rating, reason, widget.request.jwtToken);
+                              }
+                              messenger.showSnackBar(
+                                const SnackBar(content: Text('소중한 피드백 감사합니다!')),
+                              );
+                            }
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        shape: const StadiumBorder(),
+                      ),
+                      child: Text('피드백 제출하기',
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: canSubmit ? Colors.white : Colors.grey[600])),
+                    ),
+                  );
+                },
               ),
             ],
           ),
