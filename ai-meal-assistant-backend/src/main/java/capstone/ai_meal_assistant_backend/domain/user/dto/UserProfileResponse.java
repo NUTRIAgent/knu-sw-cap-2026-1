@@ -42,4 +42,7 @@ public class UserProfileResponse {
 
     // 알러지 정보 (이름 리스트)
     private List<String> allergies;
+
+    // 건강 상태 (예: 고혈압, 당뇨 등)
+    private List<String> healthConditions;
 }

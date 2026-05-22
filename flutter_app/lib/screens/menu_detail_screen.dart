@@ -1,0 +1,736 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_app/models/recommendation_models.dart';
+import 'package:flutter_app/services/recommendation_service.dart';
+import 'package:flutter_app/theme.dart';
+
+class MenuDetailScreen extends StatefulWidget {
+  final MenuCandidate? candidate;
+  final RecommendationResult? aiResult;
+  final String? jwt;
+
+  const MenuDetailScreen({
+    super.key,
+    this.candidate,
+    this.aiResult,
+    this.jwt,
+  });
+
+  @override
+  State<MenuDetailScreen> createState() => _MenuDetailScreenState();
+}
+
+class _MenuDetailScreenState extends State<MenuDetailScreen> {
+  MenuDetail? _detail;
+  bool _loading = false;
+  String? _error;
+
+  bool get _isAiPick => widget.aiResult != null;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!_isAiPick) _fetchDetail();
+  }
+
+  Future<void> _fetchDetail() async {
+    if (widget.candidate == null) return;
+    setState(() { _loading = true; _error = null; });
+    final detail = await RecommendationService.fetchMenuDetail(
+        widget.candidate!.id, widget.jwt);
+    if (!mounted) return;
+    if (detail != null) {
+      setState(() { _detail = detail; _loading = false; });
+    } else {
+      setState(() { _loading = false; _error = '상세 정보를 불러오지 못했습니다.'; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final title = _isAiPick
+        ? widget.aiResult!.menuName
+        : (widget.candidate?.name ?? '메뉴 상세');
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(title,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+            overflow: TextOverflow.ellipsis),
+        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        actions: _isAiPick
+            ? [
+                Container(
+                  margin: const EdgeInsets.only(right: 16),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    gradient: AppTheme.aiGradient,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.auto_awesome, color: Colors.white, size: 12),
+                      SizedBox(width: 4),
+                      Text('AI 픽',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+              ]
+            : null,
+      ),
+      body: _isAiPick
+          ? _AiPickBody(result: widget.aiResult!)
+          : _CandidateBody(
+              candidate: widget.candidate!,
+              detail: _detail,
+              loading: _loading,
+              error: _error,
+              onRetry: _fetchDetail,
+            ),
+    );
+  }
+}
+
+// ── AI 픽 상세 본문 ──────────────────────────────────────────
+class _AiPickBody extends StatelessWidget {
+  final RecommendationResult result;
+  const _AiPickBody({required this.result});
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _HeroImage(url: result.mainImg),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _SectionCard(
+                  icon: Icons.format_quote_rounded,
+                  title: 'AI 선택 이유',
+                  content: result.selectionReason,
+                ),
+                const SizedBox(height: 16),
+                _NutritionSection(info: result.nutritionInfo),
+                if (result.personalizedRecipeTip.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  _PersonalizedTip(tip: result.personalizedRecipeTip),
+                ],
+                if (result.recipeSteps.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  _RecipeSteps(steps: result.recipeSteps),
+                ],
+                if (result.naTip.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  _SectionCard(
+                    icon: Icons.water_drop_outlined,
+                    title: '나트륨 관리 팁',
+                    content: result.naTip,
+                    iconColor: Colors.blue,
+                  ),
+                ],
+                if (result.marketPrices.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  _MarketPricesTable(
+                    prices: result.marketPrices,
+                    total: result.totalEstimatedCost,
+                  ),
+                ],
+                const SizedBox(height: 32),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── 후보 메뉴 상세 본문 ──────────────────────────────────────
+class _CandidateBody extends StatelessWidget {
+  final MenuCandidate candidate;
+  final MenuDetail? detail;
+  final bool loading;
+  final String? error;
+  final VoidCallback onRetry;
+
+  const _CandidateBody({
+    required this.candidate,
+    required this.detail,
+    required this.loading,
+    required this.error,
+    required this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _HeroImage(url: detail?.mainImageUrl ?? candidate.mainImageUrl ?? ''),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (detail != null) ...[
+                  if ((detail!.category ?? '').isNotEmpty ||
+                      (detail!.cookingMethod ?? '').isNotEmpty)
+                    _Chips(labels: [
+                      if ((detail!.category ?? '').isNotEmpty) detail!.category!,
+                      if ((detail!.cookingMethod ?? '').isNotEmpty)
+                        detail!.cookingMethod!,
+                    ]),
+                  const SizedBox(height: 16),
+                ],
+                if (loading)
+                  const _LoadingSection()
+                else if (error != null)
+                  _ErrorSection(error: error!, onRetry: onRetry)
+                else if (detail != null) ...[
+                  _DetailNutrition(detail: detail!),
+                  if ((detail!.ingredientsText ?? '').isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    _Ingredients(text: detail!.ingredientsText!),
+                  ],
+                  if ((detail!.healthTip ?? '').isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    _SectionCard(
+                      icon: Icons.health_and_safety_outlined,
+                      title: '건강 팁',
+                      content: detail!.healthTip!,
+                      iconColor: Colors.green,
+                    ),
+                  ],
+                  if (detail!.basePrice != null && detail!.basePrice! > 0) ...[
+                    const SizedBox(height: 12),
+                    _PriceRow(price: detail!.basePrice!),
+                  ],
+                ] else
+                  _BasicNutrition(candidate: candidate),
+                const SizedBox(height: 32),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── 공통 위젯들 ──────────────────────────────────────────────
+
+class _HeroImage extends StatelessWidget {
+  final String url;
+  const _HeroImage({required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    if (url.isEmpty) return _placeholder();
+    return Image.network(
+      url,
+      height: 220,
+      width: double.infinity,
+      fit: BoxFit.cover,
+      errorBuilder: (_, _, _) => _placeholder(),
+    );
+  }
+
+  Widget _placeholder() => Container(
+        height: 220,
+        color: AppTheme.primaryColor.withValues(alpha: 0.08),
+        child: const Center(
+          child: Icon(Icons.restaurant, size: 64, color: AppTheme.primaryColor),
+        ),
+      );
+}
+
+class _SectionCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String content;
+  final Color? iconColor;
+
+  const _SectionCard({
+    required this.icon,
+    required this.title,
+    required this.content,
+    this.iconColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Icon(icon,
+                size: 16, color: iconColor ?? AppTheme.primaryColor),
+            const SizedBox(width: 6),
+            Text(title,
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold, fontSize: 14)),
+          ]),
+          const SizedBox(height: 8),
+          Text(content,
+              style: TextStyle(
+                  fontSize: 13, color: Colors.grey[700], height: 1.5)),
+        ],
+      ),
+    );
+  }
+}
+
+class _NutritionSection extends StatelessWidget {
+  final NutritionInfo info;
+  const _NutritionSection({required this.info});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = [
+      ('열량', info.energy),
+      ('단백질', info.protein),
+      ('지방', info.fat),
+      ('탄수화물', info.carbs),
+      ('나트륨', info.sodium),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('영양 정보',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          children: items
+              .map((e) => _NutritionChip(label: e.$1, value: e.$2))
+              .toList(),
+        ),
+      ],
+    );
+  }
+}
+
+class _DetailNutrition extends StatelessWidget {
+  final MenuDetail detail;
+  const _DetailNutrition({required this.detail});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = <(String, String)>[
+      if (detail.calories != null)
+        ('열량', '${detail.calories!.toInt()} kcal'),
+      if (detail.protein != null)
+        ('단백질', '${detail.protein!.toStringAsFixed(1)}g'),
+      if (detail.fat != null)
+        ('지방', '${detail.fat!.toStringAsFixed(1)}g'),
+      if (detail.carbs != null)
+        ('탄수화물', '${detail.carbs!.toStringAsFixed(1)}g'),
+      if (detail.sodium != null)
+        ('나트륨', '${detail.sodium!.toStringAsFixed(0)}mg'),
+    ];
+    if (items.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('영양 정보',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          children:
+              items.map((e) => _NutritionChip(label: e.$1, value: e.$2)).toList(),
+        ),
+      ],
+    );
+  }
+}
+
+class _BasicNutrition extends StatelessWidget {
+  final MenuCandidate candidate;
+  const _BasicNutrition({required this.candidate});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = <(String, String)>[
+      if (candidate.calories != null)
+        ('열량', '${candidate.calories!.toInt()} kcal'),
+      if (candidate.protein != null)
+        ('단백질', '${candidate.protein!.toStringAsFixed(1)}g'),
+      if (candidate.sodium != null)
+        ('나트륨', '${candidate.sodium!.toStringAsFixed(0)}mg'),
+    ];
+    if (items.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('영양 정보',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          children:
+              items.map((e) => _NutritionChip(label: e.$1, value: e.$2)).toList(),
+        ),
+      ],
+    );
+  }
+}
+
+class _NutritionChip extends StatelessWidget {
+  final String label;
+  final String value;
+  const _NutritionChip({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryColor.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: RichText(
+        text: TextSpan(
+          children: [
+            TextSpan(
+                text: '$label ',
+                style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+            TextSpan(
+                text: value,
+                style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PersonalizedTip extends StatelessWidget {
+  final String tip;
+  const _PersonalizedTip({required this.tip});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.gradientStart.withValues(alpha: 0.15),
+            AppTheme.gradientEnd.withValues(alpha: 0.12),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(
+          color: AppTheme.primaryColor.withValues(alpha: 0.35),
+          width: 1.5,
+        ),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            ShaderMask(
+              blendMode: BlendMode.srcIn,
+              shaderCallback: (b) => AppTheme.aiGradient.createShader(b),
+              child: const Icon(Icons.tips_and_updates_rounded, size: 18),
+            ),
+            const SizedBox(width: 6),
+            ShaderMask(
+              blendMode: BlendMode.srcIn,
+              shaderCallback: (b) => AppTheme.aiGradient.createShader(b),
+              child: const Text('나의 맞춤 레시피 변주',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 14)),
+            ),
+          ]),
+          const SizedBox(height: 10),
+          Text(tip,
+              style: TextStyle(
+                  fontSize: 13, color: Colors.grey[800], height: 1.6)),
+        ],
+      ),
+    );
+  }
+}
+
+class _RecipeSteps extends StatelessWidget {
+  final List<RecipeStep> steps;
+  const _RecipeSteps({required this.steps});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('조리 방법',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+        const SizedBox(height: 10),
+        ...steps.map((s) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: const BoxDecoration(
+                        color: AppTheme.primaryColor, shape: BoxShape.circle),
+                    child: Center(
+                      child: Text('${s.stepNo}',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(s.content,
+                        style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[800],
+                            height: 1.5)),
+                  ),
+                ],
+              ),
+            )),
+      ],
+    );
+  }
+}
+
+class _MarketPricesTable extends StatelessWidget {
+  final List<MarketPriceItem> prices;
+  final num total;
+  const _MarketPricesTable({required this.prices, required this.total});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('재료별 가격',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+        const SizedBox(height: 10),
+        Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade200),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    topRight: Radius.circular(12),
+                  ),
+                ),
+                child: Row(children: [
+                  Expanded(
+                      flex: 3,
+                      child: Text('재료',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w600))),
+                  Expanded(
+                      flex: 2,
+                      child: Text('사용량',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w600))),
+                  Expanded(
+                      flex: 2,
+                      child: Text('비용',
+                          textAlign: TextAlign.end,
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.w600))),
+                ]),
+              ),
+              const Divider(height: 1),
+              ...prices.asMap().entries.map((entry) {
+                final i = entry.key;
+                final p = entry.value;
+                return Column(children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 10),
+                    child: Row(children: [
+                      Expanded(
+                          flex: 3,
+                          child: Text(p.name,
+                              style: const TextStyle(fontSize: 13))),
+                      Expanded(
+                          flex: 2,
+                          child: Text(p.recipeAmount,
+                              style: TextStyle(
+                                  fontSize: 12, color: Colors.grey[600]))),
+                      Expanded(
+                          flex: 2,
+                          child: Text('${p.calculatedCost.toInt()}원',
+                              textAlign: TextAlign.end,
+                              style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500))),
+                    ]),
+                  ),
+                  if (i < prices.length - 1)
+                    const Divider(height: 1, indent: 12, endIndent: 12),
+                ]);
+              }),
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('예상 총 재료비',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 14)),
+                    Text('약 ${total.toInt()}원',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: AppTheme.primaryColor)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Ingredients extends StatelessWidget {
+  final String text;
+  const _Ingredients({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('재료',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+        const SizedBox(height: 8),
+        Text(text,
+            style:
+                TextStyle(fontSize: 13, color: Colors.grey[700], height: 1.5)),
+      ],
+    );
+  }
+}
+
+class _PriceRow extends StatelessWidget {
+  final int price;
+  const _PriceRow({required this.price});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(children: [
+      const Icon(Icons.attach_money, size: 16, color: AppTheme.primaryColor),
+      const SizedBox(width: 4),
+      Text('기본 가격 약 $price원',
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+    ]);
+  }
+}
+
+class _Chips extends StatelessWidget {
+  final List<String> labels;
+  const _Chips({required this.labels});
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 4,
+      children: labels
+          .map((l) => Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(l,
+                    style: const TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.w500)),
+              ))
+          .toList(),
+    );
+  }
+}
+
+class _LoadingSection extends StatelessWidget {
+  const _LoadingSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 40),
+      child: Center(
+        child: CircularProgressIndicator(
+            color: AppTheme.primaryColor, strokeWidth: 2.5),
+      ),
+    );
+  }
+}
+
+class _ErrorSection extends StatelessWidget {
+  final String error;
+  final VoidCallback onRetry;
+  const _ErrorSection({required this.error, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(error,
+            style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+        const SizedBox(height: 8),
+        TextButton(
+          onPressed: onRetry,
+          child: const Text('다시 시도'),
+        ),
+      ],
+    );
+  }
+}

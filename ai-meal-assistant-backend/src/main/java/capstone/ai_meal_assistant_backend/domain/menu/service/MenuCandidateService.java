@@ -1,5 +1,6 @@
 package capstone.ai_meal_assistant_backend.domain.menu.service;
 
+import capstone.ai_meal_assistant_backend.domain.history.repository.RecommendationLogRepository;
 import capstone.ai_meal_assistant_backend.domain.menu.dto.MenuCandidateDto;
 import capstone.ai_meal_assistant_backend.domain.menu.entity.Allergy;
 import capstone.ai_meal_assistant_backend.domain.menu.entity.Menu;
@@ -13,12 +14,14 @@ import capstone.ai_meal_assistant_backend.domain.user.entity.UserPreference;
 import capstone.ai_meal_assistant_backend.domain.user.repository.UserPreferenceRepository;
 import capstone.ai_meal_assistant_backend.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -31,6 +34,7 @@ public class MenuCandidateService {
     private final UserAllergyRepository userAllergyRepository;
     private final MenuAllergyRepository menuAllergyRepository;
     private final MenuRepository menuRepository;
+    private final RecommendationLogRepository recommendationLogRepository;
 
     public List<MenuCandidateDto> getCandidates(String email) {
         User user = userRepository.findByEmail(email)
@@ -38,7 +42,15 @@ public class MenuCandidateService {
 
         UserPreference pref = preferenceRepository.findByUser(user).orElse(null);
 
-        Set<Long> excludeMenuIds = getExcludeMenuIds(user);
+        Set<Long> excludeMenuIds = new HashSet<>(getExcludeMenuIds(user));
+        try {
+            Set<Long> negativeIds = recommendationLogRepository.findNegativeMenuIdsByUser(user);
+            log.debug("[MenuCandidateService] 부정 피드백 제외 메뉴 {}개", negativeIds.size());
+            excludeMenuIds.addAll(negativeIds);
+        } catch (Exception e) {
+            log.error("[MenuCandidateService] 부정 피드백 조회 실패 (필터링 없이 진행): {}", e.getMessage(), e);
+        }
+
         Integer budget     = pref != null ? pref.getMealBudget() : null;
         Double  minProtein = resolveMinProtein(pref);
 
@@ -52,12 +64,24 @@ public class MenuCandidateService {
         return buildDtos(menus);
     }
 
+    public List<MenuCandidateDto> getCandidatesByIds(List<Long> ids) {
+        List<Menu> menus = menuRepository.findAllById(ids);
+        return buildDtos(menus);
+    }
+
+    public MenuCandidateDto getMenuById(Long id) {
+        Menu menu = menuRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("메뉴를 찾을 수 없습니다. id=" + id));
+        List<Object[]> rows = menuRepository.findIngredientsTextByMenuIds(List.of(id));
+        String ingredientsText = rows.isEmpty() ? "" : (String) rows.get(0)[1];
+        return MenuCandidateDto.from(menu, ingredientsText, Collections.emptyList());
+    }
+
     private List<MenuCandidateDto> buildDtos(List<Menu> menus) {
         if (menus.isEmpty()) return Collections.emptyList();
 
         List<Long> menuIds = menus.stream().map(Menu::getId).collect(Collectors.toList());
 
-        // 재료 텍스트 일괄 조회 (쿼리 1번)
         Map<Long, String> ingredientsMap = new HashMap<>();
         for (Object[] row : menuRepository.findIngredientsTextByMenuIds(menuIds)) {
             Long menuId = ((Number) row[0]).longValue();
@@ -68,7 +92,7 @@ public class MenuCandidateService {
                 .map(m -> MenuCandidateDto.from(
                         m,
                         ingredientsMap.getOrDefault(m.getId(), ""),
-                        Collections.emptyList() // TODO: menu_steps 테이블 추가 후 연결
+                        Collections.emptyList()
                 ))
                 .collect(Collectors.toList());
     }

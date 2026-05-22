@@ -134,20 +134,21 @@ class _DashboardScreenState extends State<DashboardScreen>
       final UserProfileData profile = profileResp.data!;
       final jwt = await TokenStorage.getAccessToken();
 
+      // 후보 목록 먼저 가져와서 화면에 즉시 표시하고, 동일한 ID를 AI agent에 전달
+      final candidates = await RecommendationService.fetchCandidates(jwt);
+
       final request = RecommendationRequest(
         heightCm: profile.height ?? 170.0,
         weightKg: profile.weight ?? 65.0,
         location: '현재위치',
         budget: (profile.mealBudget ?? 8000).toDouble(),
         fitnessGoal: _fitnessGoalMap[profile.fitnessGoal] ?? '일반식단',
-        healthConditions: const [], // TODO: health_conditions 필드 추가 시 연결
+        healthConditions: profile.healthConditions,
         allergies: profile.allergies,
         preferences: profile.foodPreferences,
         jwtToken: jwt,
+        candidateMenuIds: candidates.map((c) => c.id).toList(),
       );
-
-      // 후보 목록 먼저 가져오고 (빠름), AI 추천은 화면에서 처리
-      final candidates = await RecommendationService.fetchCandidates(jwt);
 
       if (!mounted) return;
       Navigator.push(

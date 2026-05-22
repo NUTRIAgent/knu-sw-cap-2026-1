@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/models/recommendation_models.dart';
+import 'package:flutter_app/screens/menu_detail_screen.dart';
 import 'package:flutter_app/services/recommendation_service.dart';
 import 'package:flutter_app/theme.dart';
 
@@ -18,9 +19,16 @@ class RecommendationScreen extends StatefulWidget {
 }
 
 class _RecommendationScreenState extends State<RecommendationScreen> {
+  late List<MenuCandidate> _candidates;
+  late RecommendationRequest _currentRequest;
+
   RecommendationResult? _aiResult;
   bool _aiLoading = true;
   String? _aiError;
+  bool _reloading = false;
+
+  final Set<int> _negativeFeedbackIds = {};
+  final Set<int> _positiveFeedbackIds = {};
 
   int _rating = 0;
   final TextEditingController _feedbackController = TextEditingController();
@@ -28,6 +36,8 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
   @override
   void initState() {
     super.initState();
+    _candidates = List.from(widget.candidates);
+    _currentRequest = widget.request;
     _fetchAiResult();
   }
 
@@ -39,16 +49,72 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
 
   Future<void> _fetchAiResult() async {
     try {
-      final result = await RecommendationService.recommend(widget.request);
+      final result = await RecommendationService.recommend(_currentRequest);
       if (mounted) setState(() { _aiResult = result; _aiLoading = false; });
     } catch (e) {
       if (mounted) setState(() { _aiError = e.toString(); _aiLoading = false; });
     }
   }
 
+  Future<void> _onFeedback(int menuId, bool isPositive) async {
+    setState(() {
+      if (isPositive) {
+        _positiveFeedbackIds.add(menuId);
+        _negativeFeedbackIds.remove(menuId);
+      } else {
+        _negativeFeedbackIds.add(menuId);
+        _positiveFeedbackIds.remove(menuId);
+      }
+    });
+
+    await RecommendationService.saveFeedback(
+      menuId, isPositive ? 1 : -1, widget.request.jwtToken);
+
+    _checkAllNegative();
+  }
+
+  void _checkAllNegative() {
+    final aiPickId = _aiResult?.menuId;
+    final nonAiPick = _candidates.where((c) => c.id != aiPickId).toList();
+    if (nonAiPick.isEmpty) return;
+    if (nonAiPick.every((c) => _negativeFeedbackIds.contains(c.id))) {
+      _reload();
+    }
+  }
+
+  Future<void> _reload() async {
+    if (_reloading) return;
+    setState(() => _reloading = true);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('후보 메뉴를 다시 불러오는 중입니다...')),
+    );
+
+    try {
+      final newCandidates = await RecommendationService.fetchCandidates(widget.request.jwtToken);
+      if (!mounted) return;
+      setState(() {
+        _candidates = newCandidates;
+        _currentRequest = widget.request.copyWith(
+          candidateMenuIds: newCandidates.map((c) => c.id).toList(),
+        );
+        _aiLoading = true;
+        _aiResult = null;
+        _aiError = null;
+        _negativeFeedbackIds.clear();
+        _positiveFeedbackIds.clear();
+        _reloading = false;
+      });
+      _fetchAiResult();
+    } catch (_) {
+      if (mounted) setState(() => _reloading = false);
+    }
+  }
+
   void _showFeedbackBottomSheet() {
     _rating = 0;
     _feedbackController.clear();
+    final messenger = ScaffoldMessenger.of(context);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -86,6 +152,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
               TextField(
                 controller: _feedbackController,
                 maxLines: 3,
+                onChanged: (_) => setModal(() {}),
                 decoration: InputDecoration(
                   hintText: '아쉬운 점이 있다면 알려주세요...',
                   filled: true,
@@ -97,27 +164,46 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              Container(
-                height: 56,
-                decoration: BoxDecoration(
-                  gradient: AppTheme.aiGradient,
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('소중한 피드백 감사합니다!')),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    shape: const StadiumBorder(),
-                  ),
-                  child: const Text('피드백 제출하기',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-                ),
+              Builder(
+                builder: (_) {
+                  final canSubmit =
+                      _rating > 0 && _feedbackController.text.trim().isNotEmpty;
+                  return Container(
+                    height: 56,
+                    decoration: BoxDecoration(
+                      gradient: canSubmit ? AppTheme.aiGradient : null,
+                      color: canSubmit ? null : Colors.grey[300],
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    child: ElevatedButton(
+                      onPressed: canSubmit
+                          ? () async {
+                              final menuId = _aiResult?.menuId;
+                              final rating = _rating;
+                              final reason = _feedbackController.text;
+                              Navigator.pop(context);
+                              if (menuId != null && menuId > 0) {
+                                await RecommendationService.saveDetailedFeedback(
+                                    menuId, rating, reason, widget.request.jwtToken);
+                              }
+                              messenger.showSnackBar(
+                                const SnackBar(content: Text('소중한 피드백 감사합니다!')),
+                              );
+                            }
+                          : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        shape: const StadiumBorder(),
+                      ),
+                      child: Text('피드백 제출하기',
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: canSubmit ? Colors.white : Colors.grey[600])),
+                    ),
+                  );
+                },
               ),
             ],
           ),
@@ -128,7 +214,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final aiPickName = _aiResult?.menuName;
+    final aiPickId = _aiResult?.menuId;
 
     return Scaffold(
       appBar: AppBar(
@@ -154,6 +240,14 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                         setState(() { _aiLoading = true; _aiError = null; });
                         _fetchAiResult();
                       },
+                      onDetailTap: _aiResult != null
+                          ? () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => MenuDetailScreen(aiResult: _aiResult),
+                              ),
+                            )
+                          : null,
                     ),
                   ),
                 ),
@@ -167,16 +261,23 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                         const Icon(Icons.list_alt, size: 18, color: AppTheme.primaryColor),
                         const SizedBox(width: 6),
                         Text(
-                          '후보 메뉴 ${widget.candidates.length}개',
+                          '후보 메뉴 ${_candidates.length}개',
                           style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                         ),
+                        if (!_aiLoading) ...[
+                          const SizedBox(width: 8),
+                          Text(
+                            '(마음에 드는 메뉴에 반응을 남겨보세요)',
+                            style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                          ),
+                        ],
                       ],
                     ),
                   ),
                 ),
 
                 // ── 후보 메뉴 목록 ────────────────────────────
-                widget.candidates.isEmpty
+                _candidates.isEmpty
                     ? SliverToBoxAdapter(
                         child: Padding(
                           padding: const EdgeInsets.all(32),
@@ -188,12 +289,31 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                       )
                     : SliverList(
                         delegate: SliverChildBuilderDelegate(
-                          (ctx, i) => _CandidateCard(
-                            candidate: widget.candidates[i],
-                            isAiPick: aiPickName != null &&
-                                widget.candidates[i].name == aiPickName,
-                          ),
-                          childCount: widget.candidates.length,
+                          (ctx, i) {
+                            final c = _candidates[i];
+                            final isAiPick = aiPickId != null && c.id == aiPickId;
+                            bool? feedbackGiven;
+                            if (_positiveFeedbackIds.contains(c.id)) feedbackGiven = true;
+                            if (_negativeFeedbackIds.contains(c.id)) feedbackGiven = false;
+
+                            return _CandidateCard(
+                              candidate: c,
+                              isAiPick: isAiPick,
+                              showFeedback: !_aiLoading && !isAiPick,
+                              feedbackGiven: feedbackGiven,
+                              onFeedback: (isPos) => _onFeedback(c.id, isPos),
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => MenuDetailScreen(
+                                    candidate: c,
+                                    jwt: widget.request.jwtToken,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                          childCount: _candidates.length,
                         ),
                       ),
 
@@ -202,7 +322,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
             ),
           ),
 
-          // ── 피드백 버튼 ───────────────────────────────────
+          // ── AI 픽 피드백 버튼 ─────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
             child: OutlinedButton(
@@ -231,12 +351,14 @@ class _AiPickSection extends StatelessWidget {
   final RecommendationResult? result;
   final String? error;
   final VoidCallback onRetry;
+  final VoidCallback? onDetailTap;
 
   const _AiPickSection({
     required this.loading,
     required this.result,
     required this.error,
     required this.onRetry,
+    this.onDetailTap,
   });
 
   @override
@@ -266,7 +388,7 @@ class _AiPickSection extends StatelessWidget {
         else if (error != null)
           _ErrorCard(error: error!, onRetry: onRetry)
         else if (result != null)
-          _ResultCard(result: result!),
+          _ResultCard(result: result!, onDetailTap: onDetailTap),
       ],
     );
   }
@@ -334,7 +456,8 @@ class _ErrorCard extends StatelessWidget {
 
 class _ResultCard extends StatelessWidget {
   final RecommendationResult result;
-  const _ResultCard({required this.result});
+  final VoidCallback? onDetailTap;
+  const _ResultCard({required this.result, this.onDetailTap});
 
   @override
   Widget build(BuildContext context) {
@@ -344,7 +467,6 @@ class _ResultCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 이미지
           if (result.mainImg.isNotEmpty)
             Image.network(
               result.mainImg,
@@ -361,17 +483,13 @@ class _ResultCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 메뉴명
                 Text(result.menuName,
                     style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                // 추천 이유
                 Text(result.selectionReason,
                     style: TextStyle(fontSize: 13, color: Colors.grey[700], height: 1.5)),
                 const SizedBox(height: 12),
-                // 영양 정보 칩
                 _NutritionRow(info: result.nutritionInfo),
-                // 예상 비용
                 if (result.totalEstimatedCost > 0) ...[
                   const SizedBox(height: 10),
                   Row(children: [
@@ -383,7 +501,6 @@ class _ResultCard extends StatelessWidget {
                             fontSize: 13, fontWeight: FontWeight.w600)),
                   ]),
                 ],
-                // 레시피 단계 (있는 경우)
                 if (result.recipeSteps.isNotEmpty) ...[
                   const Divider(height: 24),
                   const Text('조리 방법',
@@ -416,6 +533,20 @@ class _ResultCard extends StatelessWidget {
                     ),
                   )),
                 ],
+                const Divider(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton.icon(
+                    onPressed: onDetailTap,
+                    icon: const Icon(Icons.open_in_new_rounded, size: 15),
+                    label: const Text('맞춤 레시피 변주 · 재료별 가격 자세히 보기'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppTheme.primaryColor,
+                      textStyle: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -459,12 +590,25 @@ class _NutritionRow extends StatelessWidget {
 class _CandidateCard extends StatelessWidget {
   final MenuCandidate candidate;
   final bool isAiPick;
+  final bool showFeedback;
+  final bool? feedbackGiven;
+  final void Function(bool isPositive)? onFeedback;
+  final VoidCallback? onTap;
 
-  const _CandidateCard({required this.candidate, required this.isAiPick});
+  const _CandidateCard({
+    required this.candidate,
+    required this.isAiPick,
+    required this.showFeedback,
+    this.feedbackGiven,
+    this.onFeedback,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(14),
@@ -484,7 +628,6 @@ class _CandidateCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Row(
           children: [
-            // 썸네일
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: candidate.mainImageUrl != null &&
@@ -497,7 +640,6 @@ class _CandidateCard extends StatelessWidget {
                   : _placeholder(),
             ),
             const SizedBox(width: 12),
-            // 이름 + 칼로리
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -518,23 +660,56 @@ class _CandidateCard extends StatelessWidget {
                 ],
               ),
             ),
-            // AI 픽 뱃지
             if (isAiPick)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  gradient: AppTheme.aiGradient,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text('AI 픽',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold)),
-              ),
+              _aiBadge()
+            else if (showFeedback)
+              _feedbackWidget(),
           ],
         ),
       ),
+      ),
+    );
+  }
+
+  Widget _aiBadge() => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          gradient: AppTheme.aiGradient,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: const Text('AI 픽',
+            style: TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.bold)),
+      );
+
+  Widget _feedbackWidget() {
+    if (feedbackGiven != null) {
+      return Icon(
+        feedbackGiven! ? Icons.thumb_up_rounded : Icons.thumb_down_rounded,
+        color: feedbackGiven! ? AppTheme.primaryColor : Colors.redAccent,
+        size: 22,
+      );
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          onPressed: () => onFeedback?.call(true),
+          icon: const Icon(Icons.thumb_up_outlined, size: 20),
+          color: AppTheme.primaryColor,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+        ),
+        IconButton(
+          onPressed: () => onFeedback?.call(false),
+          icon: const Icon(Icons.thumb_down_outlined, size: 20),
+          color: Colors.grey,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+        ),
+      ],
     );
   }
 
@@ -545,3 +720,4 @@ class _CandidateCard extends StatelessWidget {
             size: 24, color: AppTheme.primaryColor),
       );
 }
+

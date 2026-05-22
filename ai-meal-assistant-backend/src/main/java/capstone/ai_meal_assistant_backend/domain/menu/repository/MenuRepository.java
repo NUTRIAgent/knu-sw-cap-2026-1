@@ -15,10 +15,10 @@ public interface MenuRepository extends JpaRepository<Menu, Long> {
 
     @Query(value = """
             SELECT * FROM menus m
-            WHERE (:excludeIds IS NULL OR m.id NOT IN (:excludeIds))
-              AND (:budget   IS NULL OR m.base_price IS NULL OR m.base_price <= :budget)
-              AND (:minPro   IS NULL OR m.protein >= :minPro)
-              AND (:maxCal   IS NULL OR m.calories <= :maxCal)
+            WHERE m.id NOT IN (:excludeIds)
+              AND (:budget IS NULL OR m.base_price IS NULL OR m.base_price <= :budget)
+              AND (:minPro IS NULL OR m.protein >= :minPro)
+              AND (:maxCal IS NULL OR m.calories <= :maxCal)
             ORDER BY RAND()
             LIMIT :limit
             """, nativeQuery = true)
@@ -32,7 +32,7 @@ public interface MenuRepository extends JpaRepository<Menu, Long> {
 
     @Query(value = """
             SELECT mi.menu_id,
-                   GROUP_CONCAT(CONCAT(i.name, ' ', COALESCE(mi.amount_text, ''))
+                   GROUP_CONCAT(DISTINCT CONCAT(i.name, ' ', COALESCE(mi.amount_text, ''))
                                 ORDER BY i.name SEPARATOR ', ') AS ingredients_text
             FROM menu_ingredients mi
             JOIN ingredients i ON mi.ingredient_id = i.id

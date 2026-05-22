@@ -51,8 +51,22 @@ class _MyPageScreenState extends State<MyPageScreen> {
   String _selectedFitnessGoal = 'GENERAL';
   Set<String> _selectedFoodPreferences = {};
 
-  // 4. 알레르기 정보
+  // 4. 건강 상태
+  Set<String> _selectedHealthConditions = {};
+
+  // 5. 알레르기 정보
   Set<String> _selectedAllergies = {'우유', '밀가루'};
+
+  final List<String> _healthConditionOptions = [
+    '고혈압',
+    '당뇨',
+    '고지혈증',
+    '비만',
+    '신장질환',
+    '간질환',
+    '심장질환',
+    '갑상선질환',
+  ];
 
   final List<String> _allergyOptions = [
     '땅콩',
@@ -97,6 +111,7 @@ class _MyPageScreenState extends State<MyPageScreen> {
   late String _bkFitnessGoal;
   late Set<String> _bkFoodPreferences;
   late Set<String> _bkAllergies;
+  late Set<String> _bkHealthConditions;
 
   @override
   void initState() {
@@ -191,6 +206,7 @@ class _MyPageScreenState extends State<MyPageScreen> {
     }
     _selectedFoodPreferences = data.foodPreferences.toSet();
     _selectedAllergies = data.allergies.toSet();
+    _selectedHealthConditions = data.healthConditions.toSet();
   }
 
   @override
@@ -222,6 +238,7 @@ class _MyPageScreenState extends State<MyPageScreen> {
     _bkFitnessGoal = _selectedFitnessGoal;
     _bkFoodPreferences = Set.from(_selectedFoodPreferences);
     _bkAllergies = Set.from(_selectedAllergies);
+    _bkHealthConditions = Set.from(_selectedHealthConditions);
 
     setState(() {
       _isEditMode = true;
@@ -244,6 +261,7 @@ class _MyPageScreenState extends State<MyPageScreen> {
     _selectedFitnessGoal = _bkFitnessGoal;
     _selectedFoodPreferences = Set.from(_bkFoodPreferences);
     _selectedAllergies = Set.from(_bkAllergies);
+    _selectedHealthConditions = Set.from(_bkHealthConditions);
 
     setState(() {
       _isEditMode = false;
@@ -278,6 +296,7 @@ class _MyPageScreenState extends State<MyPageScreen> {
         fitnessGoal: _selectedFitnessGoal,
         foodPreferences: _selectedFoodPreferences.toList(),
         allergies: _selectedAllergies.toList(),
+        healthConditions: _selectedHealthConditions.toList(),
       );
 
       final result = await UserProfileService.updateProfile(request: request);
@@ -330,7 +349,9 @@ class _MyPageScreenState extends State<MyPageScreen> {
         _selectedFoodPreferences.length != _bkFoodPreferences.length ||
         !_selectedFoodPreferences.containsAll(_bkFoodPreferences) ||
         _selectedAllergies.length != _bkAllergies.length ||
-        !_selectedAllergies.containsAll(_bkAllergies);
+        !_selectedAllergies.containsAll(_bkAllergies) ||
+        _selectedHealthConditions.length != _bkHealthConditions.length ||
+        !_selectedHealthConditions.containsAll(_bkHealthConditions);
   }
   @override
   Widget build(BuildContext context) {
@@ -614,7 +635,56 @@ class _MyPageScreenState extends State<MyPageScreen> {
                 ),
                 const SizedBox(height: 32),
 
-                _buildSectionTitle('4. 알레르기 유발 물질'),
+                _buildSectionTitle('4. 건강 상태'),
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(_isEditMode ? 0 : 16.0),
+                  decoration: BoxDecoration(
+                    color: _isEditMode ? Colors.transparent : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(16),
+                    border: _isEditMode ? null : Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: IgnorePointer(
+                    ignoring: !_isEditMode,
+                    child: Wrap(
+                      spacing: 8.0,
+                      runSpacing: 8.0,
+                      children: _healthConditionOptions.map((cond) {
+                        final isSelected = _selectedHealthConditions.contains(cond);
+                        return FilterChip(
+                          label: Text(
+                            cond,
+                            style: TextStyle(
+                              color: _isEditMode ? Colors.black87 : Colors.grey.shade600,
+                            ),
+                          ),
+                          selected: isSelected,
+                          backgroundColor: _isEditMode ? Colors.white : Colors.grey.shade200,
+                          selectedColor: _isEditMode
+                              ? AppTheme.primaryColor.withValues(alpha: 0.2)
+                              : Colors.grey.shade300,
+                          checkmarkColor: _isEditMode ? AppTheme.primaryColor : Colors.grey.shade600,
+                          shape: RoundedRectangleBorder(
+                            side: BorderSide(
+                              color: _isEditMode ? Colors.grey.shade300 : Colors.transparent,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          onSelected: (bool selected) {
+                            setState(() {
+                              selected
+                                  ? _selectedHealthConditions.add(cond)
+                                  : _selectedHealthConditions.remove(cond);
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 32),
+
+                _buildSectionTitle('5. 알레르기 유발 물질'),
                 Container(
                   width: double.infinity,
                   padding: EdgeInsets.all(_isEditMode ? 0 : 16.0),

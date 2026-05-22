@@ -38,6 +38,10 @@ class UserRequest(BaseModel):
         default=None,
         description="Spring 백엔드 JWT. 제공 시 서버 사이드 필터링 후보 사용"
     )
+    candidate_menu_ids: Optional[List[int]] = Field(
+        default=None,
+        description="Flutter가 미리 조회한 후보 메뉴 ID 목록. 제공 시 해당 후보만 사용하여 Flutter와 동일한 후보 풀 보장"
+    )
 
 
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8080")
@@ -45,7 +49,7 @@ menu_fetcher = MenuFetcher(BACKEND_URL)
 
 model = ChatOpenAI(
     base_url="https://openrouter.ai/api/v1",
-    model="openai/gpt-4o-mini",   # gpt-4o → gpt-4o-mini: 속도 개선
+    model="openai/gpt-4o-mini",
     temperature=0,
     openai_api_key=os.getenv("OPENROUTER_API_KEY"),
     default_headers={
@@ -54,19 +58,24 @@ model = ChatOpenAI(
     }
 )
 
-get_market_prices = GetMarketPrices([])  # 가격 데이터는 추후 DB 연결
+get_market_prices = GetMarketPrices([])
 select_candidates = SelectCandidates(model)
 
 orchestrator = ProcessDynamicInputs(
-    recipes=[],  # 런타임에 항상 주입되므로 빈 리스트
+    recipes=[],
     get_market_prices=get_market_prices,
     select_candidates=select_candidates,
     model=model
 )
 
 
-def _resolve_recipes(jwt_token: Optional[str]) -> list:
-    """Spring /api/menus/candidates 에서 AI 포맷 후보 리스트 반환."""
+def _resolve_recipes(jwt_token: Optional[str], candidate_menu_ids: Optional[List[int]] = None) -> list:
+    """후보 메뉴 목록 반환. candidate_menu_ids 제공 시 해당 IDs로 조회하여 Flutter와 동일한 풀 사용."""
+    if candidate_menu_ids:
+        candidates = menu_fetcher.fetch_candidates_by_ids(candidate_menu_ids, jwt_token)
+        if candidates:
+            return candidates
+        print("[server] ID 기반 후보 조회 실패, 전체 후보로 대체")
     candidates = menu_fetcher.fetch_candidates_full(jwt_token)
     if not candidates:
         print("[server] Spring 후보 조회 실패")
@@ -76,11 +85,11 @@ def _resolve_recipes(jwt_token: Optional[str]) -> list:
 @app.post("/recommend")
 async def get_recommendation(user_input: UserRequest):
     try:
-        active_recipes = _resolve_recipes(user_input.jwt_token)
+        active_recipes = _resolve_recipes(user_input.jwt_token, user_input.candidate_menu_ids)
         if not active_recipes:
             raise ValueError("메뉴 후보를 가져올 수 없습니다. Spring 백엔드 연결을 확인하세요.")
 
-        user_query = user_input.dict(exclude={"jwt_token"})
+        user_query = user_input.dict(exclude={"jwt_token", "candidate_menu_ids"})
 
         final_result: dict = await asyncio.get_running_loop().run_in_executor(
             None, orchestrator.process_dynamic_inputs, user_query, active_recipes

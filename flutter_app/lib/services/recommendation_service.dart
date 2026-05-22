@@ -46,4 +46,60 @@ class RecommendationService {
     final json = jsonDecode(utf8.decode(response.bodyBytes));
     return RecommendationResult.fromJson(json);
   }
+
+  static Future<void> saveFeedback(int menuId, int feedbackScore, String? jwt) async {
+    if (jwt == null || jwt.isEmpty) return;
+    final uri = Uri.parse('${ApiConfig.baseUrl}/api/recommendation-logs');
+    try {
+      await http
+          .post(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $jwt',
+            },
+            body: jsonEncode({'menuId': menuId, 'feedbackScore': feedbackScore}),
+          )
+          .timeout(const Duration(seconds: 5));
+    } catch (_) {}
+  }
+
+  static Future<void> saveDetailedFeedback(
+      int menuId, int starRating, String feedbackReason, String? jwt) async {
+    if (jwt == null || jwt.isEmpty) return;
+    final uri = Uri.parse('${ApiConfig.baseUrl}/api/recommendation-logs');
+    try {
+      final body = <String, dynamic>{'menuId': menuId, 'starRating': starRating};
+      if (feedbackReason.isNotEmpty) body['feedbackReason'] = feedbackReason;
+      await http
+          .post(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $jwt',
+            },
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 5));
+    } catch (_) {}
+  }
+
+  static Future<MenuDetail?> fetchMenuDetail(int id, String? jwt) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}/api/menus/$id');
+    final headers = <String, String>{};
+    if (jwt != null && jwt.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $jwt';
+    }
+    try {
+      final response = await http
+          .get(uri, headers: headers)
+          .timeout(const Duration(seconds: 10));
+      if (response.statusCode != 200) return null;
+      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      if (json['success'] != true || json['data'] == null) return null;
+      return MenuDetail.fromJson(json['data'] as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
+  }
 }

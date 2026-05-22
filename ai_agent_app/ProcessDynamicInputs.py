@@ -85,6 +85,7 @@ class ProcessDynamicInputs:
     def _build_static_data(self, final_recipe) -> dict:
         """정적 레시피 데이터 조립"""
         return {
+            "menu_id": final_recipe.get("MENU_ID"),
             "menu_name": final_recipe["RCP_NM"],
             "main_img": final_recipe["ATT_FILE_NO_MAIN"],
             "nutrition_info": {
@@ -107,12 +108,15 @@ class ProcessDynamicInputs:
             "user_profile": (
                 f"키 {user_query.get('height_cm')}cm, "
                 f"체중 {user_query.get('weight_kg')}kg, "
-                f"목표: {user_query.get('fitness_goal')}"
+                f"운동 목표: {user_query.get('fitness_goal', '일반식단')}, "
+                f"건강 상태: {', '.join(user_query.get('health_conditions', []) or []) or '없음'}, "
+                f"선호 음식: {', '.join(user_query.get('preferences', []) or []) or '없음'}"
             ),
             "user_restrictions": (
                 f"알러지: {', '.join(user_query.get('allergies', []) or [])}, "
                 f"선호: {', '.join(user_query.get('preferences', []) or [])}"
             ),
+            "health_conditions": ', '.join(user_query.get('health_conditions', []) or []) or '없음',
         }
         return self.chain.invoke(llm_input)
     
