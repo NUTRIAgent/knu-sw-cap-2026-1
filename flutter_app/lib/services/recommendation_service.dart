@@ -83,4 +83,23 @@ class RecommendationService {
           .timeout(const Duration(seconds: 5));
     } catch (_) {}
   }
+
+  static Future<MenuDetail?> fetchMenuDetail(int id, String? jwt) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}/api/menus/$id');
+    final headers = <String, String>{};
+    if (jwt != null && jwt.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $jwt';
+    }
+    try {
+      final response = await http
+          .get(uri, headers: headers)
+          .timeout(const Duration(seconds: 10));
+      if (response.statusCode != 200) return null;
+      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      if (json['success'] != true || json['data'] == null) return null;
+      return MenuDetail.fromJson(json['data'] as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
+  }
 }

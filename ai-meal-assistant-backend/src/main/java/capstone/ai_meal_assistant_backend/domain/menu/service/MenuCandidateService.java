@@ -69,6 +69,14 @@ public class MenuCandidateService {
         return buildDtos(menus);
     }
 
+    public MenuCandidateDto getMenuById(Long id) {
+        Menu menu = menuRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("메뉴를 찾을 수 없습니다. id=" + id));
+        List<Object[]> rows = menuRepository.findIngredientsTextByMenuIds(List.of(id));
+        String ingredientsText = rows.isEmpty() ? "" : (String) rows.get(0)[1];
+        return MenuCandidateDto.from(menu, ingredientsText, Collections.emptyList());
+    }
+
     private List<MenuCandidateDto> buildDtos(List<Menu> menus) {
         if (menus.isEmpty()) return Collections.emptyList();
 

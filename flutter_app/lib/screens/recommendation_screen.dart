@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/models/recommendation_models.dart';
+import 'package:flutter_app/screens/menu_detail_screen.dart';
 import 'package:flutter_app/services/recommendation_service.dart';
 import 'package:flutter_app/theme.dart';
 
@@ -239,6 +240,14 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                         setState(() { _aiLoading = true; _aiError = null; });
                         _fetchAiResult();
                       },
+                      onDetailTap: _aiResult != null
+                          ? () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => MenuDetailScreen(aiResult: _aiResult),
+                              ),
+                            )
+                          : null,
                     ),
                   ),
                 ),
@@ -293,6 +302,15 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                               showFeedback: !_aiLoading && !isAiPick,
                               feedbackGiven: feedbackGiven,
                               onFeedback: (isPos) => _onFeedback(c.id, isPos),
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => MenuDetailScreen(
+                                    candidate: c,
+                                    jwt: widget.request.jwtToken,
+                                  ),
+                                ),
+                              ),
                             );
                           },
                           childCount: _candidates.length,
@@ -333,12 +351,14 @@ class _AiPickSection extends StatelessWidget {
   final RecommendationResult? result;
   final String? error;
   final VoidCallback onRetry;
+  final VoidCallback? onDetailTap;
 
   const _AiPickSection({
     required this.loading,
     required this.result,
     required this.error,
     required this.onRetry,
+    this.onDetailTap,
   });
 
   @override
@@ -368,7 +388,7 @@ class _AiPickSection extends StatelessWidget {
         else if (error != null)
           _ErrorCard(error: error!, onRetry: onRetry)
         else if (result != null)
-          _ResultCard(result: result!),
+          _ResultCard(result: result!, onDetailTap: onDetailTap),
       ],
     );
   }
@@ -436,7 +456,8 @@ class _ErrorCard extends StatelessWidget {
 
 class _ResultCard extends StatelessWidget {
   final RecommendationResult result;
-  const _ResultCard({required this.result});
+  final VoidCallback? onDetailTap;
+  const _ResultCard({required this.result, this.onDetailTap});
 
   @override
   Widget build(BuildContext context) {
@@ -512,6 +533,20 @@ class _ResultCard extends StatelessWidget {
                     ),
                   )),
                 ],
+                const Divider(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton.icon(
+                    onPressed: onDetailTap,
+                    icon: const Icon(Icons.open_in_new_rounded, size: 15),
+                    label: const Text('맞춤 레시피 변주 · 재료별 가격 자세히 보기'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppTheme.primaryColor,
+                      textStyle: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -558,6 +593,7 @@ class _CandidateCard extends StatelessWidget {
   final bool showFeedback;
   final bool? feedbackGiven;
   final void Function(bool isPositive)? onFeedback;
+  final VoidCallback? onTap;
 
   const _CandidateCard({
     required this.candidate,
@@ -565,11 +601,14 @@ class _CandidateCard extends StatelessWidget {
     required this.showFeedback,
     this.feedbackGiven,
     this.onFeedback,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(14),
@@ -628,6 +667,7 @@ class _CandidateCard extends StatelessWidget {
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -680,3 +720,4 @@ class _CandidateCard extends StatelessWidget {
             size: 24, color: AppTheme.primaryColor),
       );
 }
+

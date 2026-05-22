@@ -35,6 +35,11 @@ public class MenuCandidateController {
         }
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<MenuCandidateDto>> getMenuById(@PathVariable("id") Long id) {
+        return ResponseEntity.ok(ApiResponse.ok(menuCandidateService.getMenuById(id)));
+    }
+
     /**
      * AI 추천용 메뉴 후보 반환
      * - ids 파라미터 제공 시: 해당 ID 목록의 메뉴만 반환 (AI agent 전용)

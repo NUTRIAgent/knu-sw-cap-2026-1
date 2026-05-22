@@ -162,6 +162,7 @@ class RecommendationResult {
   final List<RecipeStep> recipeSteps;
   final String naTip;
   final String selectionReason;
+  final String personalizedRecipeTip;
   final num totalEstimatedCost;
   final List<MarketPriceItem> marketPrices;
 
@@ -173,6 +174,7 @@ class RecommendationResult {
     required this.recipeSteps,
     required this.naTip,
     required this.selectionReason,
+    this.personalizedRecipeTip = '',
     required this.totalEstimatedCost,
     required this.marketPrices,
   });
@@ -187,9 +189,58 @@ class RecommendationResult {
             .toList(),
         naTip: json['na_tip'] ?? '',
         selectionReason: json['selection_reason'] ?? '',
+        personalizedRecipeTip: json['personalized_recipe_tip'] ?? '',
         totalEstimatedCost: json['total_estimated_cost'] ?? 0,
         marketPrices: (json['market_prices'] as List? ?? [])
             .map((e) => MarketPriceItem.fromJson(e))
             .toList(),
+      );
+}
+
+class MenuDetail {
+  final int id;
+  final String name;
+  final String? category;
+  final String? cookingMethod;
+  final double? calories;
+  final double? protein;
+  final double? fat;
+  final double? carbs;
+  final double? sodium;
+  final int? basePrice;
+  final String? mainImageUrl;
+  final String? healthTip;
+  final String? ingredientsText;
+
+  const MenuDetail({
+    required this.id,
+    required this.name,
+    this.category,
+    this.cookingMethod,
+    this.calories,
+    this.protein,
+    this.fat,
+    this.carbs,
+    this.sodium,
+    this.basePrice,
+    this.mainImageUrl,
+    this.healthTip,
+    this.ingredientsText,
+  });
+
+  factory MenuDetail.fromJson(Map<String, dynamic> json) => MenuDetail(
+        id: (json['id'] as num?)?.toInt() ?? 0,
+        name: json['name'] ?? '',
+        category: json['category'],
+        cookingMethod: json['cookingMethod'],
+        calories: (json['calories'] as num?)?.toDouble(),
+        protein: (json['protein'] as num?)?.toDouble(),
+        fat: (json['fat'] as num?)?.toDouble(),
+        carbs: (json['carbs'] as num?)?.toDouble(),
+        sodium: (json['sodium'] as num?)?.toDouble(),
+        basePrice: (json['basePrice'] as num?)?.toInt(),
+        mainImageUrl: json['mainImageUrl'],
+        healthTip: json['healthTip'],
+        ingredientsText: json['ingredientsText'],
       );
 }

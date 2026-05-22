@@ -108,12 +108,15 @@ class ProcessDynamicInputs:
             "user_profile": (
                 f"키 {user_query.get('height_cm')}cm, "
                 f"체중 {user_query.get('weight_kg')}kg, "
-                f"목표: {user_query.get('fitness_goal')}"
+                f"운동 목표: {user_query.get('fitness_goal', '일반식단')}, "
+                f"건강 상태: {', '.join(user_query.get('health_conditions', []) or []) or '없음'}, "
+                f"선호 음식: {', '.join(user_query.get('preferences', []) or []) or '없음'}"
             ),
             "user_restrictions": (
                 f"알러지: {', '.join(user_query.get('allergies', []) or [])}, "
                 f"선호: {', '.join(user_query.get('preferences', []) or [])}"
             ),
+            "health_conditions": ', '.join(user_query.get('health_conditions', []) or []) or '없음',
         }
         return self.chain.invoke(llm_input)
     

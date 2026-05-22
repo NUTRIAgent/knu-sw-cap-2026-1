@@ -45,7 +45,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         location: '서울', // TODO: 사용자 위치 필드 추가 시 교체
         budget: (profile.mealBudget ?? 8000).toDouble(),
         fitnessGoal: _fitnessGoalMap[profile.fitnessGoal] ?? '일반식단',
-        healthConditions: const [], // TODO: health_conditions 필드 추가 시 연결
+        healthConditions: profile.healthConditions,
         allergies: profile.allergies,
         preferences: profile.foodPreferences,
         jwtToken: jwt,

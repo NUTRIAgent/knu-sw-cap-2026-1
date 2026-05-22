@@ -44,9 +44,16 @@ public class UserPreference extends BaseEntity {
     @Builder.Default
     private List<String> foodPreferences = new ArrayList<>();
 
+    @ElementCollection
+    @CollectionTable(name = "user_health_conditions", joinColumns = @JoinColumn(name = "user_preference_id"))
+    @Column(name = "health_condition")
+    @Builder.Default
+    private List<String> healthConditions = new ArrayList<>();
+
     public void updatePreference(Integer mealBudget, VegetarianType vegetarianType,
                                  Integer spicyPreference, ProteinLevel proteinLevel,
-                                 FitnessGoal fitnessGoal, List<String> foodPreferences) {
+                                 FitnessGoal fitnessGoal, List<String> foodPreferences,
+                                 List<String> healthConditions) {
         this.mealBudget = mealBudget;
         this.vegetarianType = vegetarianType;
         this.spicyPreference = spicyPreference;
@@ -55,6 +62,10 @@ public class UserPreference extends BaseEntity {
         if (foodPreferences != null) {
             this.foodPreferences.clear();
             this.foodPreferences.addAll(foodPreferences);
+        }
+        if (healthConditions != null) {
+            this.healthConditions.clear();
+            this.healthConditions.addAll(healthConditions);
         }
     }
 }

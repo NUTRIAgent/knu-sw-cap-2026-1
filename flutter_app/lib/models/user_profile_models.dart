@@ -19,6 +19,7 @@ class UserProfileRequest {
   final String? fitnessGoal; // e.g. DIET, MUSCLE_GAIN, MAINTAIN, GENERAL
   final List<String>? foodPreferences;
   final List<String>? allergies;
+  final List<String>? healthConditions;
 
   UserProfileRequest({
     this.nickname,
@@ -38,6 +39,7 @@ class UserProfileRequest {
     this.fitnessGoal,
     this.foodPreferences,
     this.allergies,
+    this.healthConditions,
   });
 
   Map<String, dynamic> toJson() {
@@ -59,6 +61,7 @@ class UserProfileRequest {
     if (fitnessGoal != null) data['fitnessGoal'] = fitnessGoal;
     if (foodPreferences != null) data['foodPreferences'] = foodPreferences;
     if (allergies != null) data['allergies'] = allergies;
+    if (healthConditions != null) data['healthConditions'] = healthConditions;
     return data;
   }
 }
@@ -108,8 +111,8 @@ class UserProfileData {
   final String? proteinLevel;
   final String? fitnessGoal;
   final List<String> foodPreferences;
-
   final List<String> allergies;
+  final List<String> healthConditions;
 
   const UserProfileData({
     this.userId,
@@ -130,13 +133,14 @@ class UserProfileData {
     this.fitnessGoal,
     this.foodPreferences = const [],
     this.allergies = const [],
+    this.healthConditions = const [],
   });
 
   factory UserProfileData.fromJson(Map<String, dynamic> json) {
     return UserProfileData(
       userId: json['userId'],
-  nickname: json['nickname'],
-  gender: json['gender']?.toString(),
+      nickname: json['nickname'],
+      gender: json['gender']?.toString(),
       height: (json['height'] as num?)?.toDouble(),
       weight: (json['weight'] as num?)?.toDouble(),
       skeletalMuscleMass: (json['skeletalMuscleMass'] as num?)?.toDouble(),
@@ -152,6 +156,7 @@ class UserProfileData {
       fitnessGoal: json['fitnessGoal'],
       foodPreferences: (json['foodPreferences'] as List?)?.map((e) => e.toString()).toList() ?? const [],
       allergies: (json['allergies'] as List?)?.map((e) => e.toString()).toList() ?? const [],
+      healthConditions: (json['healthConditions'] as List?)?.map((e) => e.toString()).toList() ?? const [],
     );
   }
 }
