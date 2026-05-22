@@ -36,8 +36,8 @@ public class WeatherController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<WeatherResponse>> getWeather(
-            @RequestParam double lat,
-            @RequestParam double lon) {
+            @RequestParam("lat") double lat,
+            @RequestParam("lon") double lon) {
         try {
             WeatherResponse weather = weatherService.getWeather(lat, lon);
             return ResponseEntity.ok(ApiResponse.ok(weather));
