@@ -32,7 +32,7 @@ public interface MenuRepository extends JpaRepository<Menu, Long> {
 
     @Query(value = """
             SELECT mi.menu_id,
-                   GROUP_CONCAT(CONCAT(i.name, ' ', COALESCE(mi.amount_text, ''))
+                   GROUP_CONCAT(DISTINCT CONCAT(i.name, ' ', COALESCE(mi.amount_text, ''))
                                 ORDER BY i.name SEPARATOR ', ') AS ingredients_text
             FROM menu_ingredients mi
             JOIN ingredients i ON mi.ingredient_id = i.id

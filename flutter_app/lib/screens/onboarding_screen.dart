@@ -31,9 +31,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   String _selectedFitnessGoal = 'GENERAL';
   final Set<String> _selectedFoodPreferences = {};
 
-  // 3. 알레르기 정보
+  // 3. 건강 상태
+  final Set<String> _selectedHealthConditions = {};
+
+  // 4. 알레르기 정보
   final Set<String> _selectedAllergies = {};
 
+  final List<String> _healthConditionOptions = ['고혈압', '당뇨', '고지혈증', '비만', '신장질환', '간질환', '심장질환', '갑상선질환'];
   final List<String> _allergyOptions = ['땅콩', '갑각류', '대두', '우유', '밀가루', '계란', '견과류', '생선'];
   final Map<String, String> _vegOptions = {
     'NONE': '해당 없음',
@@ -93,6 +97,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         fitnessGoal: _selectedFitnessGoal,
         foodPreferences: _selectedFoodPreferences.toList(),
         allergies: _selectedAllergies.toList(),
+        healthConditions: _selectedHealthConditions.toList(),
       );
 
       final result = await UserProfileService.saveProfile(request: request);
@@ -238,7 +243,32 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
                 const SizedBox(height: 32),
 
-                _buildSectionTitle('3. 알레르기 유발 물질 (해당 시 선택)'),
+                _buildSectionTitle('3. 건강 상태 (해당 시 선택)'),
+                Wrap(
+                  spacing: 8.0,
+                  runSpacing: 8.0,
+                  children: _healthConditionOptions.map((condition) {
+                    final isSelected = _selectedHealthConditions.contains(condition);
+                    return FilterChip(
+                      label: Text(condition),
+                      selected: isSelected,
+                      selectedColor: AppTheme.primaryColor.withOpacity(0.2),
+                      checkmarkColor: AppTheme.primaryColor,
+                      shape: RoundedRectangleBorder(
+                        side: BorderSide(color: isSelected ? AppTheme.primaryColor : Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      onSelected: (bool selected) {
+                        setState(() {
+                          selected ? _selectedHealthConditions.add(condition) : _selectedHealthConditions.remove(condition);
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 32),
+
+                _buildSectionTitle('4. 알레르기 유발 물질 (해당 시 선택)'),
                 Wrap(
                   spacing: 8.0,
                   runSpacing: 8.0,

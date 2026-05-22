@@ -7,11 +7,13 @@ import capstone.ai_meal_assistant_backend.domain.user.entity.VegetarianType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDate;
 import java.util.List;
 
 @Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserProfileRequest {
@@ -39,4 +41,7 @@ public class UserProfileRequest {
 
     // 알러지 정보 (이름 리스트)
     private List<String> allergies;
+
+    // 건강 상태 (예: 고혈압, 당뇨 등)
+    private List<String> healthConditions;
 }
