@@ -4,6 +4,9 @@ import 'package:flutter_app/models/user_profile_models.dart';
 import 'package:flutter_app/services/recommendation_service.dart';
 import 'package:flutter_app/services/token_storage.dart';
 import 'package:flutter_app/services/user_profile_service.dart';
+import 'package:flutter_app/services/weather_service.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import 'recommendation_screen.dart';
 import 'package:flutter_app/theme.dart';
 
@@ -14,8 +17,103 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class _DashboardScreenState extends State<DashboardScreen>
+    with WidgetsBindingObserver {
   bool _isLoading = false;
+  WeatherData? _weather;
+  bool _isWeatherLoading = true;
+  String? _weatherError;
+  String _locationName = '현재위치';
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _loadWeather();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadWeather();
+    }
+  }
+
+  Future<void> _loadWeather() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() {
+          _weatherError = '위치 서비스가 꺼져 있습니다';
+          _isWeatherLoading = false;
+        });
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          setState(() {
+            _weatherError = '위치 권한이 거부되었습니다';
+            _isWeatherLoading = false;
+          });
+          return;
+        }
+      }
+      if (permission == LocationPermission.deniedForever) {
+        setState(() {
+          _weatherError = '위치 권한이 영구 거부되었습니다\n설정에서 허용해주세요';
+          _isWeatherLoading = false;
+        });
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.low,
+          timeLimit: Duration(seconds: 10),
+        ),
+      );
+
+      final results = await Future.wait([
+        WeatherService.fetchWeather(position.latitude, position.longitude),
+        placemarkFromCoordinates(position.latitude, position.longitude),
+      ]);
+
+      final weather = results[0] as WeatherData;
+      final placemarks = results[1] as List<Placemark>;
+      final place = placemarks.isNotEmpty ? placemarks.first : null;
+      final locationName = place?.locality?.isNotEmpty == true
+          ? place!.locality!
+          : place?.subAdministrativeArea?.isNotEmpty == true
+              ? place!.subAdministrativeArea!
+              : place?.administrativeArea?.isNotEmpty == true
+                  ? place!.administrativeArea!
+                  : '현재위치';
+
+      if (mounted) {
+        setState(() {
+          _weather = weather;
+          _locationName = locationName;
+          _isWeatherLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _weatherError = '날씨 정보를 불러올 수 없습니다';
+          _isWeatherLoading = false;
+        });
+      }
+    }
+  }
 
   static const Map<String, String> _fitnessGoalMap = {
     'DIET': '다이어트',
@@ -39,7 +137,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final request = RecommendationRequest(
         heightCm: profile.height ?? 170.0,
         weightKg: profile.weight ?? 65.0,
-        location: '서울', // TODO: 사용자 위치 필드 추가 시 교체
+        location: '현재위치',
         budget: (profile.mealBudget ?? 8000).toDouble(),
         fitnessGoal: _fitnessGoalMap[profile.fitnessGoal] ?? '일반식단',
         healthConditions: const [], // TODO: health_conditions 필드 추가 시 연결
@@ -66,6 +164,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  String _weatherText(WeatherData? w, bool loading, String? error) {
+    if (loading) return '날씨 불러오는 중...';
+    if (error != null) return '날씨 정보 없음';
+    if (w == null) return '날씨 정보 없음';
+    return '$_locationName ${w.precipitationName}, ${w.temperature.toStringAsFixed(1)}°C';
+  }
+
+  IconData _weatherIcon(WeatherData? w) {
+    if (w == null) return Icons.cloud_off;
+    return switch (w.precipitationType) {
+      1 || 5 => Icons.umbrella,
+      2 || 6 => Icons.grain,
+      3 || 7 => Icons.ac_unit,
+      _ => w.temperature >= 28 ? Icons.wb_sunny : Icons.wb_cloudy,
+    };
+  }
+
+  Color _weatherIconColor(WeatherData? w) {
+    if (w == null) return Colors.grey;
+    return switch (w.precipitationType) {
+      1 || 5 => Colors.blueAccent,
+      2 || 6 => Colors.blueGrey,
+      3 || 7 => Colors.lightBlue,
+      _ => Colors.orangeAccent,
+    };
+  }
+
+  String _briefingText(WeatherData? w) {
+    if (w == null) return '날씨 정보를 불러오는 중입니다. 오늘도 건강한 식사를 추천해 드릴게요.';
+    final temp = w.temperature;
+    final pty = w.precipitationType;
+
+    if (pty == 1 || pty == 5) return '비가 오는 날이에요. 따뜻한 국물 요리로 몸을 따뜻하게 해보세요.';
+    if (pty == 2 || pty == 6) return '비와 눈이 섞여 내려요. 따뜻한 식사로 체온을 유지해보세요.';
+    if (pty == 3 || pty == 7) return '눈이 내리는 날이에요. 따뜻한 국물 요리를 추천해 드릴게요.';
+    if (temp >= 30) return '무더운 날씨입니다. 수분 보충에 좋은 시원한 음식을 추천해 드릴게요.';
+    if (temp >= 23) return '따뜻하고 쾌적한 날씨입니다. 맛있는 한 끼를 추천해 드릴게요.';
+    if (temp >= 10) return '선선한 날씨네요. 오늘 영양 균형 잡힌 메뉴를 추천해 드릴게요.';
+    return '쌀쌀한 날씨입니다. 따뜻하고 든든한 메뉴를 추천해 드릴게요.';
   }
 
   void _showError(String message) {
@@ -123,10 +262,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.wb_sunny, color: Colors.orangeAccent, size: 28),
+                      Icon(
+                        _weatherIcon(_weather),
+                        color: _weatherIconColor(_weather),
+                        size: 28,
+                      ),
                       const SizedBox(width: 12),
                       Text(
-                        '서울시 맑음, 22°C',
+                        _weatherText(_weather, _isWeatherLoading, _weatherError),
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
@@ -146,7 +289,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '상쾌한 날씨입니다. 매일 하시는 5km 러닝 후 근손실 방지를 위해 오늘은 단백질이 풍부하고 예산에 맞는 메뉴를 추천해 드릴 준비가 되었습니다.',
+                    _briefingText(_weather),
                     style: TextStyle(fontSize: 15, color: Colors.grey[700], height: 1.5),
                   ),
                 ],
