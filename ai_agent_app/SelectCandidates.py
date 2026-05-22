@@ -1,8 +1,11 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
+
+from GoalGuidelines import format_guideline
+
 
 class SelectCandidates:
     def __init__(self, model: ChatOpenAI):
@@ -17,13 +20,27 @@ class SelectCandidates:
             for i, r in enumerate(recipes[:100])
         ])
 
-    def select_candidates(self, recipes: List[Dict], query: Dict) -> List[int]:
+    @staticmethod
+    def _format_history(history_texts: Optional[List[str]]) -> str:
+        if not history_texts:
+            return "(이력 없음)"
+        return "\n".join(f"- {t}" for t in history_texts)
+
+    def select_candidates(
+        self,
+        recipes: List[Dict],
+        query: Dict,
+        history_texts: Optional[List[str]] = None,
+    ) -> List[int]:
         context = self._build_context(recipes)
+        history_block = self._format_history(history_texts)
 
         prompt = ChatPromptTemplate.from_messages([
             (
                 "system",
-                "당신은 전문 영양사입니다. 사용자의 프로필을 분석하여 최적의 식단 ID를 선정하세요. "
+                "당신은 전문 영양사입니다. 사용자의 프로필과 과거 식사 이력을 종합 분석하여 "
+                "가장 적합한 식단 ID를 선정하세요. 별점 낮은 이력은 사용자가 싫어한 패턴을 "
+                "암시하므로 피해야 합니다. "
                 "반드시 JSON으로만 답하세요. 형식: {{\"candidate_ids\": [0, 1, 2]}} (최대 10개)"
             ),
             ("human", (
@@ -33,6 +50,9 @@ class SelectCandidates:
                 "알러지: {allergy}\n"
                 "선호: {preferences}\n"
                 "운동 목표: {goal}\n\n"
+                "{guideline}\n\n"
+                "[과거 식사 이력 (현재 요청과 관련 있는 항목)]\n"
+                "{history}\n\n"
                 "[레시피 목록]\n{context}"
             ))
         ])
@@ -44,9 +64,11 @@ class SelectCandidates:
                 "weight": query.get('weight_kg'),
                 "health": ", ".join(query.get('health_conditions', [])) or "없음",
                 "allergy": ", ".join(query.get('allergies', [])) or "없음",
-                "preferences": query.get('preferences', "없음"),
+                "preferences": ", ".join(query.get('preferences', [])) or "없음",
                 "goal": query.get('fitness_goal'),
-                "context": context
+                "guideline": format_guideline(query.get('fitness_goal', '일반식단')),
+                "history": history_block,
+                "context": context,
             })
             if not isinstance(response, dict):
                 return []
@@ -60,7 +82,7 @@ class SelectCandidates:
                     out.append(int(x))
                 except Exception:
                     continue
-            print(out)  # 모델이 어떤 응답을 주는지 확인용
+            print(f"[SelectCandidates] LLM 응답 IDs: {out}")
             return out[:10]
         except Exception as e:
             print(f"Error in select_candidates: {e}")

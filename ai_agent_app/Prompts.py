@@ -17,6 +17,9 @@ RECIPE_ANALYST_TEMPLATE = """
 - 제한사항: {user_restrictions}
 - 건강 상태: {health_conditions}
 
+{goal_guideline}
+
+# selection_reason 작성 시 위 '목표별 영양 가이드'에 부합하는 이유를 강조하세요.
 
 # 반드시 아래 JSON 구조를 지키세요:
 {{
