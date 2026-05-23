@@ -2,8 +2,8 @@
 # RecommendationService: 추천 전체 흐름 조율
 # =====================================================================
 from typing import Dict, List, Any, Optional
-from services.recommendation_engine import RecommendationEngine
-from services.feedback_analyzer import FeedbackAnalyzer
+from ai_agent_app.services.recommendation_engine import RecommendationEngine
+from ai_agent_app.services.feedback_analyzer import FeedbackAnalyzer
 
 
 class RecommendationService:
@@ -14,12 +14,12 @@ class RecommendationService:
         recommendation_engine: RecommendationEngine,
         feedback_analyzer: FeedbackAnalyzer,
         session_manager: "SessionManager",
-        recipes: List[Dict],
+        recipes: List[Dict] = None,
     ):
         self.engine = recommendation_engine
         self.analyzer = feedback_analyzer
         self.session_manager = session_manager
-        self.recipes = recipes
+        self.recipes = recipes or []
 
     async def recommend(self, user_id: str, user_query: Dict, recipes: Optional[List[Dict]] = None, history_texts: Optional[List[str]] = None) -> Dict[str, Any]:
         """

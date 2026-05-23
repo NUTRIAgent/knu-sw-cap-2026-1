@@ -2,7 +2,7 @@
 # RecommendationEngine: LangGraph 기반 추천 엔진
 # =====================================================================
 from typing import Dict, List, Any, Optional
-from RecipeGraph import RecipeGraphBuilder
+from ai_agent_app.RecipeGraph import RecipeGraphBuilder
 
 
 def _build_recipes_by_seq(recipes: List[Dict]) -> Dict[str, Dict]:

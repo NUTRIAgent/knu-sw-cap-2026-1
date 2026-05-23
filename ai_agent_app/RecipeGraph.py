@@ -8,11 +8,11 @@ from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import JsonOutputParser
 import re
 import asyncio
-from GetMarketPrices import GetMarketPrices
-from SelectCandidates import SelectCandidates
-from Prompts import get_recipe_prompt
-import ProcessDynamicInputs
-from GoalGuidelines import format_guideline
+from ai_agent_app.GetMarketPrices import GetMarketPrices
+from ai_agent_app.SelectCandidates import SelectCandidates
+from ai_agent_app.Prompts import get_recipe_prompt
+from ai_agent_app import ProcessDynamicInputs
+from ai_agent_app.GoalGuidelines import format_guideline
 
 
 # =====================================================================
@@ -55,12 +55,12 @@ class GraphState(TypedDict):
 class RecipeGraphBuilder:
     def __init__(
         self,
-        recipes: List[Dict],
         get_market_prices: GetMarketPrices,
         select_candidates: SelectCandidates,
         model: ChatOpenAI,
+        recipes: List[Dict] = None,
     ):
-        self.recipes = recipes
+        self.recipes = recipes or []
         self.get_market_prices = get_market_prices
         self.select_candidates = select_candidates
         self.model = model

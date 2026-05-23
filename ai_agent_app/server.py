@@ -6,20 +6,20 @@ from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 
 # 데이터 로더
-from DataLoader import RecipeDataLoader
-from GetMarketPrices import GetMarketPrices
-from SelectCandidates import SelectCandidates
-from MenuFetcher import MenuFetcher
-from UserHistoryManager import UserHistoryManager
+from ai_agent_app.DataLoader import RecipeDataLoader
+from ai_agent_app.GetMarketPrices import GetMarketPrices
+from ai_agent_app.SelectCandidates import SelectCandidates
+from ai_agent_app.MenuFetcher import MenuFetcher
+from ai_agent_app.UserHistoryManager import UserHistoryManager
 
 # 그래프 및 서비스
-from RecipeGraph import RecipeGraphBuilder
-from services import (
+from ai_agent_app.RecipeGraph import RecipeGraphBuilder
+from ai_agent_app.services import (
     FeedbackAnalyzer,
     RecommendationEngine,
     RecommendationService,
 )
-from session_manager import SessionManager
+from ai_agent_app.session_manager import SessionManager
 
 # =====================================================================
 # 초기화
@@ -27,11 +27,6 @@ from session_manager import SessionManager
 load_dotenv()
 app = FastAPI(title="Recipe AI API")
 
-# 로컬 JSON 데이터 로드 (Spring 연결 실패 시 폴백용)
-recipe_path = "all_recipe_nutrition_data.json"
-price_path = "seoul_prices_weekly_2026-04-05.json"
-recipes = RecipeDataLoader.load_json(recipe_path)
-price_list = RecipeDataLoader.load_json(price_path)
 
 # Spring 백엔드 연동
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8080")
@@ -50,12 +45,11 @@ model = ChatOpenAI(
 )
 
 # 헬퍼 클래스들
-get_market_prices = GetMarketPrices(price_list)
+get_market_prices = GetMarketPrices([])
 select_candidates = SelectCandidates(model)
 
 # 그래프 및 서비스 초기화
 graph_builder = RecipeGraphBuilder(
-    recipes=recipes,
     get_market_prices=get_market_prices,
     select_candidates=select_candidates,
     model=model,
@@ -66,7 +60,7 @@ session_manager = SessionManager()
 recommendation_engine = RecommendationEngine(graph_builder)
 feedback_analyzer = FeedbackAnalyzer(model)
 recommendation_service = RecommendationService(
-    recommendation_engine, feedback_analyzer, session_manager, recipes
+    recommendation_engine, feedback_analyzer, session_manager
 )
 
 # =====================================================================
@@ -143,7 +137,6 @@ def _resolve_recipes(jwt_token: Optional[str], candidate_menu_ids: Optional[List
     """후보 메뉴 목록 반환.
     - candidate_menu_ids 제공 시: 해당 IDs로 조회 (Flutter와 동일한 후보 풀 보장)
     - 미제공 시: 전체 후보 조회
-    - 둘 다 실패 시: 로컬 JSON 폴백
     """
     if candidate_menu_ids:
         candidates = menu_fetcher.fetch_candidates_by_ids(candidate_menu_ids, jwt_token)
@@ -154,8 +147,7 @@ def _resolve_recipes(jwt_token: Optional[str], candidate_menu_ids: Optional[List
     candidates = menu_fetcher.fetch_candidates_full(jwt_token)
     if candidates:
         return candidates
-    print("[server] Spring 후보 조회 실패 → 로컬 JSON 사용")
-    return recipes
+    return []
 
 
 # =====================================================================

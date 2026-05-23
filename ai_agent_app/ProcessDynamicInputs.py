@@ -1,5 +1,5 @@
 from typing import List, Dict
-from GoalGuidelines import format_guideline
+from ai_agent_app.GoalGuidelines import format_guideline
 
 
 def format_enriched(cid, recipe: Dict, price_info: str, rough_cost: int = 0) -> str:

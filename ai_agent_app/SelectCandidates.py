@@ -4,7 +4,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 
-from GoalGuidelines import format_guideline
+from ai_agent_app.GoalGuidelines import format_guideline
 
 
 class SelectCandidates:
