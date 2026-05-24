@@ -51,9 +51,13 @@ public class IngredientPrice extends BaseEntity {
     @Column(nullable = false)
     private LocalDateTime baseDate; // P_DATE: 2026-03-24
 
+    @Column(name = "last_sync_at")
+    private LocalDateTime lastSyncAt; // 배치 실행 확인용 — 가격 변동 없어도 항상 갱신
+
     public void updatePrice(double pricePerGram, Integer originalPrice, String originalUnit) {
         this.pricePerGram = pricePerGram;
         this.originalPrice = originalPrice;
         this.originalUnit = originalUnit;
+        this.lastSyncAt = LocalDateTime.now();
     }
 }
