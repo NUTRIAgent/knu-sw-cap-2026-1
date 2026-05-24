@@ -27,7 +27,7 @@ public class KamisMappedPriceCommand implements ApplicationRunner {
 	public void run(ApplicationArguments args) {
 		Instant start = BatchLog.start(JOB_NAME);
 		try {
-			KamisPriceUpdateResult result = service.updateTodayPrices(false);
+			KamisPriceUpdateResult result = service.updateTodayPrices(false, false);
 			BatchLog.success(JOB_NAME, start, result);
 			int exitCode = SpringApplication.exit(applicationContext, () -> 0);
 			System.exit(exitCode);

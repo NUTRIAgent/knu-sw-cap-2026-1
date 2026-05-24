@@ -3,6 +3,8 @@ package capstone.ai_meal_assistant_batch.job.kamis;
 import java.time.Instant;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -11,16 +13,23 @@ import lombok.RequiredArgsConstructor;
 
 @Component
 @RequiredArgsConstructor
-@ConditionalOnProperty(
-		prefix = "batch.kamis",
-		name = {"enabled", "run-once"},
-		havingValue = "true,false",
-		matchIfMissing = true)
+@ConditionalOnProperty(prefix = "batch.kamis", name = "run-once", havingValue = "false")
 public class KamisPriceScheduler {
 
 	private static final String JOB_NAME = "kamisPriceUpdate";
 
 	private final KamisPriceUpdateService service;
+
+	@EventListener(ApplicationReadyEvent.class)
+	public void runOnStartup() {
+		Instant start = BatchLog.start(JOB_NAME + ".startup");
+		try {
+			KamisPriceUpdateResult result = service.updateTodayPricesForced();
+			BatchLog.success(JOB_NAME + ".startup", start, result);
+		} catch (Exception e) {
+			BatchLog.fail(JOB_NAME + ".startup", start, e);
+		}
+	}
 
 	@Scheduled(cron = "${batch.kamis.cron}")
 	public void run() {
