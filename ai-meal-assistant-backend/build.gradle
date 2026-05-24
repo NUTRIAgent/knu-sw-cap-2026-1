@@ -49,13 +49,20 @@ dependencies {
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 
-	// 7. Test (테스트 환경)
+	// 7. API 문서 (Swagger UI)
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.8'
+
+	// 8. Test (테스트 환경)
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
 }
 
 tasks.named('test') {
 	useJUnitPlatform()
+}
+
+tasks.withType(JavaCompile).configureEach {
+	options.compilerArgs << '-parameters'
 }
 
 // 스프링 클라우드 버전을 관리해 주는 설정
