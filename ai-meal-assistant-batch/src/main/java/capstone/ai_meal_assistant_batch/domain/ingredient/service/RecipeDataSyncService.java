@@ -9,6 +9,7 @@ import capstone.ai_meal_assistant_batch.domain.menu.entity.Menu;
 import capstone.ai_meal_assistant_batch.domain.menu.entity.MenuIngredient;
 import capstone.ai_meal_assistant_batch.domain.menu.repository.MenuIngredientRepository;
 import capstone.ai_meal_assistant_batch.domain.menu.repository.MenuRepository;
+import capstone.ai_meal_assistant_batch.global.s3.S3ImageUploadService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,7 @@ public class RecipeDataSyncService {
     private final IngredientRepository ingredientRepository;
     private final MenuIngredientRepository menuIngredientRepository;
     private final ObjectMapper objectMapper;
+    private final S3ImageUploadService s3ImageUploadService;
 
     @Transactional
     public void syncAllDataFromApi(){
@@ -73,12 +75,15 @@ public class RecipeDataSyncService {
 
                 // 캐시에 없는 새로운 레시피만 골라냅니다.
                 if (!menuCache.containsKey(foodCode)) {
+                    String originalImageUrl = recipeNode.path("ATT_FILE_NO_MAIN").asText();
+                    String mainImageUrl = s3ImageUploadService.uploadFromUrl(originalImageUrl);
+
                     Menu newMenu = Menu.builder()
                             .foodCode(foodCode)                                                // 일련번호
                             .name(recipeNode.path("RCP_NM").asText())                       // 메뉴명
                             .category(recipeNode.path("RCP_PAT2").asText())                 // 카테고리
                             .cookingMethod(recipeNode.path("RCP_WAY2").asText())            // 조리법
-                            .mainImageUrl(recipeNode.path("ATT_FILE_NO_MAIN").asText())     // 메인 이미지
+                            .mainImageUrl(mainImageUrl)                                      // S3 업로드 후 URL (실패 시 원본)
                             .healthTip(recipeNode.path("RCP_NA_TIP").asText())              // 팁
                             .calories(parseDoubleSafe(recipeNode.path("INFO_ENG").asText()))// 열량
                             .protein(parseDoubleSafe(recipeNode.path("INFO_PRO").asText())) // 단백질
@@ -148,6 +153,32 @@ public class RecipeDataSyncService {
             menuIngredientRepository.saveAll(menuIngredientsToSave);
 
             log.info("데이터 동기화 완전 성공! 총 저장된 식재료 매핑 수: {}", menuIngredientsToSave.size());
+
+            // =========================================================================
+            // STEP 3: [기존 메뉴 이미지 S3 마이그레이션]
+            // 원본 URL(foodsafetykorea)을 가진 기존 메뉴를 S3 URL로 업데이트합니다.
+            // =========================================================================
+            List<Menu> menusToMigrate = menuRepository.findAll().stream()
+                    .filter(m -> m.getMainImageUrl() != null
+                            && !m.getMainImageUrl().isBlank()
+                            && !m.getMainImageUrl().contains("amazonaws.com"))
+                    .collect(Collectors.toList());
+
+            if (!menusToMigrate.isEmpty()) {
+                log.info("S3 마이그레이션 대상 메뉴: {}개", menusToMigrate.size());
+                int successCount = 0;
+                for (Menu menu : menusToMigrate) {
+                    String s3Url = s3ImageUploadService.uploadFromUrl(menu.getMainImageUrl());
+                    if (s3Url.contains("amazonaws.com")) {
+                        menu.updateMainImageUrl(s3Url);
+                        successCount++;
+                    }
+                }
+                menuRepository.saveAll(menusToMigrate);
+                log.info("S3 마이그레이션 완료: {}개 성공 / {}개 대상", successCount, menusToMigrate.size());
+            } else {
+                log.info("S3 마이그레이션 대상 없음 (이미 모두 S3 URL)");
+            }
 
         } catch (Exception e){
             log.error("API 데이터 동기화 중 에러 발생: ", e);

@@ -44,6 +44,10 @@ public class Menu extends BaseEntity {
     private Double carbs;        // 매핑: INFO_CAR (탄수화물)
     private Double sodium;       // 매핑: INFO_NA (나트륨)
 
+    public void updateMainImageUrl(String url) {
+        this.mainImageUrl = url;
+    }
+
     // 메뉴 삭제 시 레시피(MenuIngredient)도 한 번에 날아가도록 Cascade 걸기 (벌크성 작업 최적화)
     @Builder.Default // 해당 어노테이션이 없으면 빌더 패턴으로 객체를 생성할 때 해당 리스트가 빈 배열이 아니라 null로 덮어씌워짐 -> add 시 NullPointerEx
     @OneToMany(mappedBy = "menu", cascade = CascadeType.ALL, orphanRemoval = true)
