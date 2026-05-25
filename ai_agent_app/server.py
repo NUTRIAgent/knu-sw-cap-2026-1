@@ -1,7 +1,9 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from typing import List, Optional
 import os
+import json
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 
@@ -158,51 +160,57 @@ def _resolve_recipes(jwt_token: Optional[str], candidate_menu_ids: Optional[List
 @app.post("/recommend")
 async def get_recommendation(user_input: UserRequest):
     """
-    초기 추천 요청
+    초기 추천 요청 (SSE 스트리밍)
 
-    Args:
-        user_input: 사용자 정보 (user_id, jwt_token 포함)
-
-    Returns:
-        {
-            "user_id": str,
-            "recommendations": List[Dict]
-        }
+    Returns text/event-stream:
+        각 분석 완료 시마다 `data: {...}\n\n` 전송
+        마지막에 `data: [DONE]\n\n`
     """
     try:
         user_id = _user_id_from_jwt(user_input.jwt_token)
         active_recipes = _resolve_recipes(user_input.jwt_token, user_input.candidate_menu_ids)
         if not active_recipes:
-            raise ValueError("메뉴 후보를 가져올 수 없습니다. Spring 백엔드 연결을 확인하세요.")
+            raise HTTPException(status_code=422, detail="메뉴 후보를 가져올 수 없습니다. Spring 백엔드 연결을 확인하세요.")
 
         user_query = user_input.dict(exclude={"jwt_token"})
-
-        # 벡터 검색으로 현재 요청과 관련 있는 과거 이력 K개 추출
         history_texts = await user_history_manager.search_relevant_history(
             user_id=user_id,
             user_query=user_query,
             k=5,
         )
 
-        result = await recommendation_service.recommend(user_id, user_query, active_recipes, history_texts)
-        # Flutter는 flat 구조 + menu_id(int) 를 기대하므로 변환
-        recs = result.get("recommendations", [])
-        if not recs:
-            raise ValueError("추천 결과가 없습니다.")
-        top = recs[0]
-        rid = top.get("recipe_id") or top.get("menu_id")
-        try:
-            top["menu_id"] = int(rid) if rid is not None else 0
-        except (TypeError, ValueError):
-            top["menu_id"] = 0
-        return top
-    except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"AI 에이전트 실행 중 오류 발생: {str(e)}",
+        session_manager.create_or_get_session(user_id, user_query)
+
+        async def event_generator():
+            try:
+                async for result in recommendation_engine.stream_initial_recommendations(
+                    active_recipes, user_query, history_texts
+                ):
+                    rid = result.get("recipe_id") or result.get("menu_id")
+                    try:
+                        result["menu_id"] = int(rid) if rid is not None else 0
+                    except (TypeError, ValueError):
+                        result["menu_id"] = 0
+                    yield f"data: {json.dumps(result, ensure_ascii=False)}\n\n"
+            except ValueError as e:
+                yield f"data: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
+            except Exception as e:
+                yield f"data: {json.dumps({'error': f'AI 에이전트 실행 중 오류: {str(e)}'}, ensure_ascii=False)}\n\n"
+            finally:
+                yield "data: [DONE]\n\n"
+
+        return StreamingResponse(
+            event_generator(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no",
+            },
         )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI 에이전트 실행 중 오류 발생: {str(e)}")
 
 
 @app.post("/history")

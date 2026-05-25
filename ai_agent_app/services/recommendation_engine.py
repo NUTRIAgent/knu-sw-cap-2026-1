@@ -55,6 +55,56 @@ class RecommendationEngine:
         final_state = await self.graph.ainvoke(initial_state)
         return final_state
 
+    async def stream_initial_recommendations(
+        self,
+        recipes: List[Dict],
+        user_query: Dict,
+        history_texts: Optional[List[str]] = None,
+    ):
+        """초기 추천 파이프라인을 실행하고 analyze 결과를 완료 순서대로 yield (SSE용)"""
+        print("[RecommendationEngine] SSE 스트리밍 추천 시작")
+
+        if history_texts is None:
+            history_texts = []
+
+        state = {
+            "recipes": recipes,
+            "recipes_by_seq": _build_recipes_by_seq(recipes),
+            "user_query": user_query,
+            "rejected_ids": [],
+            "feedback_reason": None,
+            "feedback_constraints": None,
+            "filtered_recipes": [],
+            "allowed_ids": [],
+            "history_texts": history_texts,
+            "candidate_ids": [],
+            "enriched": [],
+            "price_cache": {},
+            "top5_ids": [],
+            "top10_ids": [],
+            "final_results": [],
+            "error": None,
+        }
+
+        state = self.graph_builder.filter_node(state)
+        if state.get("error"):
+            raise ValueError(state["error"])
+
+        state = self.graph_builder.candidate_node(state)
+        if state.get("error"):
+            raise ValueError(state["error"])
+
+        state = await self.graph_builder.price_node(state)
+        if state.get("error"):
+            raise ValueError(state.get("error", "price_node 오류"))
+
+        state = self.graph_builder.rank_node(state)
+        if state.get("error"):
+            raise ValueError(state["error"])
+
+        async for result in self.graph_builder.stream_analyze(state):
+            yield result
+
     async def get_feedback_recommendations(
         self,
         recipes: List[Dict],
