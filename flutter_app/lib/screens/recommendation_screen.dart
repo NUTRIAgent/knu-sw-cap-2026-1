@@ -22,7 +22,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
   late List<MenuCandidate> _candidates;
   late RecommendationRequest _currentRequest;
 
-  RecommendationResult? _aiResult;
+  final List<RecommendationResult> _aiResults = [];
   bool _aiLoading = true;
   String? _aiError;
   bool _reloading = false;
@@ -49,8 +49,11 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
 
   Future<void> _fetchAiResult() async {
     try {
-      final result = await RecommendationService.recommend(_currentRequest);
-      if (mounted) setState(() { _aiResult = result; _aiLoading = false; });
+      await for (final result in RecommendationService.recommendStream(_currentRequest)) {
+        if (!mounted) return;
+        setState(() => _aiResults.add(result));
+      }
+      if (mounted) setState(() => _aiLoading = false);
     } catch (e) {
       if (mounted) setState(() { _aiError = e.toString(); _aiLoading = false; });
     }
@@ -74,8 +77,8 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
   }
 
   void _checkAllNegative() {
-    final aiPickId = _aiResult?.menuId;
-    final nonAiPick = _candidates.where((c) => c.id != aiPickId).toList();
+    final aiPickIds = _aiResults.map((r) => r.menuId).toSet();
+    final nonAiPick = _candidates.where((c) => !aiPickIds.contains(c.id)).toList();
     if (nonAiPick.isEmpty) return;
     if (nonAiPick.every((c) => _negativeFeedbackIds.contains(c.id))) {
       _reload();
@@ -99,7 +102,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
           candidateMenuIds: newCandidates.map((c) => c.id).toList(),
         );
         _aiLoading = true;
-        _aiResult = null;
+        _aiResults.clear();
         _aiError = null;
         _negativeFeedbackIds.clear();
         _positiveFeedbackIds.clear();
@@ -178,7 +181,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                     child: ElevatedButton(
                       onPressed: canSubmit
                           ? () async {
-                              final menuId = _aiResult?.menuId;
+                              final menuId = _aiResults.isNotEmpty ? _aiResults.first.menuId : null;
                               final rating = _rating;
                               final reason = _feedbackController.text;
                               Navigator.pop(context);
@@ -214,7 +217,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final aiPickId = _aiResult?.menuId;
+    final aiPickIds = _aiResults.map((r) => r.menuId).toSet();
 
     return Scaffold(
       appBar: AppBar(
@@ -228,26 +231,24 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
           Expanded(
             child: CustomScrollView(
               slivers: [
-                // ── AI 추천 1픽 섹션 ──────────────────────────
+                // ── AI 추천 섹션 ──────────────────────────────
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                     child: _AiPickSection(
                       loading: _aiLoading,
-                      result: _aiResult,
+                      results: _aiResults,
                       error: _aiError,
                       onRetry: () {
-                        setState(() { _aiLoading = true; _aiError = null; });
+                        setState(() { _aiLoading = true; _aiError = null; _aiResults.clear(); });
                         _fetchAiResult();
                       },
-                      onDetailTap: _aiResult != null
-                          ? () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => MenuDetailScreen(aiResult: _aiResult),
-                              ),
-                            )
-                          : null,
+                      onDetailTap: (result) => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => MenuDetailScreen(aiResult: result),
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -291,7 +292,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                         delegate: SliverChildBuilderDelegate(
                           (ctx, i) {
                             final c = _candidates[i];
-                            final isAiPick = aiPickId != null && c.id == aiPickId;
+                            final isAiPick = aiPickIds.contains(c.id);
                             bool? feedbackGiven;
                             if (_positiveFeedbackIds.contains(c.id)) feedbackGiven = true;
                             if (_negativeFeedbackIds.contains(c.id)) feedbackGiven = false;
@@ -345,27 +346,59 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
   }
 }
 
-// ── AI 추천 1픽 섹션 ─────────────────────────────────────────
-class _AiPickSection extends StatelessWidget {
+// ── AI 추천 섹션 ─────────────────────────────────────────────
+class _AiPickSection extends StatefulWidget {
   final bool loading;
-  final RecommendationResult? result;
+  final List<RecommendationResult> results;
   final String? error;
   final VoidCallback onRetry;
-  final VoidCallback? onDetailTap;
+  final void Function(RecommendationResult) onDetailTap;
 
   const _AiPickSection({
     required this.loading,
-    required this.result,
+    required this.results,
     required this.error,
     required this.onRetry,
-    this.onDetailTap,
+    required this.onDetailTap,
   });
 
   @override
+  State<_AiPickSection> createState() => _AiPickSectionState();
+}
+
+class _AiPickSectionState extends State<_AiPickSection> {
+  final PageController _pageController = PageController(viewportFraction: 0.92);
+  int _currentPage = 0;
+
+  @override
+  void didUpdateWidget(_AiPickSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 로딩 완료 시 loading placeholder 페이지에 있었다면 마지막 결과 카드로 이동
+    if (!widget.loading && oldWidget.loading && _currentPage >= widget.results.length) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && widget.results.isNotEmpty) {
+          _pageController.jumpToPage(widget.results.length - 1);
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final hasResults = widget.results.isNotEmpty;
+    final pageCount = widget.results.length + (widget.loading ? 1 : 0);
+    final displayCount = pageCount == 0 ? 1 : pageCount;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // ── 헤더 ───────────────────────────────────────────
         Row(
           children: [
             ShaderMask(
@@ -377,24 +410,83 @@ class _AiPickSection extends StatelessWidget {
             ShaderMask(
               blendMode: BlendMode.srcIn,
               shaderCallback: (b) => AppTheme.aiGradient.createShader(b),
-              child: const Text('AI 추천 1픽',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+              child: Text(
+                widget.loading
+                    ? 'AI 추천 분석 중 (${widget.results.length}/5)'
+                    : 'AI 추천 ${widget.results.length}픽',
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         ),
         const SizedBox(height: 8),
-        if (loading)
-          _LoadingCard()
-        else if (error != null)
-          _ErrorCard(error: error!, onRetry: onRetry)
-        else if (result != null)
-          _ResultCard(result: result!, onDetailTap: onDetailTap),
+        // ── 에러 (결과 없을 때) ─────────────────────────────
+        if (!hasResults && !widget.loading && widget.error != null)
+          _ErrorCard(error: widget.error!, onRetry: widget.onRetry)
+        else
+          // ── 카드 PageView ─────────────────────────────────
+          SizedBox(
+            height: 460,
+            child: PageView.builder(
+              controller: _pageController,
+              onPageChanged: (i) => setState(() => _currentPage = i),
+              itemCount: displayCount,
+              itemBuilder: (context, index) {
+                if (!hasResults || index >= widget.results.length) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 4),
+                    child: _LoadingCard(),
+                  );
+                }
+                final r = widget.results[index];
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: SingleChildScrollView(
+                    physics: const ClampingScrollPhysics(),
+                    child: _ResultCard(
+                      result: r,
+                      onDetailTap: () => widget.onDetailTap(r),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        // ── 페이지 인디케이터 ──────────────────────────────
+        if (displayCount > 1)
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(displayCount, (i) {
+                final isActive = i == _currentPage;
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  width: isActive ? 16 : 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: isActive ? AppTheme.primaryColor : Colors.grey[300],
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                );
+              }),
+            ),
+          ),
+        // ── 에러 (부분 결과 있을 때) ────────────────────────
+        if (hasResults && widget.error != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: _ErrorCard(error: widget.error!, onRetry: widget.onRetry),
+          ),
       ],
     );
   }
 }
 
 class _LoadingCard extends StatelessWidget {
+  const _LoadingCard();
+
   @override
   Widget build(BuildContext context) {
     return Card(

@@ -223,6 +223,13 @@ class RecipeGraphBuilder:
             )
         return result
 
+    async def stream_analyze(self, state: GraphState):
+        """Top5 분석 결과를 완료된 순서대로 yield (SSE용)"""
+        tasks = [self._analyze_one(seq, state) for seq in state["top5_ids"]]
+        for coro in asyncio.as_completed(tasks):
+            result = await coro
+            yield result
+
     async def analyze_node(self, state: GraphState) -> GraphState:
         print("[analyze_node] 상위 5개 상세 분석 (병렬 처리)")
         tasks = [self._analyze_one(seq, state) for seq in state["top5_ids"]]

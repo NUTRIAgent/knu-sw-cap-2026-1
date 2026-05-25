@@ -24,27 +24,40 @@ class RecommendationService {
         .toList();
   }
 
-  static Future<RecommendationResult> recommend(RecommendationRequest request) async {
-    final uri = Uri.parse('${ApiConfig.aiBaseUrl}/recommend');
+  static Stream<RecommendationResult> recommendStream(RecommendationRequest request) async* {
+    final client = http.Client();
+    try {
+      final uri = Uri.parse('${ApiConfig.aiBaseUrl}/recommend');
+      final httpRequest = http.Request('POST', uri)
+        ..headers['Content-Type'] = 'application/json; charset=utf-8'
+        ..body = jsonEncode(request.toJson());
 
-    final response = await http
-        .post(
-          uri,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode(request.toJson()),
-        )
-        .timeout(
-          const Duration(seconds: 120),
-          onTimeout: () => throw Exception('AI 서버 응답 시간 초과 (120초)'),
-        );
+      final streamedResponse = await client.send(httpRequest).timeout(
+        const Duration(seconds: 180),
+        onTimeout: () => throw Exception('AI 서버 응답 시간 초과 (180초)'),
+      );
 
-    if (response.statusCode != 200) {
-      final body = jsonDecode(response.body);
-      throw Exception(body['detail'] ?? 'AI 추천 실패 (${response.statusCode})');
+      if (streamedResponse.statusCode != 200) {
+        final body = await streamedResponse.stream.bytesToString();
+        final decoded = jsonDecode(body);
+        throw Exception(decoded['detail'] ?? 'AI 추천 실패 (${streamedResponse.statusCode})');
+      }
+
+      final lines = streamedResponse.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter());
+
+      await for (final line in lines) {
+        if (!line.startsWith('data: ')) continue;
+        final data = line.substring(6);
+        if (data == '[DONE]') return;
+        final decoded = jsonDecode(data) as Map<String, dynamic>;
+        if (decoded.containsKey('error')) throw Exception(decoded['error']);
+        yield RecommendationResult.fromJson(decoded);
+      }
+    } finally {
+      client.close();
     }
-
-    final json = jsonDecode(utf8.decode(response.bodyBytes));
-    return RecommendationResult.fromJson(json);
   }
 
   static Future<void> saveFeedback(int menuId, int feedbackScore, String? jwt) async {
