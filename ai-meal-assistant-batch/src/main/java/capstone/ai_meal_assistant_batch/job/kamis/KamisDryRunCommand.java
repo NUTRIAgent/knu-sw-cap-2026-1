@@ -19,7 +19,7 @@ public class KamisDryRunCommand implements ApplicationRunner {
 	@Override
 	public void run(ApplicationArguments args) {
 		log.info("[BATCH][DRYRUN] kamisPriceUpdate started");
-		KamisPriceUpdateResult result = service.updateTodayPrices(true);
+		KamisPriceUpdateResult result = service.updateTodayPrices(true, false);
 		log.info("[BATCH][DRYRUN] kamisPriceUpdate result={}", result);
 	}
 }

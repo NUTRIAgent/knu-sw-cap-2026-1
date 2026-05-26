@@ -53,8 +53,8 @@ public class KamisNaturePriceListXmlParser {
 				String productno = textContent(el, "productno"); // 품목코드
 				String itemName = textContent(el, "item_name"); // 품목명
 				String unit = textContent(el, "unit"); // 단위
-				String day1 = textContent(el, "day1"); // 최근 조사일자
-				String dpr1 = textContent(el, "dpr1"); // 최근 조사일자 가격
+				String lastestDay = textContent(el, "lastest_day"); // 실제 조사 날짜 (yyyy-MM-dd)
+				String dpr1 = textContent(el, "dpr1"); // 당일 가격
 
 				// 가격이나 코드가 없으면(또는 "-" 처리되어 있으면) 스킵
 				if ((dpr1 == null || dpr1.isBlank() || "-".equals(dpr1)) || productno == null) {
@@ -67,7 +67,7 @@ public class KamisNaturePriceListXmlParser {
 						productno,
 						itemName,
 						unit,
-						day1,
+						lastestDay,
 						dpr1));
 			}
 
@@ -107,6 +107,6 @@ public class KamisNaturePriceListXmlParser {
 			String productno,
 			String itemName,
 			String unit,
-			String day1,
+			String lastestDay,
 			String dpr1) {}
 }

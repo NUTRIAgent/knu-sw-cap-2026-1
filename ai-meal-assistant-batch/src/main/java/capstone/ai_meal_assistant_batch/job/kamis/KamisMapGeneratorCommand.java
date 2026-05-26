@@ -1,14 +1,10 @@
 package capstone.ai_meal_assistant_batch.job.kamis;
 
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -17,137 +13,122 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
+import capstone.ai_meal_assistant_batch.domain.ingredient.entity.Ingredient;
+import capstone.ai_meal_assistant_batch.domain.ingredient.entity.IngredientKamisMapping;
+import capstone.ai_meal_assistant_batch.domain.ingredient.repository.IngredientKamisMappingRepository;
 import capstone.ai_meal_assistant_batch.domain.ingredient.repository.IngredientRepository;
 import capstone.ai_meal_assistant_batch.global.log.BatchLog;
 import lombok.RequiredArgsConstructor;
 
 /**
  * DB의 ingredients와 KAMIS dailySalesList 전체 품목을 비교해서
- * 자동 매핑(JSON)을 생성한다.
+ * 재료당 상위 3개 후보를 ingredient_kamis_mappings 테이블에 confirmed=false로 저장한다.
  *
- * 실행:
- *  -Dspring-boot.run.arguments="--batch.kamis.generate-map=true"
+ * 실행: --batch.kamis.generate-map=true
  */
 @Component
 @RequiredArgsConstructor
 @ConditionalOnProperty(prefix = "batch.kamis", name = "generate-map", havingValue = "true")
 public class KamisMapGeneratorCommand implements ApplicationRunner {
 
-	private static final String JOB_NAME = "kamisGenerateIngredientMap";
+    private static final String JOB_NAME = "kamisGenerateIngredientMap";
+    private static final int TOP_K = 3;
 
-	private final IngredientRepository ingredientRepository;
-	private final KamisNaturePriceListClient client;
-	private final KamisNaturePriceListXmlParser parser;
-	private final ObjectMapper objectMapper;
-	private final ApplicationContext applicationContext;
+    private final IngredientRepository ingredientRepository;
+    private final IngredientKamisMappingRepository mappingRepository;
+    private final KamisNaturePriceListClient client;
+    private final KamisNaturePriceListXmlParser parser;
+    private final ApplicationContext applicationContext;
 
-	@Override
-	public void run(ApplicationArguments args) throws Exception {
-		Instant start = BatchLog.start(JOB_NAME);
-		try {
-			// 1) DB 재료명
-			List<String> ingredientNames = ingredientRepository.findAll().stream()
-					.map(i -> i.getName())
-					.filter(Objects::nonNull)
-					.map(String::trim)
-					.filter(s -> !s.isBlank())
-					.distinct()
-					.sorted()
-					.toList();
+    @Override
+    public void run(ApplicationArguments args) throws Exception {
+        Instant start = BatchLog.start(JOB_NAME);
+        try {
+            // 1) DB 재료 목록
+            List<Ingredient> ingredients = ingredientRepository.findAll().stream()
+                    .filter(i -> i.getName() != null && !i.getName().isBlank())
+                    .sorted((a, b) -> a.getName().compareTo(b.getName()))
+                    .toList();
 
-			// 2) KAMIS 전체 품목(이미 지금 코드에서 단건 호출로 전체 items 확보 가능)
-			String xml = client.fetchXml(Map.of());
-			KamisNaturePriceListXmlParser.ParsedKamisResponse parsed = parser.parse(xml);
-			if (parsed.errorCode() != null && !"000".equals(parsed.errorCode())) {
-				throw new IllegalStateException("KAMIS responded error_code=" + parsed.errorCode() + " msg=" + parsed.errorMsg());
-			}
+            // 2) KAMIS 전체 품목 조회
+            String xml = client.fetchXml(Map.of());
+            KamisNaturePriceListXmlParser.ParsedKamisResponse parsed = parser.parse(xml);
+            if (parsed.errorCode() != null && !"000".equals(parsed.errorCode())) {
+                throw new IllegalStateException("KAMIS error_code=" + parsed.errorCode() + " msg=" + parsed.errorMsg());
+            }
 
-			// 가격 정보는 중복이 많아서, "품목코드(productno)별 대표 품목명"을 뽑고,
-			// 다(多)대1 매핑이 아닌 "이름 후보" 생성을 위해 item_name들을 유니크 리스트로 만든다.
-			Map<String, String> productNoToName = new LinkedHashMap<>();
-			for (var item : parsed.items()) {
-				if (item.productno() == null || item.productno().isBlank()) {
-					continue;
-				}
-				String name = item.itemName();
-				if (name == null || name.isBlank()) {
-					continue;
-				}
-				productNoToName.putIfAbsent(item.productno().trim(), name.trim());
-			}
-			List<KamisItem> kamisItems = productNoToName.entrySet().stream()
-					.map(e -> new KamisItem(e.getKey(), e.getValue()))
-					.toList();
-			List<String> kamisNames = kamisItems.stream().map(KamisItem::kamisName).distinct().toList();
+            // productno별 대표 품목명 추출 (중복 제거)
+            Map<String, String> productNoToName = new LinkedHashMap<>();
+            for (var item : parsed.items()) {
+                if (item.productno() == null || item.productno().isBlank()) continue;
+                if (item.itemName() == null || item.itemName().isBlank()) continue;
+                productNoToName.putIfAbsent(item.productno().trim(), item.itemName().trim());
+            }
+            List<KamisItem> kamisItems = productNoToName.entrySet().stream()
+                    .map(e -> new KamisItem(e.getKey(), e.getValue()))
+                    .toList();
+            List<String> kamisNames = kamisItems.stream().map(KamisItem::kamisName).distinct().toList();
 
-			// 3) 매칭: ingredientName -> top 후보 5개
-			List<GeneratedMapping> generated = new ArrayList<>(ingredientNames.size());
-			for (String ing : ingredientNames) {
-				KamisNameMatcher.MatchResult mr = KamisNameMatcher.bestMatch(ing, kamisNames, 5);
-				List<Candidate> top = mr.topCandidates().stream()
-						.map(s -> {
-							String bestName = s.candidate();
-							List<String> productNos = kamisItems.stream()
-									.filter(ki -> ki.kamisName().equals(bestName))
-									.map(KamisItem::productNo)
-									.sorted()
-									.toList();
-							return new Candidate(bestName, s.score(), productNos);
-						})
-						.toList();
-				generated.add(new GeneratedMapping(ing, top));
-			}
+            // 3) 재료별 상위 3개 후보 매칭 후 DB 저장
+            List<IngredientKamisMapping> toSave = new ArrayList<>();
+            int skippedConfirmed = 0;
+            int skippedDuplicate = 0;
 
-			GeneratedFile out = new GeneratedFile(
-					Instant.now().toString(),
-					ingredientNames.size(),
-					kamisItems.size(),
-					generated
-			);
+            for (Ingredient ingredient : ingredients) {
+                // confirmed=true 매핑이 이미 있는 재료는 건드리지 않음
+                if (mappingRepository.existsByIngredientIdAndConfirmedTrue(ingredient.getId())) {
+                    skippedConfirmed++;
+                    continue;
+                }
 
-			Path outPath = Path.of("build", "kamis-ingredient-map.generated.json");
-			Files.createDirectories(outPath.getParent());
-			String json = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(out);
-			Files.writeString(outPath, json + "\n", StandardCharsets.UTF_8);
+                KamisNameMatcher.MatchResult mr = KamisNameMatcher.bestMatch(ingredient.getName(), kamisNames, TOP_K);
 
-			System.out.println("[KAMIS][MAP_GENERATOR] saved=" + outPath.toAbsolutePath());
-			System.out.println("[KAMIS][MAP_GENERATOR] ingredients=" + ingredientNames.size() + " kamisItems=" + kamisItems.size());
+                for (KamisNameMatcher.Scored s : mr.topCandidates()) {
+                    List<String> productNos = kamisItems.stream()
+                            .filter(ki -> ki.kamisName().equals(s.candidate()))
+                            .map(KamisItem::productNo)
+                            .sorted()
+                            .toList();
+                    if (productNos.isEmpty()) continue;
 
-			BatchLog.success(JOB_NAME, start, Map.of(
-					"out", outPath.toString(),
-					"ingredientCount", ingredientNames.size(),
-					"kamisUniqueItems", kamisItems.size()));
+                    String itemCode = productNos.get(0);
 
-			int exitCode = SpringApplication.exit(applicationContext, () -> 0);
-			System.exit(exitCode);
-		} catch (Exception e) {
-			BatchLog.fail(JOB_NAME, start, e);
-			throw e;
-		}
-	}
+                    // 동일 재료 + 동일 코드 조합이 이미 있으면 스킵 (멱등성)
+                    if (mappingRepository.existsByIngredientIdAndKamisItemCode(ingredient.getId(), itemCode)) {
+                        skippedDuplicate++;
+                        continue;
+                    }
 
-	/** KAMIS 품목코드 + 대표 품목명 */
-	record KamisItem(String productNo, String kamisName) {
-	}
+                    toSave.add(IngredientKamisMapping.builder()
+                            .ingredient(ingredient)
+                            .ingredientName(ingredient.getName())
+                            .kamisItemCode(itemCode)
+                            .kamisItemName(s.candidate())
+                            .autoScore(s.score())
+                            .build());
+                }
+            }
 
-	/** 생성 파일 루트 */
-	record GeneratedFile(
-			String generatedAt,
-			int ingredientCount,
-			int kamisUniqueItemCount,
-			List<GeneratedMapping> mappings) {
-	}
+            mappingRepository.saveAll(toSave);
 
-	record GeneratedMapping(
-			String ingredientName,
-			List<Candidate> candidates) {
-	}
+            System.out.println("[KAMIS][MAP_GENERATOR] saved=" + toSave.size()
+                    + " skippedConfirmed=" + skippedConfirmed
+                    + " skippedDuplicate=" + skippedDuplicate
+                    + " ingredients=" + ingredients.size()
+                    + " kamisItems=" + kamisItems.size());
 
-	record Candidate(
-			String kamisName,
-			double score,
-			List<String> productNos) {
-	}
+            BatchLog.success(JOB_NAME, start, Map.of(
+                    "saved", toSave.size(),
+                    "ingredientCount", ingredients.size(),
+                    "kamisUniqueItems", kamisItems.size()));
+
+            int exitCode = SpringApplication.exit(applicationContext, () -> 0);
+            System.exit(exitCode);
+        } catch (Exception e) {
+            BatchLog.fail(JOB_NAME, start, e);
+            throw e;
+        }
+    }
+
+    record KamisItem(String productNo, String kamisName) {}
 }
