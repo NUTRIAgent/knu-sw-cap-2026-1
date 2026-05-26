@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/models/market_price_models.dart';
+import 'package:flutter_app/screens/market_price_detail_screen.dart';
 import 'package:flutter_app/services/market_price_service.dart';
 import 'package:flutter_app/theme.dart';
 
@@ -173,13 +174,19 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
       );
     }
 
+    final bool showSummary = _allPrices.any((p) => p.dayChangeRate != null);
+
     return RefreshIndicator(
       color: AppTheme.primaryColor,
       onRefresh: _loadPrices,
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-        itemCount: _filtered.length,
-        itemBuilder: (context, index) => _buildPriceCard(_filtered[index]),
+        itemCount: _filtered.length + (showSummary ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (showSummary && index == 0) return _buildSummarySection();
+          final item = _filtered[showSummary ? index - 1 : index];
+          return _buildPriceCard(item);
+        },
       ),
     );
   }
@@ -219,8 +226,118 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
     );
   }
 
-  Widget _buildPriceCard(IngredientPriceModel price) {
+  Widget _buildSummarySection() {
+    final withRates = _allPrices.where((p) => p.dayChangeRate != null).toList();
+    final topUp = (withRates.where((p) => p.dayChangeRate! > 0).toList()
+          ..sort((a, b) => b.dayChangeRate!.compareTo(a.dayChangeRate!)))
+        .take(3)
+        .toList();
+    final topDown = (withRates.where((p) => p.dayChangeRate! < 0).toList()
+          ..sort((a, b) => a.dayChangeRate!.compareTo(b.dayChangeRate!)))
+        .take(3)
+        .toList();
+
+    if (topUp.isEmpty && topDown.isEmpty) return const SizedBox.shrink();
+
     return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '오늘의 주요 변동',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: Colors.black54,
+            ),
+          ),
+          const SizedBox(height: 10),
+          if (topUp.isNotEmpty)
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: topUp.map((p) => _buildSummaryChip(p, true)).toList(),
+            ),
+          if (topUp.isNotEmpty && topDown.isNotEmpty) const SizedBox(height: 6),
+          if (topDown.isNotEmpty)
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: topDown.map((p) => _buildSummaryChip(p, false)).toList(),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryChip(IngredientPriceModel price, bool isUp) {
+    final color = isUp ? const Color(0xFFE53935) : const Color(0xFF1E88E5);
+    final icon = isUp ? Icons.arrow_upward : Icons.arrow_downward;
+    final rate = price.dayChangeRate!.abs().toStringAsFixed(1);
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => MarketPriceDetailScreen(price: price),
+        ),
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 11, color: color),
+            const SizedBox(width: 3),
+            Text(
+              price.ingredientName,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              '$rate%',
+              style: TextStyle(
+                fontSize: 11,
+                color: color,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPriceCard(IngredientPriceModel price) {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => MarketPriceDetailScreen(price: price),
+        ),
+      ),
+      child: Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       decoration: BoxDecoration(
@@ -293,6 +410,7 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
           ),
         ],
       ),
+    ),
     );
   }
 }
