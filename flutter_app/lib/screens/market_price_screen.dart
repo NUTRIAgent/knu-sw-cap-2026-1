@@ -184,6 +184,41 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
     );
   }
 
+  Widget _buildChangeRateBadge(double rate) {
+    final isPositive = rate > 0;
+    final isZero = rate == 0;
+    final color = isZero
+        ? Colors.grey
+        : (isPositive ? const Color(0xFFE53935) : const Color(0xFF1E88E5));
+    final icon = isZero
+        ? Icons.remove
+        : (isPositive ? Icons.arrow_upward : Icons.arrow_downward);
+    final label = isZero ? '변동없음' : '${rate.abs().toStringAsFixed(1)}% 전일대비';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 10, color: color),
+          const SizedBox(width: 2),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildPriceCard(IngredientPriceModel price) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -247,10 +282,13 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
                 ),
               ),
               const SizedBox(height: 3),
-              Text(
-                price.displayDate,
-                style: TextStyle(fontSize: 11, color: Colors.grey[400]),
-              ),
+              if (price.dayChangeRate != null)
+                _buildChangeRateBadge(price.dayChangeRate!)
+              else
+                Text(
+                  price.displayDate,
+                  style: TextStyle(fontSize: 11, color: Colors.grey[400]),
+                ),
             ],
           ),
         ],

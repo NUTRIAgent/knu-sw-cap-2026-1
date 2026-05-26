@@ -6,6 +6,9 @@ class IngredientPriceModel {
   final String? marketName;
   final String? marketType;
   final DateTime baseDate;
+  final double? dayChangeRate;
+  final double? weekChangeRate;
+  final double? monthChangeRate;
 
   const IngredientPriceModel({
     required this.ingredientName,
@@ -15,6 +18,9 @@ class IngredientPriceModel {
     this.marketName,
     this.marketType,
     required this.baseDate,
+    this.dayChangeRate,
+    this.weekChangeRate,
+    this.monthChangeRate,
   });
 
   factory IngredientPriceModel.fromJson(Map<String, dynamic> json) {
@@ -26,6 +32,9 @@ class IngredientPriceModel {
       marketName: json['marketName'] as String?,
       marketType: json['marketType'] as String?,
       baseDate: DateTime.parse(json['baseDate'] as String),
+      dayChangeRate: (json['dayChangeRate'] as num?)?.toDouble(),
+      weekChangeRate: (json['weekChangeRate'] as num?)?.toDouble(),
+      monthChangeRate: (json['monthChangeRate'] as num?)?.toDouble(),
     );
   }
 

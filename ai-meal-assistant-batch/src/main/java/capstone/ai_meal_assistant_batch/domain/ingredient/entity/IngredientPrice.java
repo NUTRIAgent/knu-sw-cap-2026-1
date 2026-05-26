@@ -54,10 +54,18 @@ public class IngredientPrice extends BaseEntity {
     @Column(name = "last_sync_at")
     private LocalDateTime lastSyncAt; // 배치 실행 확인용 — 가격 변동 없어도 항상 갱신
 
-    public void updatePrice(double pricePerGram, Integer originalPrice, String originalUnit) {
+    private Integer prevDayPrice;   // dpr2: 1일전 가격 (원본 단위)
+    private Integer prevWeekPrice;  // dpr3: 1주일전 가격 (원본 단위)
+    private Integer prevMonthPrice; // dpr5: 1개월전 가격 (원본 단위)
+
+    public void updatePrice(double pricePerGram, Integer originalPrice, String originalUnit,
+                            Integer prevDayPrice, Integer prevWeekPrice, Integer prevMonthPrice) {
         this.pricePerGram = pricePerGram;
         this.originalPrice = originalPrice;
         this.originalUnit = originalUnit;
+        this.prevDayPrice = prevDayPrice;
+        this.prevWeekPrice = prevWeekPrice;
+        this.prevMonthPrice = prevMonthPrice;
         this.lastSyncAt = LocalDateTime.now();
     }
 }

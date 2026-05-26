@@ -98,6 +98,9 @@ public class KamisPriceUpdateService {
                         row.marketName(),
                         row.marketType(),
                         row.baseDate(),
+                        row.prevDayPrice(),
+                        row.prevWeekPrice(),
+                        row.prevMonthPrice(),
                         forceUpdate);
 
                 switch (outcome) {
@@ -122,8 +125,12 @@ public class KamisPriceUpdateService {
         LocalDateTime baseDate = parseKamisDate(item.lastestDay());
         String marketName = item.productClsName();
         String marketType = item.categoryName();
+        Integer prevDayPrice = parsePrice(item.dpr2());
+        Integer prevWeekPrice = parsePrice(item.dpr3());
+        Integer prevMonthPrice = parsePrice(item.dpr5());
 
-        return new NormalizedRow(ingredient, pricePerGram, originalPrice, originalUnit, marketName, marketType, baseDate);
+        return new NormalizedRow(ingredient, pricePerGram, originalPrice, originalUnit,
+                marketName, marketType, baseDate, prevDayPrice, prevWeekPrice, prevMonthPrice);
     }
 
     private LocalDateTime parseKamisDate(String day1) {
@@ -177,7 +184,10 @@ public class KamisPriceUpdateService {
             String originalUnit,
             String marketName,
             String marketType,
-            LocalDateTime baseDate) {}
+            LocalDateTime baseDate,
+            Integer prevDayPrice,
+            Integer prevWeekPrice,
+            Integer prevMonthPrice) {}
 
     private enum UpsertOutcome { INSERTED, UPDATED, SKIPPED }
 
@@ -189,6 +199,9 @@ public class KamisPriceUpdateService {
             String marketName,
             String marketType,
             LocalDateTime baseDate,
+            Integer prevDayPrice,
+            Integer prevWeekPrice,
+            Integer prevMonthPrice,
             boolean forceUpdate) {
 
         var existing = ingredientPriceRepository
@@ -210,6 +223,9 @@ public class KamisPriceUpdateService {
                     .marketName(marketName)
                     .marketType(marketType)
                     .baseDate(baseDate)
+                    .prevDayPrice(prevDayPrice)
+                    .prevWeekPrice(prevWeekPrice)
+                    .prevMonthPrice(prevMonthPrice)
                     .build());
             return UpsertOutcome.INSERTED;
         }
@@ -219,7 +235,7 @@ public class KamisPriceUpdateService {
             return UpsertOutcome.SKIPPED;
         }
 
-        old.updatePrice(pricePerGram, originalPrice, originalUnit);
+        old.updatePrice(pricePerGram, originalPrice, originalUnit, prevDayPrice, prevWeekPrice, prevMonthPrice);
         ingredientPriceRepository.save(old);
         return UpsertOutcome.UPDATED;
     }

@@ -35,4 +35,8 @@ public class IngredientPrice extends BaseEntity {
 
     @Column(nullable = false)
     private LocalDateTime baseDate;
+
+    private Integer prevDayPrice;
+    private Integer prevWeekPrice;
+    private Integer prevMonthPrice;
 }
