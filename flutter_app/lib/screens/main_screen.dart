@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dashboard_screen.dart';
+import 'market_price_screen.dart';
 import 'mypage_screen.dart';
 import 'package:flutter_app/theme.dart';
 
@@ -16,6 +17,7 @@ class _MainScreenState extends State<MainScreen> {
   // 탭별로 보여줄 화면 목록
   static const List<Widget> _widgetOptions = <Widget>[
     DashboardScreen(),
+    MarketPriceScreen(),
     MyPageScreen(),
   ];
 
@@ -59,7 +61,6 @@ class _MainScreenState extends State<MainScreen> {
             items: <BottomNavigationBarItem>[
               BottomNavigationBarItem(
                 icon: const Icon(Icons.home_filled),
-                // 💡 선택된 아이콘에 ShaderMask를 씌워 그라데이션 적용!
                 activeIcon: ShaderMask(
                   blendMode: BlendMode.srcIn,
                   shaderCallback: (Rect bounds) {
@@ -70,8 +71,18 @@ class _MainScreenState extends State<MainScreen> {
                 label: '대시보드',
               ),
               BottomNavigationBarItem(
+                icon: const Icon(Icons.storefront_outlined),
+                activeIcon: ShaderMask(
+                  blendMode: BlendMode.srcIn,
+                  shaderCallback: (Rect bounds) {
+                    return AppTheme.aiGradient.createShader(bounds);
+                  },
+                  child: const Icon(Icons.storefront),
+                ),
+                label: '시세',
+              ),
+              BottomNavigationBarItem(
                 icon: const Icon(Icons.person),
-                // 💡 마이페이지 활성화 아이콘에도 동일한 그라데이션 적용
                 activeIcon: ShaderMask(
                   blendMode: BlendMode.srcIn,
                   shaderCallback: (Rect bounds) {

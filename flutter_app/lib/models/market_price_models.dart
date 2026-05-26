@@ -1,0 +1,52 @@
+class IngredientPriceModel {
+  final String ingredientName;
+  final double pricePerGram;
+  final int? originalPrice;
+  final String? originalUnit;
+  final String? marketName;
+  final String? marketType;
+  final DateTime baseDate;
+
+  const IngredientPriceModel({
+    required this.ingredientName,
+    required this.pricePerGram,
+    this.originalPrice,
+    this.originalUnit,
+    this.marketName,
+    this.marketType,
+    required this.baseDate,
+  });
+
+  factory IngredientPriceModel.fromJson(Map<String, dynamic> json) {
+    return IngredientPriceModel(
+      ingredientName: json['ingredientName'] as String,
+      pricePerGram: (json['pricePerGram'] as num).toDouble(),
+      originalPrice: json['originalPrice'] as int?,
+      originalUnit: json['originalUnit'] as String?,
+      marketName: json['marketName'] as String?,
+      marketType: json['marketType'] as String?,
+      baseDate: DateTime.parse(json['baseDate'] as String),
+    );
+  }
+
+  String get displayPrice {
+    if (originalPrice != null && originalUnit != null) {
+      return '${_formatNumber(originalPrice!)}원 / $originalUnit';
+    }
+    return '${_formatNumber((pricePerGram * 1000).round())}원 / 1kg';
+  }
+
+  String get displayDate {
+    return '${baseDate.month}/${baseDate.day} ${baseDate.hour}시 기준';
+  }
+
+  static String _formatNumber(int n) {
+    final s = n.toString();
+    final buf = StringBuffer();
+    for (int i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) buf.write(',');
+      buf.write(s[i]);
+    }
+    return buf.toString();
+  }
+}
