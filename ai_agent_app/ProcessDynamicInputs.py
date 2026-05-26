@@ -27,7 +27,7 @@ def parse_recipe_steps(recipe: Dict) -> List[Dict]:
 def build_static_data(recipe: Dict) -> Dict:
     """정적 레시피 데이터 조립 (LLM 호출 없이 구성 가능한 필드)"""
     return {
-        "recipe_id": recipe.get("MENU_ID") or recipe.get("RCP_SEQ"),  # Spring MENU_ID 우선, 폴백으로 RCP_SEQ
+        "recipe_id": recipe.get("MENU_ID"),  # Spring 메뉴 PK
         "menu_name": recipe["RCP_NM"],
         "main_img": recipe["ATT_FILE_NO_MAIN"],
         "nutrition_info": {

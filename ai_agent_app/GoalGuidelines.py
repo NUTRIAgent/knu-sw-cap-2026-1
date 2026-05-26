@@ -17,7 +17,7 @@ GOAL_GUIDELINES: Dict[str, Dict[str, str]] = {
         "sodium": "나트륨 800mg 이하 권장",
         "focus": "근육 합성/회복에 도움되는 단백질원(닭/소/생선/콩) 우선.",
     },
-    "유지": {
+    "체중유지": {
         "calorie": "끼당 600~700kcal 권장",
         "macros": "균형 (탄수화물:단백질:지방 ≈ 5:3:2)",
         "sodium": "나트륨 700mg 이하 권장",
