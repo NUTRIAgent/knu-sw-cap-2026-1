@@ -1,5 +1,5 @@
 # =====================================================================
-# RecipeGraph.py - RCP_SEQ 기반 식별자로 통일된 LangGraph 워크플로우
+# RecipeGraph.py - MENU_ID 기반 식별자로 통일된 LangGraph 워크플로우
 # =====================================================================
 
 from typing import List, Dict, Any, TypedDict, Optional
@@ -17,26 +17,19 @@ from ai_agent_app.GoalGuidelines import format_guideline
 
 # =====================================================================
 # GraphState: 노드 간 공유 상태
-# - 모든 ID는 RCP_SEQ 문자열 ("28" 같은 형태)
-# - recipes_by_seq: RCP_SEQ -> recipe 빠른 룩업 dict
+# - 모든 ID는 MENU_ID 문자열 (Spring 메뉴 PK)
+# - recipes_by_seq: MENU_ID -> recipe 빠른 룩업 dict
 # =====================================================================
 class GraphState(TypedDict):
     # 입력
     recipes: List[Dict]
     recipes_by_seq: Dict[str, Dict]
     user_query: Dict
-
-    # [피드백] 거절된 RCP_SEQ 리스트
-    rejected_ids: List[str]
-    feedback_reason: Optional[str]
-    feedback_constraints: Optional[str]
-
-    # [filter_node] 출력
-    filtered_recipes: List[Dict]
-    allowed_ids: List[str]
     history_texts: List[str]  # 벡터 검색으로 추출한 관련 이력 텍스트 (LLM 컨텍스트용)
 
     # [candidate_node] 출력
+    filtered_recipes: List[Dict]
+    allowed_ids: List[str]
     candidate_ids: List[str]
 
     # [price_node] 출력
@@ -67,46 +60,30 @@ class RecipeGraphBuilder:
         self.chain = get_recipe_prompt() | self.model | JsonOutputParser()
 
     # ------------------------------------------------------------------
-    # filter_node: 알러지/거절 항목 소거 → allowed_ids (RCP_SEQ)
-    # ------------------------------------------------------------------
-    def filter_node(self, state: GraphState) -> GraphState:
-        rejected = set(state.get("rejected_ids", []))
-        allergies = state["user_query"].get("allergies", [])
-
-        allowed_ids: List[str] = []
-        filtered: List[Dict] = []
-        for r in state["recipes"]:
-            seq = str(r.get("MENU_ID") or r.get("RCP_SEQ", "")).strip()
-            if not seq:
-                continue
-            if seq in rejected:
-                continue
-            if allergies:
-                ingredients = r.get("RCP_PARTS_DTLS", "")
-                if any(a in ingredients for a in allergies):
-                    continue
-            allowed_ids.append(seq)
-            filtered.append(r)
-
-        total = len(state["recipes"])
-        print(f"[filter_node] 전체 {total}개 → 알러지/거절 제거 후 {len(filtered)}개 ({total - len(filtered)}개 제외)")
-        return {**state, "filtered_recipes": filtered, "allowed_ids": allowed_ids}
-
-    # ------------------------------------------------------------------
-    # candidate_node: 이력 우선 + 부족분 LLM으로 보충
+    # candidate_node: 전체 후보(이미 Spring이 알러지 필터링함)에서 LLM이 10개 선정
     # ------------------------------------------------------------------
     def candidate_node(self, state: GraphState) -> GraphState:
         print("[candidate_node] 후보 추출 시작")
-        allowed_ids = state.get("allowed_ids", [])
+
+        # 식별자/목록 생성 (알러지·거절은 Spring 백엔드가 이미 처리)
+        allowed_ids: List[str] = []
+        filtered_recipes: List[Dict] = []
+        for r in state["recipes"]:
+            seq = str(r.get("MENU_ID", "")).strip()
+            if not seq:
+                continue
+            allowed_ids.append(seq)
+            filtered_recipes.append(r)
+
         if not allowed_ids:
-            return {**state, "error": "필터링 후 남은 레시피가 없습니다."}
+            return {**state, "error": "후보 레시피가 없습니다."}
 
         history_texts = state.get("history_texts", [])
-        print(f"[candidate_node] 관련 이력 {len(history_texts)}개 컨텍스트로 사용")
+        print(f"[candidate_node] 후보 {len(allowed_ids)}개 / 관련 이력 {len(history_texts)}개 컨텍스트로 사용")
 
         try:
             llm_local_ids = self.select_candidates.select_candidates(
-                state["filtered_recipes"],
+                filtered_recipes,
                 state["user_query"],
                 history_texts=history_texts,
             )
@@ -116,10 +93,15 @@ class RecipeGraphBuilder:
 
         if not candidate_ids:
             return {**state, "error": "적합한 레시피 후보가 없습니다."}
-        return {**state, "candidate_ids": candidate_ids[:10]}
+        return {
+            **state,
+            "filtered_recipes": filtered_recipes,
+            "allowed_ids": allowed_ids,
+            "candidate_ids": candidate_ids[:10],
+        }
 
     # ------------------------------------------------------------------
-    # price_node: RCP_SEQ로 룩업 + 가격 조회 (병렬)
+    # price_node: MENU_ID로 룩업 + 가격 조회 (병렬)
     # ------------------------------------------------------------------
     async def price_node(self, state: GraphState) -> GraphState:
         print("[price_node] 후보 가격 조회 (병렬)")
@@ -166,8 +148,7 @@ class RecipeGraphBuilder:
             f"예산: {uq.get('budget')}원\n"
             f"목표: {goal}\n"
             f"건강 상태: {', '.join(uq.get('health_conditions', [])) or '없음'}\n"
-            f"선호: {', '.join(uq.get('preferences', [])) or '없음'}\n"
-            f"이전 거절 이유: {state.get('feedback_constraints', '없음')}\n\n"
+            f"선호: {', '.join(uq.get('preferences', [])) or '없음'}\n\n"
             f"{format_guideline(goal)}\n\n"
             "[종합 판단 지침]\n"
             "- '추정조리비'는 일부 재료만 매칭된 부정확한 값일 수 있음. 절대적 기준이 아님.\n"
@@ -236,31 +217,15 @@ class RecipeGraphBuilder:
         final_results = await asyncio.gather(*tasks)
         return {**state, "final_results": final_results}
 
-    async def analyze_with_rejection(self, state: GraphState) -> GraphState:
-        print(f"[analyze_with_rejection] top10에서 거절된 {len(state['rejected_ids'])}개 제외 후 analyze")
-
-        rejected_set = set(state["rejected_ids"])
-        remaining = [s for s in state["top10_ids"] if s not in rejected_set]
-
-        if not remaining:
-            return {**state, "error": "추천할 남은 레시피가 없습니다"}
-
-        new_top5 = remaining[:5]
-        tasks = [self._analyze_one(seq, state) for seq in new_top5]
-        final_results = await asyncio.gather(*tasks)
-        return {**state, "top5_ids": new_top5, "final_results": final_results}
-
     def build(self):
         graph = StateGraph(GraphState)
 
-        graph.add_node("filter_node", self.filter_node)
         graph.add_node("candidate_node", self.candidate_node)
         graph.add_node("price_node", self.price_node)
         graph.add_node("rank_node", self.rank_node)
         graph.add_node("analyze_node", self.analyze_node)
 
-        graph.set_entry_point("filter_node")
-        graph.add_edge("filter_node", "candidate_node")
+        graph.set_entry_point("candidate_node")
         graph.add_conditional_edges(
             "candidate_node",
             lambda s: END if s.get("error") else "price_node",

@@ -8,7 +8,6 @@ from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 
 # 데이터 로더
-from ai_agent_app.DataLoader import RecipeDataLoader
 from ai_agent_app.GetMarketPrices import GetMarketPrices
 from ai_agent_app.SelectCandidates import SelectCandidates
 from ai_agent_app.MenuFetcher import MenuFetcher
@@ -17,7 +16,6 @@ from ai_agent_app.UserHistoryManager import UserHistoryManager
 # 그래프 및 서비스
 from ai_agent_app.RecipeGraph import RecipeGraphBuilder
 from ai_agent_app.services import (
-    FeedbackAnalyzer,
     RecommendationEngine,
     RecommendationService,
 )
@@ -60,9 +58,8 @@ graph_builder = RecipeGraphBuilder(
 user_history_manager = UserHistoryManager()
 session_manager = SessionManager()
 recommendation_engine = RecommendationEngine(graph_builder)
-feedback_analyzer = FeedbackAnalyzer(model)
 recommendation_service = RecommendationService(
-    recommendation_engine, feedback_analyzer, session_manager
+    recommendation_engine, session_manager
 )
 
 # =====================================================================
@@ -103,7 +100,7 @@ class UserRequest(BaseModel):
 
 class HistoryRequest(BaseModel):
     jwt_token: Optional[str] = Field(default=None, description="Spring 백엔드 JWT")
-    recipe_id: str = Field(..., description="먹은 레시피 RCP_SEQ")
+    recipe_id: str = Field(..., description="먹은 레시피 MENU_ID")
     recipe_name: str = Field(..., description="먹은 메뉴 이름")
     comment: str = Field(default="", description="코멘트")
     rating: float = Field(..., ge=1, le=5, description="별점 (1~5)")
@@ -113,20 +110,12 @@ class HistoryRequest(BaseModel):
     preferences: List[str] = Field(default_factory=list, description="당시 선호")
 
 
-class FeedbackRequest(BaseModel):
-    jwt_token: Optional[str] = Field(default=None, description="Spring 백엔드 JWT (세션 식별용)")
-    rejected_recipe_ids: List[str] = Field(
-        ..., description="거절한 레시피 RCP_SEQ 리스트"
-    )
-    reason: str = Field(default="", description="거절 이유")
-
-
 def _user_id_from_jwt(jwt_token: Optional[str]) -> str:
     """JWT의 sub(이메일)을 user_id로 사용. 토큰 없으면 anonymous."""
     if not jwt_token:
         return "anonymous"
     try:
-        import base64, json
+        import base64
         payload_b64 = jwt_token.split(".")[1]
         payload_b64 += "=" * (-len(payload_b64) % 4)
         payload = json.loads(base64.urlsafe_b64decode(payload_b64))
@@ -231,37 +220,5 @@ async def save_history(req: HistoryRequest):
             },
         )
         return {"status": "saved"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/feedback")
-async def provide_feedback(feedback: FeedbackRequest):
-    """
-    피드백 처리 및 재추천
-
-    Args:
-        feedback: 피드백 정보 (user_id 포함)
-
-    Returns:
-        {
-            "user_id": str,
-            "feedback_count": int,
-            "applied_constraint": str,
-            "recommendations": List[Dict]
-        }
-    """
-    try:
-        user_id = _user_id_from_jwt(feedback.jwt_token)
-        result = await recommendation_service.provide_feedback(
-            user_id,
-            feedback.rejected_recipe_ids,
-            feedback.reason,
-        )
-        # 일단 가장 적합한 1개만 반환
-        result["recommendations"] = result.get("recommendations", [])[:1]
-        return result
-    except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

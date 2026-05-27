@@ -1,7 +1,7 @@
 # =====================================================================
 # SessionManager: 사용자 세션 관리 (user_id 기반)
 # =====================================================================
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 
 class SessionManager:
@@ -24,8 +24,6 @@ class SessionManager:
         if user_id not in self.sessions:
             self.sessions[user_id] = {
                 "user_query": user_query,
-                "rejected_ids": [],
-                "feedback_history": [],
                 "last_graph_state": None,
             }
             print(f"[SessionManager] 새 세션 생성: {user_id}")
@@ -36,29 +34,6 @@ class SessionManager:
 
         print(f"[SessionManager] 현재 활성 세션 수: {len(self.sessions)}")
         return user_id
-
-    def add_feedback(
-        self, user_id: str, rejected_recipe_ids: List[str], reason: str
-    ) -> None:
-        """피드백 추가 (RCP_SEQ 리스트)"""
-        print(f"[SessionManager] feedback 추가 시도: {user_id}")
-
-        if user_id not in self.sessions:
-            raise ValueError(f"사용자 세션을 찾을 수 없음: {user_id}")
-
-        self.sessions[user_id]["rejected_ids"].extend(rejected_recipe_ids)
-        self.sessions[user_id]["rejected_ids"] = list(
-            set(self.sessions[user_id]["rejected_ids"])
-        )
-        self.sessions[user_id]["feedback_history"].append(
-            {"rejected": rejected_recipe_ids, "reason": reason}
-        )
-
-    def get_rejected_ids(self, user_id: str) -> List[str]:
-        """거절된 레시피 RCP_SEQ 조회"""
-        if user_id not in self.sessions:
-            return []
-        return self.sessions[user_id]["rejected_ids"]
 
     def get_user_query(self, user_id: str) -> Dict:
         """사용자 입력 정보 조회"""
