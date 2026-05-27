@@ -19,4 +19,10 @@ public class AdminDataController {
         syncService.syncAllDataFromApi();
         return ResponseEntity.ok("레시피 데이터 동기화가 성공적으로 완료되었습니다!");
     }
+
+    @PostMapping("/sync-allergies")
+    public ResponseEntity<String> syncAllergies(){
+        syncService.syncAllergyMappings();
+        return ResponseEntity.ok("메뉴-알레르기 매핑이 성공적으로 완료되었습니다!");
+    }
 }

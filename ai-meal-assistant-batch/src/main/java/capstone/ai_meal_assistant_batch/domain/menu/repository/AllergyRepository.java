@@ -2,7 +2,6 @@ package capstone.ai_meal_assistant_batch.domain.menu.repository;
 
 import capstone.ai_meal_assistant_batch.domain.menu.entity.Allergy;
 import org.springframework.data.jpa.repository.JpaRepository;
-
 import java.util.Optional;
 
 // 알레르기 조회용
