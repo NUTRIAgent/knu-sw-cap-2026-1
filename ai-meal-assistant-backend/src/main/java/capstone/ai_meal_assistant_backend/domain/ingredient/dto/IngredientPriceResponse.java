@@ -12,7 +12,10 @@ public record IngredientPriceResponse(
         String originalUnit,
         String marketName,
         String marketType,
-        LocalDateTime baseDate
+        LocalDateTime baseDate,
+        Double dayChangeRate,
+        Double weekChangeRate,
+        Double monthChangeRate
 ) {
     public static IngredientPriceResponse from(IngredientPrice price) {
         return new IngredientPriceResponse(
@@ -23,7 +26,15 @@ public record IngredientPriceResponse(
                 price.getOriginalUnit(),
                 price.getMarketName(),
                 price.getMarketType(),
-                price.getBaseDate()
+                price.getBaseDate(),
+                calcChangeRate(price.getOriginalPrice(), price.getPrevDayPrice()),
+                calcChangeRate(price.getOriginalPrice(), price.getPrevWeekPrice()),
+                calcChangeRate(price.getOriginalPrice(), price.getPrevMonthPrice())
         );
+    }
+
+    private static Double calcChangeRate(Integer current, Integer prev) {
+        if (current == null || prev == null || prev == 0) return null;
+        return Math.round((current - prev) * 1000.0 / prev) / 10.0;
     }
 }
