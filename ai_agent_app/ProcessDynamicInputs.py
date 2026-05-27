@@ -61,4 +61,8 @@ def build_llm_input(recipe: Dict, price_info: str, user_query: Dict) -> Dict:
         ),
         "health_conditions": ', '.join(user_query.get('health_conditions', []) or []) or '없음',
         "goal_guideline": format_guideline(user_query.get('fitness_goal', '일반식단')),
+        "weather": (
+            f"{user_query.get('weather_temp')}°C {user_query.get('weather_condition', '')}"
+            if user_query.get('weather_temp') is not None else "정보 없음"
+        ),
     }

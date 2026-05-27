@@ -9,6 +9,8 @@ class RecommendationRequest {
   final List<String> preferences;
   final String? jwtToken;
   final List<int> candidateMenuIds;
+  final double? weatherTemp; // ← 추가
+  final String? weatherCondition; // ← 추가
 
   const RecommendationRequest({
     required this.heightCm,
@@ -21,6 +23,8 @@ class RecommendationRequest {
     this.preferences = const [],
     this.jwtToken,
     this.candidateMenuIds = const [],
+    this.weatherTemp,
+    this.weatherCondition,
   });
 
   RecommendationRequest copyWith({List<int>? candidateMenuIds}) {
@@ -39,17 +43,19 @@ class RecommendationRequest {
   }
 
   Map<String, dynamic> toJson() => {
-        'height_cm': heightCm,
-        'weight_kg': weightKg,
-        'location': location,
-        'budget': budget,
-        'health_conditions': healthConditions,
-        'fitness_goal': fitnessGoal,
-        'allergies': allergies,
-        'preferences': preferences,
-        if (jwtToken != null) 'jwt_token': jwtToken,
-        if (candidateMenuIds.isNotEmpty) 'candidate_menu_ids': candidateMenuIds,
-      };
+    'height_cm': heightCm,
+    'weight_kg': weightKg,
+    'location': location,
+    'budget': budget,
+    'health_conditions': healthConditions,
+    'fitness_goal': fitnessGoal,
+    'allergies': allergies,
+    'preferences': preferences,
+    if (jwtToken != null) 'jwt_token': jwtToken,
+    if (candidateMenuIds.isNotEmpty) 'candidate_menu_ids': candidateMenuIds,
+    if (weatherTemp != null) 'weather_temp': weatherTemp,
+    if (weatherCondition != null) 'weather_condition': weatherCondition,
+  };
 }
 
 class MenuCandidate {
@@ -74,15 +80,15 @@ class MenuCandidate {
   });
 
   factory MenuCandidate.fromJson(Map<String, dynamic> json) => MenuCandidate(
-        id: json['id'] ?? 0,
-        name: json['name'] ?? '',
-        category: json['category'],
-        calories: (json['calories'] as num?)?.toDouble(),
-        protein: (json['protein'] as num?)?.toDouble(),
-        sodium: (json['sodium'] as num?)?.toDouble(),
-        basePrice: json['basePrice'],
-        mainImageUrl: json['mainImageUrl'],
-      );
+    id: json['id'] ?? 0,
+    name: json['name'] ?? '',
+    category: json['category'],
+    calories: (json['calories'] as num?)?.toDouble(),
+    protein: (json['protein'] as num?)?.toDouble(),
+    sodium: (json['sodium'] as num?)?.toDouble(),
+    basePrice: json['basePrice'],
+    mainImageUrl: json['mainImageUrl'],
+  );
 }
 
 class NutritionInfo {
@@ -101,12 +107,12 @@ class NutritionInfo {
   });
 
   factory NutritionInfo.fromJson(Map<String, dynamic> json) => NutritionInfo(
-        energy: json['energy'] ?? '-',
-        protein: json['protein'] ?? '-',
-        fat: json['fat'] ?? '-',
-        carbs: json['carbs'] ?? '-',
-        sodium: json['sodium'] ?? '-',
-      );
+    energy: json['energy'] ?? '-',
+    protein: json['protein'] ?? '-',
+    fat: json['fat'] ?? '-',
+    carbs: json['carbs'] ?? '-',
+    sodium: json['sodium'] ?? '-',
+  );
 }
 
 class RecipeStep {
@@ -121,10 +127,10 @@ class RecipeStep {
   });
 
   factory RecipeStep.fromJson(Map<String, dynamic> json) => RecipeStep(
-        stepNo: json['step_no'] ?? 0,
-        content: json['content'] ?? '',
-        image: json['image'] ?? '',
-      );
+    stepNo: json['step_no'] ?? 0,
+    content: json['content'] ?? '',
+    image: json['image'] ?? '',
+  );
 }
 
 class MarketPriceItem {
@@ -144,7 +150,8 @@ class MarketPriceItem {
     required this.calculatedCost,
   });
 
-  factory MarketPriceItem.fromJson(Map<String, dynamic> json) => MarketPriceItem(
+  factory MarketPriceItem.fromJson(Map<String, dynamic> json) =>
+      MarketPriceItem(
         name: json['name'] ?? '',
         recipeAmount: json['recipe_amount'] ?? '',
         marketUnit: json['market_unit'] ?? '',
@@ -179,7 +186,8 @@ class RecommendationResult {
     required this.marketPrices,
   });
 
-  factory RecommendationResult.fromJson(Map<String, dynamic> json) => RecommendationResult(
+  factory RecommendationResult.fromJson(Map<String, dynamic> json) =>
+      RecommendationResult(
         menuId: json['menu_id'] ?? 0,
         menuName: json['menu_name'] ?? '',
         mainImg: json['main_img'] ?? '',
@@ -229,18 +237,18 @@ class MenuDetail {
   });
 
   factory MenuDetail.fromJson(Map<String, dynamic> json) => MenuDetail(
-        id: (json['id'] as num?)?.toInt() ?? 0,
-        name: json['name'] ?? '',
-        category: json['category'],
-        cookingMethod: json['cookingMethod'],
-        calories: (json['calories'] as num?)?.toDouble(),
-        protein: (json['protein'] as num?)?.toDouble(),
-        fat: (json['fat'] as num?)?.toDouble(),
-        carbs: (json['carbs'] as num?)?.toDouble(),
-        sodium: (json['sodium'] as num?)?.toDouble(),
-        basePrice: (json['basePrice'] as num?)?.toInt(),
-        mainImageUrl: json['mainImageUrl'],
-        healthTip: json['healthTip'],
-        ingredientsText: json['ingredientsText'],
-      );
+    id: (json['id'] as num?)?.toInt() ?? 0,
+    name: json['name'] ?? '',
+    category: json['category'],
+    cookingMethod: json['cookingMethod'],
+    calories: (json['calories'] as num?)?.toDouble(),
+    protein: (json['protein'] as num?)?.toDouble(),
+    fat: (json['fat'] as num?)?.toDouble(),
+    carbs: (json['carbs'] as num?)?.toDouble(),
+    sodium: (json['sodium'] as num?)?.toDouble(),
+    basePrice: (json['basePrice'] as num?)?.toInt(),
+    mainImageUrl: json['mainImageUrl'],
+    healthTip: json['healthTip'],
+    ingredientsText: json['ingredientsText'],
+  );
 }
