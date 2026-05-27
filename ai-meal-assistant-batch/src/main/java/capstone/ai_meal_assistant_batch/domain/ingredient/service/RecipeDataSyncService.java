@@ -5,8 +5,12 @@ import capstone.ai_meal_assistant_batch.domain.etl.parser.RecipeDataParser;
 import capstone.ai_meal_assistant_batch.domain.ingredient.dto.IngredientDto;
 import capstone.ai_meal_assistant_batch.domain.ingredient.entity.Ingredient;
 import capstone.ai_meal_assistant_batch.domain.ingredient.repository.IngredientRepository;
+import capstone.ai_meal_assistant_batch.domain.menu.entity.Allergy;
 import capstone.ai_meal_assistant_batch.domain.menu.entity.Menu;
+import capstone.ai_meal_assistant_batch.domain.menu.entity.MenuAllergy;
 import capstone.ai_meal_assistant_batch.domain.menu.entity.MenuIngredient;
+import capstone.ai_meal_assistant_batch.domain.menu.repository.AllergyRepository;
+import capstone.ai_meal_assistant_batch.domain.menu.repository.MenuAllergyRepository;
 import capstone.ai_meal_assistant_batch.domain.menu.repository.MenuIngredientRepository;
 import capstone.ai_meal_assistant_batch.domain.menu.repository.MenuRepository;
 import capstone.ai_meal_assistant_batch.global.s3.S3ImageUploadService;
@@ -22,8 +26,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -35,6 +42,8 @@ public class RecipeDataSyncService {
     private final MenuRepository menuRepository;
     private final IngredientRepository ingredientRepository;
     private final MenuIngredientRepository menuIngredientRepository;
+    private final AllergyRepository allergyRepository;
+    private final MenuAllergyRepository menuAllergyRepository;
     private final ObjectMapper objectMapper;
     private final S3ImageUploadService s3ImageUploadService;
 
@@ -183,6 +192,111 @@ public class RecipeDataSyncService {
         } catch (Exception e){
             log.error("API 데이터 동기화 중 에러 발생: ", e);
         }
+    }
+
+    /**
+     * STEP 4: 메뉴-알레르기 자동 매핑
+     * menu_ingredients 재료명 키워드 기반으로 menu_allergies 테이블을 채웁니다.
+     * syncAllDataFromApi()와 독립 실행 가능 — menu_ingredients가 채워진 상태라면 언제든 호출 가능.
+     * 멱등: 이미 존재하는 (menu_id, allergy_id) 쌍은 skip.
+     */
+    @Transactional
+    public void syncAllergyMappings() {
+        log.info("[STEP 4] 메뉴-알레르기 자동 매핑 시작");
+
+        // 4-1. 키워드 → 알레르기명 맵
+        Map<String, String> keywordToAllergy = buildKeywordToAllergyMap();
+        Set<String> standardNames = new HashSet<>(keywordToAllergy.values()); // 표준 8종
+
+        // 4-0. 정리: 이전 매핑 전체 삭제 후 새로 채움 (멱등 보장)
+        menuAllergyRepository.deleteAll();
+        allergyRepository.deleteNonStandardUnreferenced(standardNames);
+        log.info("[STEP 4] 기존 menu_allergies 전체 삭제, 비표준 allergies 정리 완료");
+
+        // 4-2. allergies 테이블 seed: 없는 항목만 INSERT
+        Map<String, Allergy> allergyCache = allergyRepository.findAll().stream()
+                .collect(Collectors.toMap(Allergy::getName, a -> a));
+
+        Set<String> requiredAllergyNames = new HashSet<>(keywordToAllergy.values());
+        for (String allergyName : requiredAllergyNames) {
+            allergyCache.computeIfAbsent(allergyName, name -> {
+                Allergy newAllergy = Allergy.builder().name(name).build();
+                return allergyRepository.save(newAllergy);
+            });
+        }
+        log.info("[STEP 4] allergies 테이블: {}종 준비 완료", allergyCache.size());
+
+        // 4-3. 기존 매핑 캐시 로드 (멱등 보장)
+        Set<String> existingKeys = menuAllergyRepository.findAllKeys();
+
+        // 4-4. menu_ingredients 전체 순회 → 키워드 매칭 → menu_allergies 생성
+        List<MenuIngredient> allMenuIngredients = menuIngredientRepository.findAllWithMenuAndIngredient();
+        if (allMenuIngredients.isEmpty()) {
+            log.warn("[STEP 4] menu_ingredients 데이터 없음 — syncAllDataFromApi() 먼저 실행 필요");
+            return;
+        }
+
+        List<MenuAllergy> menuAllergiesToSave = new ArrayList<>();
+        for (MenuIngredient mi : allMenuIngredients) {
+            String ingName = mi.getIngredient().getName();
+            String allergyName = matchAllergy(ingName, keywordToAllergy);
+            if (allergyName == null) continue;
+
+            Allergy allergy = allergyCache.get(allergyName);
+            if (allergy == null) continue;
+
+            String key = mi.getMenu().getId() + "_" + allergy.getId();
+            if (existingKeys.contains(key)) continue;
+
+            menuAllergiesToSave.add(MenuAllergy.builder()
+                    .menu(mi.getMenu())
+                    .allergy(allergy)
+                    .build());
+            existingKeys.add(key); // 같은 배치 내 중복 방지
+        }
+
+        menuAllergyRepository.saveAll(menuAllergiesToSave);
+        log.info("[STEP 4] 메뉴-알레르기 매핑 완료: {}건 INSERT (총 재료 {}건 처리)", menuAllergiesToSave.size(), allMenuIngredients.size());
+    }
+
+    /**
+     * 재료명에서 알레르기 키워드 매칭 (포함 검사)
+     * 예: "땅콩버터" → "땅콩" 키워드 포함 → "땅콩" 알레르기 반환
+     */
+    private String matchAllergy(String ingredientName, Map<String, String> keywordToAllergy) {
+        for (Map.Entry<String, String> entry : keywordToAllergy.entrySet()) {
+            if (ingredientName.contains(entry.getKey())) {
+                return entry.getValue();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 키워드 → 알레르기명 매핑 테이블
+     * 한국 식품위생법 알레르기 표시 의무 22종 기준
+     */
+    private Map<String, String> buildKeywordToAllergyMap() {
+        Map<String, String> map = new HashMap<>();
+        // 우유
+        for (String kw : List.of("우유", "치즈", "버터", "크림", "요구르트", "요거트")) map.put(kw, "우유");
+        // 계란
+        for (String kw : List.of("계란", "달걀")) map.put(kw, "계란");
+        // 밀가루
+        for (String kw : List.of("밀가루", "빵가루", "글루텐")) map.put(kw, "밀가루");
+        // 대두
+        for (String kw : List.of("두부", "된장", "청국장", "두유")) map.put(kw, "대두");
+        // 땅콩
+        map.put("땅콩", "땅콩");
+        // 견과류
+        for (String kw : List.of("호두", "아몬드", "잣", "캐슈", "피스타치오", "마카다미아")) map.put(kw, "견과류");
+        // 갑각류
+        for (String kw : List.of("새우", "랍스터")) map.put(kw, "갑각류");
+        // 게 (단독 키워드 — "게살", "꽃게" 등 포함)
+        map.put("게", "갑각류");
+        // 생선
+        for (String kw : List.of("고등어", "연어", "참치", "명태", "대구", "멸치", "가자미", "조기", "갈치", "삼치")) map.put(kw, "생선");
+        return map;
     }
 
 //    공공데이터의 빈 문자열이나 이상한 값을 안전하게 0.0으로 변환해 주는 메서드
