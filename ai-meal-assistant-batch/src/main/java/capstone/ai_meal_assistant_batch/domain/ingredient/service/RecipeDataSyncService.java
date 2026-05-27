@@ -206,12 +206,11 @@ public class RecipeDataSyncService {
 
         // 4-1. 키워드 → 알레르기명 맵
         Map<String, String> keywordToAllergy = buildKeywordToAllergyMap();
-        Set<String> standardNames = new HashSet<>(keywordToAllergy.values()); // 표준 8종
 
-        // 4-0. 정리: 이전 매핑 전체 삭제 후 새로 채움 (멱등 보장)
+        // 4-0. 정리: menu_allergies 전체 삭제 후 새로 채움 (멱등 보장)
+        // allergies 테이블은 user_allergies FK가 있어 배치에서 직접 삭제하지 않음
         menuAllergyRepository.deleteAll();
-        allergyRepository.deleteNonStandardUnreferenced(standardNames);
-        log.info("[STEP 4] 기존 menu_allergies 전체 삭제, 비표준 allergies 정리 완료");
+        log.info("[STEP 4] 기존 menu_allergies 전체 삭제 완료");
 
         // 4-2. allergies 테이블 seed: 없는 항목만 INSERT
         Map<String, Allergy> allergyCache = allergyRepository.findAll().stream()
