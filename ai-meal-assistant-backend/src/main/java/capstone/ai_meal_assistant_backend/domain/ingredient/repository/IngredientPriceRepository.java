@@ -17,4 +17,15 @@ public interface IngredientPriceRepository extends JpaRepository<IngredientPrice
             ORDER BY ip.baseDate DESC, ip.id DESC
             """)
     List<IngredientPrice> findLatestByIngredientName(@Param("name") String name, Pageable pageable);
+
+    @Query("""
+            SELECT ip FROM IngredientPrice ip
+            JOIN FETCH ip.ingredient i
+            WHERE ip.id IN (
+                SELECT MAX(ip2.id) FROM IngredientPrice ip2
+                GROUP BY ip2.ingredient.id
+            )
+            ORDER BY i.name ASC
+            """)
+    List<IngredientPrice> findAllLatest();
 }

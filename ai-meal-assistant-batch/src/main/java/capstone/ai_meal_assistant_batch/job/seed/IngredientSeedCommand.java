@@ -30,7 +30,8 @@ public class IngredientSeedCommand implements ApplicationRunner {
 		Instant start = BatchLog.start(JOB_NAME);
 		try {
 			recipeDataSyncService.syncAllDataFromApi();
-			BatchLog.success(JOB_NAME, start, "seeded ingredients via cleaned_recipe_data.json");
+			recipeDataSyncService.syncAllergyMappings();
+			BatchLog.success(JOB_NAME, start, "seeded ingredients + allergy mappings via cleaned_recipe_data.json");
 		} catch (Exception e) {
 			BatchLog.fail(JOB_NAME, start, e);
 			throw e;

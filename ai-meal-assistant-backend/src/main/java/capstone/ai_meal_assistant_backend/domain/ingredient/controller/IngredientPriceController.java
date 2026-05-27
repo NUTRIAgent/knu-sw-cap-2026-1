@@ -36,6 +36,15 @@ public class IngredientPriceController {
     }
 
     /**
+     * 전체 재료 최신 가격 목록 조회
+     * GET /api/v1/ingredients/prices/all
+     */
+    @GetMapping("/all")
+    public ResponseEntity<ApiResponse<List<IngredientPriceResponse>>> getAllPrices() {
+        return ResponseEntity.ok(ApiResponse.ok(service.getAllLatest()));
+    }
+
+    /**
      * 단일 재료의 최신 가격 조회
      * GET /api/v1/ingredients/prices?name=양파
      */

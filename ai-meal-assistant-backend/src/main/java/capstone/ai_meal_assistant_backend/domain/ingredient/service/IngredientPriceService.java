@@ -19,6 +19,12 @@ public class IngredientPriceService {
 
     private final IngredientPriceRepository repository;
 
+    public List<IngredientPriceResponse> getAllLatest() {
+        return repository.findAllLatest().stream()
+                .map(IngredientPriceResponse::from)
+                .toList();
+    }
+
     public Optional<IngredientPriceResponse> getLatestByName(String name) {
         List<IngredientPrice> results = repository.findLatestByIngredientName(name, PageRequest.of(0, 1));
         return results.isEmpty() ? Optional.empty() : Optional.of(IngredientPriceResponse.from(results.get(0)));
