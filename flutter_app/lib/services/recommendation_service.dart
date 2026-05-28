@@ -97,6 +97,42 @@ class RecommendationService {
     } catch (_) {}
   }
 
+  static Future<List<FeedbackHistoryItem>> fetchMyFeedbacks(String? jwt) async {
+    if (jwt == null || jwt.isEmpty) return [];
+    final uri = Uri.parse('${ApiConfig.baseUrl}/api/recommendation-logs/my');
+    try {
+      final response = await http.get(
+        uri,
+        headers: {'Authorization': 'Bearer $jwt'},
+      ).timeout(const Duration(seconds: 10));
+      if (response.statusCode != 200) return [];
+      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      if (json['success'] != true || json['data'] == null) return [];
+      return (json['data'] as List)
+          .map((e) => FeedbackHistoryItem.fromJson(e))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  static Future<bool> deleteFeedback(int logId, String? jwt) async {
+    if (jwt == null || jwt.isEmpty) return false;
+    final uri =
+        Uri.parse('${ApiConfig.baseUrl}/api/recommendation-logs/$logId');
+    try {
+      final response = await http.delete(
+        uri,
+        headers: {'Authorization': 'Bearer $jwt'},
+      ).timeout(const Duration(seconds: 10));
+      if (response.statusCode != 200) return false;
+      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      return json['success'] == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   static Future<MenuDetail?> fetchMenuDetail(int id, String? jwt) async {
     final uri = Uri.parse('${ApiConfig.baseUrl}/api/menus/$id');
     final headers = <String, String>{};
