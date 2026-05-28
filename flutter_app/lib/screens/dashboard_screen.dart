@@ -24,6 +24,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   bool _isWeatherLoading = true;
   String? _weatherError;
   String _locationName = '현재위치';
+  static String? _aiBriefing;
 
   @override
   void initState() {
@@ -40,9 +41,9 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _loadWeather();
-    }
+    // if (state == AppLifecycleState.resumed) {
+    //   _loadWeather();
+    // }
   }
 
   Future<void> _loadWeather() async {
@@ -93,10 +94,10 @@ class _DashboardScreenState extends State<DashboardScreen>
       final locationName = place?.locality?.isNotEmpty == true
           ? place!.locality!
           : place?.subAdministrativeArea?.isNotEmpty == true
-              ? place!.subAdministrativeArea!
-              : place?.administrativeArea?.isNotEmpty == true
-                  ? place!.administrativeArea!
-                  : '현재위치';
+          ? place!.subAdministrativeArea!
+          : place?.administrativeArea?.isNotEmpty == true
+          ? place!.administrativeArea!
+          : '현재위치';
 
       if (mounted) {
         setState(() {
@@ -104,6 +105,15 @@ class _DashboardScreenState extends State<DashboardScreen>
           _locationName = locationName;
           _isWeatherLoading = false;
         });
+
+        // AI 브리핑 멘트 (실패해도 무시)
+        final briefing = await WeatherService.fetchBriefing(
+          weather,
+          locationName: locationName,
+        );
+        if (mounted && briefing != null) {
+          setState(() => _aiBriefing = briefing);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -148,16 +158,16 @@ class _DashboardScreenState extends State<DashboardScreen>
         preferences: profile.foodPreferences,
         jwtToken: jwt,
         candidateMenuIds: candidates.map((c) => c.id).toList(),
+        weatherTemp: _weather?.temperature, // ← 추가
+        weatherCondition: _weather?.precipitationName, // ← 추가
       );
 
       if (!mounted) return;
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => RecommendationScreen(
-            candidates: candidates,
-            request: request,
-          ),
+          builder: (_) =>
+              RecommendationScreen(candidates: candidates, request: request),
         ),
       );
     } catch (e) {
@@ -195,17 +205,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   String _briefingText(WeatherData? w) {
-    if (w == null) return '날씨 정보를 불러오는 중입니다. 오늘도 건강한 식사를 추천해 드릴게요.';
-    final temp = w.temperature;
-    final pty = w.precipitationType;
-
-    if (pty == 1 || pty == 5) return '비가 오는 날이에요. 따뜻한 국물 요리로 몸을 따뜻하게 해보세요.';
-    if (pty == 2 || pty == 6) return '비와 눈이 섞여 내려요. 따뜻한 식사로 체온을 유지해보세요.';
-    if (pty == 3 || pty == 7) return '눈이 내리는 날이에요. 따뜻한 국물 요리를 추천해 드릴게요.';
-    if (temp >= 30) return '무더운 날씨입니다. 수분 보충에 좋은 시원한 음식을 추천해 드릴게요.';
-    if (temp >= 23) return '따뜻하고 쾌적한 날씨입니다. 맛있는 한 끼를 추천해 드릴게요.';
-    if (temp >= 10) return '선선한 날씨네요. 오늘 영양 균형 잡힌 메뉴를 추천해 드릴게요.';
-    return '쌀쌀한 날씨입니다. 따뜻하고 든든한 메뉴를 추천해 드릴게요.';
+    if (_aiBriefing != null) return _aiBriefing!;
+    return 'ai가 날씨를 브리핑 중입니다...';
   }
 
   void _showError(String message) {
@@ -236,7 +237,8 @@ class _DashboardScreenState extends State<DashboardScreen>
           children: [
             ShaderMask(
               blendMode: BlendMode.srcIn,
-              shaderCallback: (Rect bounds) => AppTheme.aiGradient.createShader(bounds),
+              shaderCallback: (Rect bounds) =>
+                  AppTheme.aiGradient.createShader(bounds),
               child: const Text(
                 'NUTRI Agent',
                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
@@ -270,7 +272,11 @@ class _DashboardScreenState extends State<DashboardScreen>
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        _weatherText(_weather, _isWeatherLoading, _weatherError),
+                        _weatherText(
+                          _weather,
+                          _isWeatherLoading,
+                          _weatherError,
+                        ),
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
@@ -279,7 +285,11 @@ class _DashboardScreenState extends State<DashboardScreen>
                       ),
                     ],
                   ),
-                  const Divider(height: 30, thickness: 1, color: Color(0xFFEEEEEE)),
+                  const Divider(
+                    height: 30,
+                    thickness: 1,
+                    color: Color(0xFFEEEEEE),
+                  ),
                   Text(
                     '오늘의 브리핑',
                     style: TextStyle(
@@ -291,7 +301,11 @@ class _DashboardScreenState extends State<DashboardScreen>
                   const SizedBox(height: 8),
                   Text(
                     _briefingText(_weather),
-                    style: TextStyle(fontSize: 15, color: Colors.grey[700], height: 1.5),
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: Colors.grey[700],
+                      height: 1.5,
+                    ),
                   ),
                 ],
               ),
@@ -321,7 +335,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).primaryColor.withOpacity(0.1),
+                          color: Theme.of(
+                            context,
+                          ).primaryColor.withOpacity(0.1),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
@@ -417,7 +433,11 @@ class _DashboardScreenState extends State<DashboardScreen>
                     : const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.restaurant_menu, size: 24, color: Colors.white),
+                          Icon(
+                            Icons.restaurant_menu,
+                            size: 24,
+                            color: Colors.white,
+                          ),
                           SizedBox(width: 12),
                           Text(
                             '맞춤 메뉴 추천 받기',

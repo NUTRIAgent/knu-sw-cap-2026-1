@@ -30,9 +30,9 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor, 
-      body: _widgetOptions.elementAt(_selectedIndex),
-      
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: IndexedStack(index: _selectedIndex, children: _widgetOptions),
+
       // 💡 하단 네비게이션 바 전체를 Container로 감싸서 그림자와 라운딩 추가
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -52,12 +52,12 @@ class _MainScreenState extends State<MainScreen> {
             backgroundColor: Colors.white,
             elevation: 0, // Container의 boxShadow를 쓰기 위해 기본 그림자 제거
             type: BottomNavigationBarType.fixed,
-            
+
             // 선택되지 않은 아이템 색상
             unselectedItemColor: Colors.grey.shade400,
             // 텍스트 라벨 색상은 프라이머리 컬러(Indigo)로 통일
-            selectedItemColor: AppTheme.primaryColor, 
-            
+            selectedItemColor: AppTheme.primaryColor,
+
             items: <BottomNavigationBarItem>[
               BottomNavigationBarItem(
                 icon: const Icon(Icons.home_filled),

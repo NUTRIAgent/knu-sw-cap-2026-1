@@ -20,6 +20,7 @@ from ai_agent_app.services import (
     RecommendationService,
 )
 from ai_agent_app.session_manager import SessionManager
+from ai_agent_app.WeatherAdvisor import WeatherAdvisor
 
 # =====================================================================
 # 초기화
@@ -47,6 +48,7 @@ model = ChatOpenAI(
 # 헬퍼 클래스들
 get_market_prices = GetMarketPrices([])
 select_candidates = SelectCandidates(model)
+weather_advisor = WeatherAdvisor(model)
 
 # 그래프 및 서비스 초기화
 graph_builder = RecipeGraphBuilder(
@@ -96,6 +98,12 @@ class UserRequest(BaseModel):
         default=None,
         description="Flutter가 미리 조회한 후보 메뉴 ID 목록. 제공 시 해당 후보만 사용하여 Flutter와 동일한 후보 풀 보장"
     )
+    weather_temp: Optional[float] = Field(
+        default=None, example=31.5, description="현재 기온(°C)"
+    )
+    weather_condition: Optional[str] = Field(
+        default=None, example="맑음", description="현재 날씨 상태 (맑음/비/눈/흐림 등)"
+    )
 
 
 class HistoryRequest(BaseModel):
@@ -109,6 +117,11 @@ class HistoryRequest(BaseModel):
     health_conditions: List[str] = Field(default_factory=list, description="당시 건강 상태")
     preferences: List[str] = Field(default_factory=list, description="당시 선호")
 
+class WeatherBriefingRequest(BaseModel):
+    temperature: float = Field(..., example=31.5, description="현재 기온(°C)")
+    condition: str = Field(default="", example="맑음", description="날씨 상태")
+    humidity: Optional[float] = Field(default=None, example=60, description="습도(%)")
+    location_name: Optional[str] = Field(default=None, example="서울", description="지역명")
 
 def _user_id_from_jwt(jwt_token: Optional[str]) -> str:
     """JWT의 sub(이메일)을 user_id로 사용. 토큰 없으면 anonymous."""
@@ -220,5 +233,19 @@ async def save_history(req: HistoryRequest):
             },
         )
         return {"status": "saved"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/weather-briefing")
+async def weather_briefing(req: WeatherBriefingRequest):
+    """날씨 기반 한 줄 브리핑 멘트 생성"""
+    try:
+        briefing = await weather_advisor.generate(
+            temperature=req.temperature,
+            condition=req.condition,
+            humidity=req.humidity,
+            location_name=req.location_name,
+        )
+        return {"briefing": briefing}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

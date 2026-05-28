@@ -16,6 +16,7 @@ RECIPE_ANALYST_TEMPLATE = """
 - 프로필: {user_profile}
 - 제한사항: {user_restrictions}
 - 건강 상태: {health_conditions}
+- 현재 날씨: {weather}
 
 {goal_guideline}
 
@@ -23,7 +24,8 @@ RECIPE_ANALYST_TEMPLATE = """
 
 # 반드시 아래 JSON 구조를 지키세요:
 {{
-    "selection_reason": "이 메뉴를 추천한 이유를 사용자 프로필과 제한사항을 근거로 2~3문장으로 서술",
+    "selection_reason": "이 메뉴를 추천한 이유를 사용자 프로필과 제한사항을 근거로 2~3문장으로 서술. 
+    selection_reason 에는 추천 이유와 함께, 현재 날씨에 잘 어울리는 메뉴라면 그 점도 한 문장 자연스럽게 언급하세요. 날씨와 무관하면 억지로 넣지 마세요.",
     "personalized_recipe_tip": "사용자의 건강 상태({health_conditions})와 운동 목표를 고려하여 이 레시피에서 개선하거나 변주할 수 있는 2~3가지 구체적인 방법을 서술. 예: 특정 영양소 보충을 위한 재료 추가, 건강 상태에 따른 재료 대체, 조리법 변경 등. 건강 상태가 없음이면 운동 목표 기반으로만 작성.",
     "total_estimated_cost": 0,
     "market_prices": [
