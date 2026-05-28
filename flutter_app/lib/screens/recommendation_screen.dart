@@ -114,7 +114,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
     }
   }
 
-  void _showFeedbackBottomSheet() {
+  void _showFeedbackBottomSheet(int menuId) {
     _rating = 0;
     _feedbackController.clear();
     final messenger = ScaffoldMessenger.of(context);
@@ -181,14 +181,11 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                     child: ElevatedButton(
                       onPressed: canSubmit
                           ? () async {
-                              final menuId = _aiResults.isNotEmpty ? _aiResults.first.menuId : null;
                               final rating = _rating;
                               final reason = _feedbackController.text;
                               Navigator.pop(context);
-                              if (menuId != null && menuId > 0) {
-                                await RecommendationService.saveDetailedFeedback(
-                                    menuId, rating, reason, widget.request.jwtToken);
-                              }
+                              await RecommendationService.saveDetailedFeedback(
+                                  menuId, rating, reason, widget.request.jwtToken);
                               messenger.showSnackBar(
                                 const SnackBar(content: Text('소중한 피드백 감사합니다!')),
                               );
@@ -249,6 +246,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                           builder: (_) => MenuDetailScreen(aiResult: result),
                         ),
                       ),
+                      onFeedbackTap: (result) => _showFeedbackBottomSheet(result.menuId),
                     ),
                   ),
                 ),
@@ -323,23 +321,6 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
             ),
           ),
 
-          // ── AI 픽 피드백 버튼 ─────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-            child: OutlinedButton(
-              onPressed: _showFeedbackBottomSheet,
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: AppTheme.primaryColor, width: 1.5),
-                minimumSize: const Size(double.infinity, 52),
-                shape: const StadiumBorder(),
-              ),
-              child: const Text('추천 결과 피드백 남기기',
-                  style: TextStyle(
-                      color: AppTheme.primaryColor,
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold)),
-            ),
-          ),
         ],
       ),
     );
@@ -353,6 +334,7 @@ class _AiPickSection extends StatefulWidget {
   final String? error;
   final VoidCallback onRetry;
   final void Function(RecommendationResult) onDetailTap;
+  final void Function(RecommendationResult) onFeedbackTap;
 
   const _AiPickSection({
     required this.loading,
@@ -360,6 +342,7 @@ class _AiPickSection extends StatefulWidget {
     required this.error,
     required this.onRetry,
     required this.onDetailTap,
+    required this.onFeedbackTap,
   });
 
   @override
@@ -441,11 +424,11 @@ class _AiPickSectionState extends State<_AiPickSection> {
                 final r = widget.results[index];
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: SingleChildScrollView(
-                    physics: const ClampingScrollPhysics(),
+                  child: GestureDetector(
+                    onTap: () => widget.onDetailTap(r),
                     child: _ResultCard(
                       result: r,
-                      onDetailTap: () => widget.onDetailTap(r),
+                      onFeedbackTap: () => widget.onFeedbackTap(r),
                     ),
                   ),
                 );
@@ -471,6 +454,20 @@ class _AiPickSectionState extends State<_AiPickSection> {
                   ),
                 );
               }),
+            ),
+          ),
+        // ── 카드 탭 안내 ───────────────────────────────────
+        if (hasResults)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.touch_app_rounded, size: 13, color: Colors.grey[400]),
+                const SizedBox(width: 4),
+                Text('카드를 누르면 레시피·재료 가격을 볼 수 있어요',
+                    style: TextStyle(fontSize: 11, color: Colors.grey[400])),
+              ],
             ),
           ),
         // ── 에러 (부분 결과 있을 때) ────────────────────────
@@ -548,8 +545,8 @@ class _ErrorCard extends StatelessWidget {
 
 class _ResultCard extends StatelessWidget {
   final RecommendationResult result;
-  final VoidCallback? onDetailTap;
-  const _ResultCard({required this.result, this.onDetailTap});
+  final VoidCallback? onFeedbackTap;
+  const _ResultCard({required this.result, this.onFeedbackTap});
 
   @override
   Widget build(BuildContext context) {
@@ -562,84 +559,59 @@ class _ResultCard extends StatelessWidget {
           if (result.mainImg.isNotEmpty)
             Image.network(
               result.mainImg,
-              height: 160,
+              height: 130,
               fit: BoxFit.cover,
               errorBuilder: (_, _, _) => Container(
-                height: 160,
+                height: 130,
                 color: AppTheme.primaryColor.withValues(alpha: 0.1),
                 child: const Icon(Icons.restaurant, size: 48, color: AppTheme.primaryColor),
               ),
             ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(result.menuName,
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Text(result.selectionReason,
-                    style: TextStyle(fontSize: 13, color: Colors.grey[700], height: 1.5)),
-                const SizedBox(height: 12),
-                _NutritionRow(info: result.nutritionInfo),
-                if (result.totalEstimatedCost > 0) ...[
-                  const SizedBox(height: 10),
-                  Row(children: [
-                    const Icon(Icons.receipt_long_outlined,
-                        size: 15, color: AppTheme.primaryColor),
-                    const SizedBox(width: 4),
-                    Text('예상 재료비 약 ${result.totalEstimatedCost.toInt()}원',
-                        style: const TextStyle(
-                            fontSize: 13, fontWeight: FontWeight.w600)),
-                  ]),
-                ],
-                if (result.recipeSteps.isNotEmpty) ...[
-                  const Divider(height: 24),
-                  const Text('조리 방법',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(result.menuName,
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
-                  ...result.recipeSteps.map((s) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 22, height: 22,
-                          decoration: const BoxDecoration(
-                              color: AppTheme.primaryColor, shape: BoxShape.circle),
-                          child: Center(
-                            child: Text('${s.stepNo}',
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold)),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(s.content,
-                              style: TextStyle(
-                                  fontSize: 13, color: Colors.grey[800], height: 1.4)),
-                        ),
-                      ],
-                    ),
-                  )),
-                ],
-                const Divider(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: TextButton.icon(
-                    onPressed: onDetailTap,
-                    icon: const Icon(Icons.open_in_new_rounded, size: 15),
-                    label: const Text('맞춤 레시피 변주 · 재료별 가격 자세히 보기'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppTheme.primaryColor,
-                      textStyle: const TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w600),
+                  Text(result.selectionReason,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 13, color: Colors.grey[700], height: 1.5)),
+                  const SizedBox(height: 12),
+                  _NutritionRow(info: result.nutritionInfo),
+                  if (result.totalEstimatedCost > 0) ...[
+                    const SizedBox(height: 10),
+                    Row(children: [
+                      const Icon(Icons.receipt_long_outlined,
+                          size: 15, color: AppTheme.primaryColor),
+                      const SizedBox(width: 4),
+                      Text('예상 재료비 약 ${result.totalEstimatedCost.toInt()}원',
+                          style: const TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w600)),
+                    ]),
+                  ],
+                  const Spacer(),
+                  const Divider(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: onFeedbackTap,
+                      icon: const Icon(Icons.star_outline_rounded, size: 15),
+                      label: const Text('이 메뉴 피드백 남기기'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.primaryColor,
+                        side: const BorderSide(color: AppTheme.primaryColor, width: 1),
+                        textStyle: const TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w600),
+                        shape: const StadiumBorder(),
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
