@@ -207,6 +207,34 @@ class RecommendationResult {
       );
 }
 
+class FeedbackHistoryItem {
+  final int id;
+  final int menuId;
+  final String menuName;
+  final String? menuImageUrl;
+  final int feedbackScore;
+  final String? createdAt;
+
+  const FeedbackHistoryItem({
+    required this.id,
+    required this.menuId,
+    required this.menuName,
+    this.menuImageUrl,
+    required this.feedbackScore,
+    this.createdAt,
+  });
+
+  factory FeedbackHistoryItem.fromJson(Map<String, dynamic> json) =>
+      FeedbackHistoryItem(
+        id: (json['id'] as num).toInt(),
+        menuId: (json['menuId'] as num).toInt(),
+        menuName: json['menuName'] ?? '',
+        menuImageUrl: json['menuImageUrl'],
+        feedbackScore: (json['feedbackScore'] as num).toInt(),
+        createdAt: json['createdAt'],
+      );
+}
+
 class MenuDetail {
   final int id;
   final String name;

@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Set;
 
 @Repository
@@ -14,4 +15,7 @@ public interface RecommendationLogRepository extends JpaRepository<Recommendatio
 
     @Query("SELECT r.selectedMenu.id FROM RecommendationLog r WHERE r.user = :user AND r.feedbackScore < 0")
     Set<Long> findNegativeMenuIdsByUser(@Param("user") User user);
+
+    @Query("SELECT r FROM RecommendationLog r WHERE r.user = :user AND r.feedbackScore IS NOT NULL ORDER BY r.createdAt DESC")
+    List<RecommendationLog> findFeedbacksByUser(@Param("user") User user);
 }
