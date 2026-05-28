@@ -1,0 +1,1232 @@
+[
+  {
+    "ingredientName": "m 적양배추",
+    "kamisItemCode": "297",
+    "kamisItemName": "양배추/양배추"
+  },
+  {
+    "ingredientName": "간 마늘",
+    "kamisItemCode": "357",
+    "kamisItemName": "깐마늘(국산)/깐마늘(국산)"
+  },
+  {
+    "ingredientName": "간 양파",
+    "kamisItemCode": "117",
+    "kamisItemName": "양파/양파"
+  },
+  {
+    "ingredientName": "갈치",
+    "kamisItemCode": "2110",
+    "kamisItemName": "갈치/국산(냉장)(小)"
+  },
+  {
+    "ingredientName": "감자",
+    "kamisItemCode": "1900",
+    "kamisItemName": "감자/수미(시설)"
+  },
+  {
+    "ingredientName": "감자전분",
+    "kamisItemCode": "1900",
+    "kamisItemName": "감자/수미(시설)"
+  },
+  {
+    "ingredientName": "감자튀김",
+    "kamisItemCode": "1900",
+    "kamisItemName": "감자/수미(시설)"
+  },
+  {
+    "ingredientName": "갑오징어",
+    "kamisItemCode": "3082",
+    "kamisItemName": "물오징어/원양(냉동)"
+  },
+  {
+    "ingredientName": "거피녹두",
+    "kamisItemCode": "16",
+    "kamisItemName": "녹두/국산"
+  },
+  {
+    "ingredientName": "건고추",
+    "kamisItemCode": "341",
+    "kamisItemName": "건고추/화건"
+  },
+  {
+    "ingredientName": "건다시마",
+    "kamisItemCode": "2889",
+    "kamisItemName": "건다시마/완도산"
+  },
+  {
+    "ingredientName": "건새우",
+    "kamisItemCode": "938",
+    "kamisItemName": "새우/흰다리(수입)"
+  },
+  {
+    "ingredientName": "건오징어",
+    "kamisItemCode": "3082",
+    "kamisItemName": "물오징어/원양(냉동)"
+  },
+  {
+    "ingredientName": "건조 자른미역",
+    "kamisItemCode": "265",
+    "kamisItemName": "마른미역/마른미역"
+  },
+  {
+    "ingredientName": "건조다시마 사방",
+    "kamisItemCode": "2889",
+    "kamisItemName": "건다시마/완도산"
+  },
+  {
+    "ingredientName": "건조체리",
+    "kamisItemCode": "608",
+    "kamisItemName": "체리/수입"
+  },
+  {
+    "ingredientName": "건조토마토",
+    "kamisItemCode": "321",
+    "kamisItemName": "토마토/토마토"
+  },
+  {
+    "ingredientName": "건청양고추",
+    "kamisItemCode": "353",
+    "kamisItemName": "풋고추/청양고추"
+  },
+  {
+    "ingredientName": "계란",
+    "kamisItemCode": "71",
+    "kamisItemName": "계란/특란10구(일반란)"
+  },
+  {
+    "ingredientName": "고구마",
+    "kamisItemCode": "20",
+    "kamisItemName": "고구마/밤"
+  },
+  {
+    "ingredientName": "고구마 다이스",
+    "kamisItemCode": "20",
+    "kamisItemName": "고구마/밤"
+  },
+  {
+    "ingredientName": "고구마순",
+    "kamisItemCode": "20",
+    "kamisItemName": "고구마/밤"
+  },
+  {
+    "ingredientName": "고등어",
+    "kamisItemCode": "464",
+    "kamisItemName": "고등어/국산(염장)(중품)"
+  },
+  {
+    "ingredientName": "고운 고춧가루",
+    "kamisItemCode": "679",
+    "kamisItemName": "고춧가루/국산"
+  },
+  {
+    "ingredientName": "고추",
+    "kamisItemCode": "341",
+    "kamisItemName": "건고추/화건"
+  },
+  {
+    "ingredientName": "고춧가루",
+    "kamisItemCode": "680",
+    "kamisItemName": "고춧가루/중국"
+  },
+  {
+    "ingredientName": "구운 김",
+    "kamisItemCode": "1017",
+    "kamisItemName": "김/구운김"
+  },
+  {
+    "ingredientName": "구운 땅콩",
+    "kamisItemCode": "149",
+    "kamisItemName": "땅콩/국산"
+  },
+  {
+    "ingredientName": "굴",
+    "kamisItemCode": "2811",
+    "kamisItemName": "조기/굴비(中)"
+  },
+  {
+    "ingredientName": "굵게 사과",
+    "kamisItemCode": "198",
+    "kamisItemName": "사과/후지"
+  },
+  {
+    "ingredientName": "굵은 고춧가루",
+    "kamisItemCode": "679",
+    "kamisItemName": "고춧가루/국산"
+  },
+  {
+    "ingredientName": "김",
+    "kamisItemCode": "264",
+    "kamisItemName": "김/마른김"
+  },
+  {
+    "ingredientName": "깐마늘",
+    "kamisItemCode": "357",
+    "kamisItemName": "깐마늘(국산)/깐마늘(국산)"
+  },
+  {
+    "ingredientName": "깐생강",
+    "kamisItemCode": "126",
+    "kamisItemName": "생강/국산"
+  },
+  {
+    "ingredientName": "깐양파",
+    "kamisItemCode": "117",
+    "kamisItemName": "양파/양파"
+  },
+  {
+    "ingredientName": "깨",
+    "kamisItemCode": "143",
+    "kamisItemName": "참깨/백색(국산)"
+  },
+  {
+    "ingredientName": "깻잎",
+    "kamisItemCode": "133",
+    "kamisItemName": "깻잎/깻잎"
+  },
+  {
+    "ingredientName": "깻잎순",
+    "kamisItemCode": "133",
+    "kamisItemName": "깻잎/깻잎"
+  },
+  {
+    "ingredientName": "꽁치",
+    "kamisItemCode": "949",
+    "kamisItemName": "꽁치/냉동(수입)"
+  },
+  {
+    "ingredientName": "꽁치살",
+    "kamisItemCode": "949",
+    "kamisItemName": "꽁치/냉동(수입)"
+  },
+  {
+    "ingredientName": "꽃게",
+    "kamisItemCode": "3029",
+    "kamisItemName": "꽃게/암꽃게(냉동)"
+  },
+  {
+    "ingredientName": "꽈리고추",
+    "kamisItemCode": "351",
+    "kamisItemName": "풋고추/꽈리고추"
+  },
+  {
+    "ingredientName": "냉동 고등어",
+    "kamisItemCode": "251",
+    "kamisItemName": "고등어/냉동"
+  },
+  {
+    "ingredientName": "냉동 아보카도",
+    "kamisItemCode": "2009",
+    "kamisItemName": "아보카도/수입"
+  },
+  {
+    "ingredientName": "느타리",
+    "kamisItemCode": "152",
+    "kamisItemName": "느타리버섯/느타리버섯"
+  },
+  {
+    "ingredientName": "느타리버섯",
+    "kamisItemCode": "152",
+    "kamisItemName": "느타리버섯/느타리버섯"
+  },
+  {
+    "ingredientName": "다시마",
+    "kamisItemCode": "2889",
+    "kamisItemName": "건다시마/완도산"
+  },
+  {
+    "ingredientName": "다시마 가루",
+    "kamisItemCode": "2889",
+    "kamisItemName": "건다시마/완도산"
+  },
+  {
+    "ingredientName": "다시마 국물",
+    "kamisItemCode": "2889",
+    "kamisItemName": "건다시마/완도산"
+  },
+  {
+    "ingredientName": "다시마 사방",
+    "kamisItemCode": "2889",
+    "kamisItemName": "건다시마/완도산"
+  },
+  {
+    "ingredientName": "다시마 육수",
+    "kamisItemCode": "2889",
+    "kamisItemName": "건다시마/완도산"
+  },
+  {
+    "ingredientName": "다시마물",
+    "kamisItemCode": "2889",
+    "kamisItemName": "건다시마/완도산"
+  },
+  {
+    "ingredientName": "단배추",
+    "kamisItemCode": "28",
+    "kamisItemName": "배추/봄"
+  },
+  {
+    "ingredientName": "단호박",
+    "kamisItemCode": "317",
+    "kamisItemName": "호박/애호박"
+  },
+  {
+    "ingredientName": "당근",
+    "kamisItemCode": "335",
+    "kamisItemName": "당근/무세척"
+  },
+  {
+    "ingredientName": "대왕오징어채",
+    "kamisItemCode": "3082",
+    "kamisItemName": "물오징어/원양(냉동)"
+  },
+  {
+    "ingredientName": "대추",
+    "kamisItemCode": "1076",
+    "kamisItemName": "방울토마토/대추방울토마토"
+  },
+  {
+    "ingredientName": "대파",
+    "kamisItemCode": "122",
+    "kamisItemName": "파/대파"
+  },
+  {
+    "ingredientName": "드라이토마토",
+    "kamisItemCode": "321",
+    "kamisItemName": "토마토/토마토"
+  },
+  {
+    "ingredientName": "들깨",
+    "kamisItemCode": "146",
+    "kamisItemName": "들깨/국산"
+  },
+  {
+    "ingredientName": "들깨가루",
+    "kamisItemCode": "146",
+    "kamisItemName": "들깨/국산"
+  },
+  {
+    "ingredientName": "땅콩",
+    "kamisItemCode": "149",
+    "kamisItemName": "땅콩/국산"
+  },
+  {
+    "ingredientName": "땅콩가루",
+    "kamisItemCode": "149",
+    "kamisItemName": "땅콩/국산"
+  },
+  {
+    "ingredientName": "땅콩기름",
+    "kamisItemCode": "149",
+    "kamisItemName": "땅콩/국산"
+  },
+  {
+    "ingredientName": "땅콩버터",
+    "kamisItemCode": "149",
+    "kamisItemName": "땅콩/국산"
+  },
+  {
+    "ingredientName": "땅콩분태",
+    "kamisItemCode": "149",
+    "kamisItemName": "땅콩/국산"
+  },
+  {
+    "ingredientName": "땅콩잼",
+    "kamisItemCode": "149",
+    "kamisItemName": "땅콩/국산"
+  },
+  {
+    "ingredientName": "땅콩호박",
+    "kamisItemCode": "317",
+    "kamisItemName": "호박/애호박"
+  },
+  {
+    "ingredientName": "레몬",
+    "kamisItemCode": "606",
+    "kamisItemName": "레몬/수입"
+  },
+  {
+    "ingredientName": "레몬 껍질",
+    "kamisItemCode": "606",
+    "kamisItemName": "레몬/수입"
+  },
+  {
+    "ingredientName": "레몬주스",
+    "kamisItemCode": "606",
+    "kamisItemName": "레몬/수입"
+  },
+  {
+    "ingredientName": "레몬즙",
+    "kamisItemCode": "606",
+    "kamisItemName": "레몬/수입"
+  },
+  {
+    "ingredientName": "로메인상추",
+    "kamisItemCode": "303",
+    "kamisItemName": "상추/청"
+  },
+  {
+    "ingredientName": "마",
+    "kamisItemCode": "20",
+    "kamisItemName": "고구마/밤"
+  },
+  {
+    "ingredientName": "마늘",
+    "kamisItemCode": "357",
+    "kamisItemName": "깐마늘(국산)/깐마늘(국산)"
+  },
+  {
+    "ingredientName": "마늘종",
+    "kamisItemCode": "102",
+    "kamisItemName": "피마늘/한지"
+  },
+  {
+    "ingredientName": "마늘즙",
+    "kamisItemCode": "102",
+    "kamisItemName": "피마늘/한지"
+  },
+  {
+    "ingredientName": "마늘쫑",
+    "kamisItemCode": "102",
+    "kamisItemName": "피마늘/한지"
+  },
+  {
+    "ingredientName": "마늘칩",
+    "kamisItemCode": "102",
+    "kamisItemName": "피마늘/한지"
+  },
+  {
+    "ingredientName": "만송이버섯",
+    "kamisItemCode": "156",
+    "kamisItemName": "새송이버섯/새송이버섯"
+  },
+  {
+    "ingredientName": "망고",
+    "kamisItemCode": "669",
+    "kamisItemName": "망고/수입"
+  },
+  {
+    "ingredientName": "망고퓨레",
+    "kamisItemCode": "669",
+    "kamisItemName": "망고/수입"
+  },
+  {
+    "ingredientName": "매운고춧가루",
+    "kamisItemCode": "679",
+    "kamisItemName": "고춧가루/국산"
+  },
+  {
+    "ingredientName": "메밀가루",
+    "kamisItemCode": "19",
+    "kamisItemName": "메밀/메밀(수입)"
+  },
+  {
+    "ingredientName": "메밀면",
+    "kamisItemCode": "19",
+    "kamisItemName": "메밀/메밀(수입)"
+  },
+  {
+    "ingredientName": "메밀묵",
+    "kamisItemCode": "19",
+    "kamisItemName": "메밀/메밀(수입)"
+  },
+  {
+    "ingredientName": "멜론",
+    "kamisItemCode": "141",
+    "kamisItemName": "멜론/멜론"
+  },
+  {
+    "ingredientName": "멸치",
+    "kamisItemCode": "2812",
+    "kamisItemName": "마른멸치/마른멸치"
+  },
+  {
+    "ingredientName": "멸치액젓",
+    "kamisItemCode": "684",
+    "kamisItemName": "멸치액젓/멸치액젓"
+  },
+  {
+    "ingredientName": "명태",
+    "kamisItemCode": "2745",
+    "kamisItemName": "명태/냉동가공(中)"
+  },
+  {
+    "ingredientName": "명태포",
+    "kamisItemCode": "2809",
+    "kamisItemName": "명태/냉동"
+  },
+  {
+    "ingredientName": "무",
+    "kamisItemCode": "325",
+    "kamisItemName": "무/봄"
+  },
+  {
+    "ingredientName": "물",
+    "kamisItemCode": "2097",
+    "kamisItemName": "물오징어/연근해(냉동)(中)"
+  },
+  {
+    "ingredientName": "물오징어",
+    "kamisItemCode": "2097",
+    "kamisItemName": "물오징어/연근해(냉동)(中)"
+  },
+  {
+    "ingredientName": "미나리",
+    "kamisItemCode": "131",
+    "kamisItemName": "미나리/미나리"
+  },
+  {
+    "ingredientName": "미나리잎장식",
+    "kamisItemCode": "131",
+    "kamisItemName": "미나리/미나리"
+  },
+  {
+    "ingredientName": "미니사과",
+    "kamisItemCode": "198",
+    "kamisItemName": "사과/후지"
+  },
+  {
+    "ingredientName": "미니새송이버섯",
+    "kamisItemCode": "156",
+    "kamisItemName": "새송이버섯/새송이버섯"
+  },
+  {
+    "ingredientName": "미니양배추",
+    "kamisItemCode": "297",
+    "kamisItemName": "양배추/양배추"
+  },
+  {
+    "ingredientName": "미역",
+    "kamisItemCode": "265",
+    "kamisItemName": "마른미역/마른미역"
+  },
+  {
+    "ingredientName": "바나나",
+    "kamisItemCode": "234",
+    "kamisItemName": "바나나/수입"
+  },
+  {
+    "ingredientName": "바나나 슬라이스",
+    "kamisItemCode": "234",
+    "kamisItemName": "바나나/수입"
+  },
+  {
+    "ingredientName": "바나나 식초",
+    "kamisItemCode": "234",
+    "kamisItemName": "바나나/수입"
+  },
+  {
+    "ingredientName": "바지락",
+    "kamisItemCode": "3028",
+    "kamisItemName": "바지락/냉장"
+  },
+  {
+    "ingredientName": "바지락살",
+    "kamisItemCode": "3028",
+    "kamisItemName": "바지락/냉장"
+  },
+  {
+    "ingredientName": "밤",
+    "kamisItemCode": "20",
+    "kamisItemName": "고구마/밤"
+  },
+  {
+    "ingredientName": "밤고구마",
+    "kamisItemCode": "20",
+    "kamisItemName": "고구마/밤"
+  },
+  {
+    "ingredientName": "방울토마토",
+    "kamisItemCode": "437",
+    "kamisItemName": "방울토마토/방울토마토"
+  },
+  {
+    "ingredientName": "배",
+    "kamisItemCode": "28",
+    "kamisItemName": "배추/봄"
+  },
+  {
+    "ingredientName": "배추",
+    "kamisItemCode": "28",
+    "kamisItemName": "배추/봄"
+  },
+  {
+    "ingredientName": "백만송이버섯",
+    "kamisItemCode": "156",
+    "kamisItemName": "새송이버섯/새송이버섯"
+  },
+  {
+    "ingredientName": "백새우",
+    "kamisItemCode": "938",
+    "kamisItemName": "새우/흰다리(수입)"
+  },
+  {
+    "ingredientName": "백일송이버섯",
+    "kamisItemCode": "156",
+    "kamisItemName": "새송이버섯/새송이버섯"
+  },
+  {
+    "ingredientName": "베트남 건고추",
+    "kamisItemCode": "341",
+    "kamisItemName": "건고추/화건"
+  },
+  {
+    "ingredientName": "볶음 참깨",
+    "kamisItemCode": "143",
+    "kamisItemName": "참깨/백색(국산)"
+  },
+  {
+    "ingredientName": "북어",
+    "kamisItemCode": "261",
+    "kamisItemName": "북어/황태"
+  },
+  {
+    "ingredientName": "북어채",
+    "kamisItemCode": "261",
+    "kamisItemName": "북어/황태"
+  },
+  {
+    "ingredientName": "붉은 고추",
+    "kamisItemCode": "355",
+    "kamisItemName": "붉은고추/붉은고추"
+  },
+  {
+    "ingredientName": "브로콜리",
+    "kamisItemCode": "2239",
+    "kamisItemName": "브로콜리/브로콜리(국산)"
+  },
+  {
+    "ingredientName": "사과",
+    "kamisItemCode": "198",
+    "kamisItemName": "사과/후지"
+  },
+  {
+    "ingredientName": "사과종",
+    "kamisItemCode": "198",
+    "kamisItemName": "사과/후지"
+  },
+  {
+    "ingredientName": "사과주스",
+    "kamisItemCode": "198",
+    "kamisItemName": "사과/후지"
+  },
+  {
+    "ingredientName": "사과즙",
+    "kamisItemCode": "198",
+    "kamisItemName": "사과/후지"
+  },
+  {
+    "ingredientName": "삼치",
+    "kamisItemCode": "3021",
+    "kamisItemName": "삼치/냉장"
+  },
+  {
+    "ingredientName": "상추",
+    "kamisItemCode": "301",
+    "kamisItemName": "상추/적"
+  },
+  {
+    "ingredientName": "상추/로메인",
+    "kamisItemCode": "303",
+    "kamisItemName": "상추/청"
+  },
+  {
+    "ingredientName": "새송이",
+    "kamisItemCode": "156",
+    "kamisItemName": "새송이버섯/새송이버섯"
+  },
+  {
+    "ingredientName": "새송이버섯",
+    "kamisItemCode": "156",
+    "kamisItemName": "새송이버섯/새송이버섯"
+  },
+  {
+    "ingredientName": "새우",
+    "kamisItemCode": "683",
+    "kamisItemName": "새우젓/새우젓"
+  },
+  {
+    "ingredientName": "새우살",
+    "kamisItemCode": "938",
+    "kamisItemName": "새우/흰다리(수입)"
+  },
+  {
+    "ingredientName": "새우젓",
+    "kamisItemCode": "683",
+    "kamisItemName": "새우젓/새우젓"
+  },
+  {
+    "ingredientName": "새우젓국",
+    "kamisItemCode": "683",
+    "kamisItemName": "새우젓/새우젓"
+  },
+  {
+    "ingredientName": "새우젓국물",
+    "kamisItemCode": "683",
+    "kamisItemName": "새우젓/새우젓"
+  },
+  {
+    "ingredientName": "생강",
+    "kamisItemCode": "126",
+    "kamisItemName": "생강/국산"
+  },
+  {
+    "ingredientName": "생강즙",
+    "kamisItemCode": "126",
+    "kamisItemName": "생강/국산"
+  },
+  {
+    "ingredientName": "생강청",
+    "kamisItemCode": "126",
+    "kamisItemName": "생강/국산"
+  },
+  {
+    "ingredientName": "소고기",
+    "kamisItemCode": "81",
+    "kamisItemName": "수입 소고기/갈비(미국산)"
+  },
+  {
+    "ingredientName": "속양파",
+    "kamisItemCode": "117",
+    "kamisItemName": "양파/양파"
+  },
+  {
+    "ingredientName": "수",
+    "kamisItemCode": "1900",
+    "kamisItemName": "감자/수미(시설)"
+  },
+  {
+    "ingredientName": "수박",
+    "kamisItemCode": "307",
+    "kamisItemName": "수박/수박"
+  },
+  {
+    "ingredientName": "수박 껍질",
+    "kamisItemCode": "307",
+    "kamisItemName": "수박/수박"
+  },
+  {
+    "ingredientName": "시금치",
+    "kamisItemCode": "299",
+    "kamisItemName": "시금치/시금치"
+  },
+  {
+    "ingredientName": "시금치 가루",
+    "kamisItemCode": "299",
+    "kamisItemName": "시금치/시금치"
+  },
+  {
+    "ingredientName": "실고추",
+    "kamisItemCode": "341",
+    "kamisItemName": "건고추/화건"
+  },
+  {
+    "ingredientName": "쌀",
+    "kamisItemCode": "272",
+    "kamisItemName": "쌀/20kg"
+  },
+  {
+    "ingredientName": "쌈다시마",
+    "kamisItemCode": "2889",
+    "kamisItemName": "건다시마/완도산"
+  },
+  {
+    "ingredientName": "아보카도",
+    "kamisItemCode": "2009",
+    "kamisItemName": "아보카도/수입"
+  },
+  {
+    "ingredientName": "아보카도유",
+    "kamisItemCode": "2009",
+    "kamisItemName": "아보카도/수입"
+  },
+  {
+    "ingredientName": "안심",
+    "kamisItemCode": "1",
+    "kamisItemName": "소/안심(1++등급)"
+  },
+  {
+    "ingredientName": "알감자",
+    "kamisItemCode": "1900",
+    "kamisItemName": "감자/수미(시설)"
+  },
+  {
+    "ingredientName": "알마늘",
+    "kamisItemCode": "357",
+    "kamisItemName": "깐마늘(국산)/깐마늘(국산)"
+  },
+  {
+    "ingredientName": "알배추",
+    "kamisItemCode": "2237",
+    "kamisItemName": "알배기배추/알배기배추"
+  },
+  {
+    "ingredientName": "앞다리살 돈육 보쌈용",
+    "kamisItemCode": "0",
+    "kamisItemName": "돼지/앞다리"
+  },
+  {
+    "ingredientName": "애느타리버섯",
+    "kamisItemCode": "1005",
+    "kamisItemName": "느타리버섯/애느타리버섯"
+  },
+  {
+    "ingredientName": "애호박",
+    "kamisItemCode": "317",
+    "kamisItemName": "호박/애호박"
+  },
+  {
+    "ingredientName": "액젓",
+    "kamisItemCode": "684",
+    "kamisItemName": "멸치액젓/멸치액젓"
+  },
+  {
+    "ingredientName": "양배추",
+    "kamisItemCode": "297",
+    "kamisItemName": "양배추/양배추"
+  },
+  {
+    "ingredientName": "양상추",
+    "kamisItemCode": "303",
+    "kamisItemName": "상추/청"
+  },
+  {
+    "ingredientName": "양송이버섯",
+    "kamisItemCode": "156",
+    "kamisItemName": "새송이버섯/새송이버섯"
+  },
+  {
+    "ingredientName": "양송이버섯 밑동",
+    "kamisItemCode": "156",
+    "kamisItemName": "새송이버섯/새송이버섯"
+  },
+  {
+    "ingredientName": "양파",
+    "kamisItemCode": "117",
+    "kamisItemName": "양파/양파"
+  },
+  {
+    "ingredientName": "양파 가루",
+    "kamisItemCode": "117",
+    "kamisItemName": "양파/양파"
+  },
+  {
+    "ingredientName": "양파 껍질",
+    "kamisItemCode": "117",
+    "kamisItemName": "양파/양파"
+  },
+  {
+    "ingredientName": "양파즙",
+    "kamisItemCode": "117",
+    "kamisItemName": "양파/양파"
+  },
+  {
+    "ingredientName": "얼갈이배추",
+    "kamisItemCode": "305",
+    "kamisItemName": "얼갈이배추/얼갈이배추"
+  },
+  {
+    "ingredientName": "연근",
+    "kamisItemCode": "2097",
+    "kamisItemName": "물오징어/연근해(냉동)(中)"
+  },
+  {
+    "ingredientName": "열무",
+    "kamisItemCode": "339",
+    "kamisItemName": "열무/열무"
+  },
+  {
+    "ingredientName": "오렌지",
+    "kamisItemCode": "244",
+    "kamisItemName": "오렌지/네이블 미국"
+  },
+  {
+    "ingredientName": "오렌지 껍질",
+    "kamisItemCode": "244",
+    "kamisItemName": "오렌지/네이블 미국"
+  },
+  {
+    "ingredientName": "오렌지 주스",
+    "kamisItemCode": "244",
+    "kamisItemName": "오렌지/네이블 미국"
+  },
+  {
+    "ingredientName": "오렌지즙",
+    "kamisItemCode": "244",
+    "kamisItemName": "오렌지/네이블 미국"
+  },
+  {
+    "ingredientName": "오이",
+    "kamisItemCode": "311",
+    "kamisItemName": "오이/가시계통"
+  },
+  {
+    "ingredientName": "오이고추",
+    "kamisItemCode": "1996",
+    "kamisItemName": "풋고추/오이맛고추"
+  },
+  {
+    "ingredientName": "오징어",
+    "kamisItemCode": "2097",
+    "kamisItemName": "물오징어/연근해(냉동)(中)"
+  },
+  {
+    "ingredientName": "오징어 몸통",
+    "kamisItemCode": "3082",
+    "kamisItemName": "물오징어/원양(냉동)"
+  },
+  {
+    "ingredientName": "완숙 토마토",
+    "kamisItemCode": "321",
+    "kamisItemName": "토마토/토마토"
+  },
+  {
+    "ingredientName": "자색고구마",
+    "kamisItemCode": "20",
+    "kamisItemName": "고구마/밤"
+  },
+  {
+    "ingredientName": "잘게 새우젓",
+    "kamisItemCode": "683",
+    "kamisItemName": "새우젓/새우젓"
+  },
+  {
+    "ingredientName": "적양배추",
+    "kamisItemCode": "297",
+    "kamisItemName": "양배추/양배추"
+  },
+  {
+    "ingredientName": "적양파",
+    "kamisItemCode": "117",
+    "kamisItemName": "양파/양파"
+  },
+  {
+    "ingredientName": "전복",
+    "kamisItemCode": "937",
+    "kamisItemName": "전복/냉장"
+  },
+  {
+    "ingredientName": "전복살",
+    "kamisItemCode": "937",
+    "kamisItemName": "전복/냉장"
+  },
+  {
+    "ingredientName": "조",
+    "kamisItemCode": "479",
+    "kamisItemName": "수입조기/부세수입(냉동)"
+  },
+  {
+    "ingredientName": "조기",
+    "kamisItemCode": "479",
+    "kamisItemName": "수입조기/부세수입(냉동)"
+  },
+  {
+    "ingredientName": "주키니호박",
+    "kamisItemCode": "319",
+    "kamisItemName": "호박/쥬키니"
+  },
+  {
+    "ingredientName": "줄기토마토",
+    "kamisItemCode": "321",
+    "kamisItemName": "토마토/토마토"
+  },
+  {
+    "ingredientName": "쥬키니호박",
+    "kamisItemCode": "319",
+    "kamisItemName": "호박/쥬키니"
+  },
+  {
+    "ingredientName": "쪽파",
+    "kamisItemCode": "124",
+    "kamisItemName": "파/쪽파"
+  },
+  {
+    "ingredientName": "찐 감자",
+    "kamisItemCode": "1900",
+    "kamisItemName": "감자/수미(시설)"
+  },
+  {
+    "ingredientName": "찐 고구마",
+    "kamisItemCode": "20",
+    "kamisItemName": "고구마/밤"
+  },
+  {
+    "ingredientName": "참깨",
+    "kamisItemCode": "143",
+    "kamisItemName": "참깨/백색(국산)"
+  },
+  {
+    "ingredientName": "참느타리버섯",
+    "kamisItemCode": "152",
+    "kamisItemName": "느타리버섯/느타리버섯"
+  },
+  {
+    "ingredientName": "참다래",
+    "kamisItemCode": "238",
+    "kamisItemName": "참다래/그린 뉴질랜드"
+  },
+  {
+    "ingredientName": "참외",
+    "kamisItemCode": "309",
+    "kamisItemName": "참외/참외"
+  },
+  {
+    "ingredientName": "찹쌀",
+    "kamisItemCode": "274",
+    "kamisItemName": "찹쌀/일반계"
+  },
+  {
+    "ingredientName": "천일염",
+    "kamisItemCode": "685",
+    "kamisItemName": "천일염/천일염"
+  },
+  {
+    "ingredientName": "청",
+    "kamisItemCode": "303",
+    "kamisItemName": "상추/청"
+  },
+  {
+    "ingredientName": "청고추",
+    "kamisItemCode": "349",
+    "kamisItemName": "풋고추/풋고추(녹광 등)"
+  },
+  {
+    "ingredientName": "청상추",
+    "kamisItemCode": "303",
+    "kamisItemName": "상추/청"
+  },
+  {
+    "ingredientName": "청양고추",
+    "kamisItemCode": "353",
+    "kamisItemName": "풋고추/청양고추"
+  },
+  {
+    "ingredientName": "체리",
+    "kamisItemCode": "608",
+    "kamisItemName": "체리/수입"
+  },
+  {
+    "ingredientName": "체리토마토",
+    "kamisItemCode": "437",
+    "kamisItemName": "방울토마토/방울토마토"
+  },
+  {
+    "ingredientName": "쳥양고추",
+    "kamisItemCode": "353",
+    "kamisItemName": "풋고추/청양고추"
+  },
+  {
+    "ingredientName": "캔 토마토",
+    "kamisItemCode": "321",
+    "kamisItemName": "토마토/토마토"
+  },
+  {
+    "ingredientName": "콩",
+    "kamisItemCode": "275",
+    "kamisItemName": "콩/흰 콩(국산)"
+  },
+  {
+    "ingredientName": "토마토",
+    "kamisItemCode": "321",
+    "kamisItemName": "토마토/토마토"
+  },
+  {
+    "ingredientName": "토마토 소스",
+    "kamisItemCode": "321",
+    "kamisItemName": "토마토/토마토"
+  },
+  {
+    "ingredientName": "토마토 페스트",
+    "kamisItemCode": "321",
+    "kamisItemName": "토마토/토마토"
+  },
+  {
+    "ingredientName": "토마토 페이스트",
+    "kamisItemCode": "321",
+    "kamisItemName": "토마토/토마토"
+  },
+  {
+    "ingredientName": "토마토 홀",
+    "kamisItemCode": "321",
+    "kamisItemName": "토마토/토마토"
+  },
+  {
+    "ingredientName": "토마토케첩",
+    "kamisItemCode": "321",
+    "kamisItemName": "토마토/토마토"
+  },
+  {
+    "ingredientName": "토마토콩카세",
+    "kamisItemCode": "321",
+    "kamisItemName": "토마토/토마토"
+  },
+  {
+    "ingredientName": "통마늘",
+    "kamisItemCode": "102",
+    "kamisItemName": "피마늘/한지"
+  },
+  {
+    "ingredientName": "통배추",
+    "kamisItemCode": "28",
+    "kamisItemName": "배추/봄"
+  },
+  {
+    "ingredientName": "통오징어",
+    "kamisItemCode": "3082",
+    "kamisItemName": "물오징어/원양(냉동)"
+  },
+  {
+    "ingredientName": "통조림 홀토마토",
+    "kamisItemCode": "321",
+    "kamisItemName": "토마토/토마토"
+  },
+  {
+    "ingredientName": "파",
+    "kamisItemCode": "117",
+    "kamisItemName": "양파/양파"
+  },
+  {
+    "ingredientName": "파인애플",
+    "kamisItemCode": "240",
+    "kamisItemName": "파인애플/수입"
+  },
+  {
+    "ingredientName": "파인애플 주스",
+    "kamisItemCode": "240",
+    "kamisItemName": "파인애플/수입"
+  },
+  {
+    "ingredientName": "파인애플 통조림",
+    "kamisItemCode": "240",
+    "kamisItemName": "파인애플/수입"
+  },
+  {
+    "ingredientName": "파인애플 통조림 국물",
+    "kamisItemCode": "240",
+    "kamisItemName": "파인애플/수입"
+  },
+  {
+    "ingredientName": "파인애플청",
+    "kamisItemCode": "240",
+    "kamisItemName": "파인애플/수입"
+  },
+  {
+    "ingredientName": "파프리카",
+    "kamisItemCode": "139",
+    "kamisItemName": "파프리카/파프리카"
+  },
+  {
+    "ingredientName": "파프리카 가루",
+    "kamisItemCode": "139",
+    "kamisItemName": "파프리카/파프리카"
+  },
+  {
+    "ingredientName": "팥",
+    "kamisItemCode": "13",
+    "kamisItemName": "팥/붉은 팥(국산)"
+  },
+  {
+    "ingredientName": "팽이버섯",
+    "kamisItemCode": "154",
+    "kamisItemName": "팽이버섯/팽이버섯"
+  },
+  {
+    "ingredientName": "편마늘",
+    "kamisItemCode": "357",
+    "kamisItemName": "깐마늘(국산)/깐마늘(국산)"
+  },
+  {
+    "ingredientName": "풋고추",
+    "kamisItemCode": "349",
+    "kamisItemName": "풋고추/풋고추(녹광 등)"
+  },
+  {
+    "ingredientName": "풋마늘",
+    "kamisItemCode": "102",
+    "kamisItemName": "피마늘/한지"
+  },
+  {
+    "ingredientName": "풋사과",
+    "kamisItemCode": "198",
+    "kamisItemName": "사과/후지"
+  },
+  {
+    "ingredientName": "피망",
+    "kamisItemCode": "137",
+    "kamisItemName": "피망/청"
+  },
+  {
+    "ingredientName": "호박",
+    "kamisItemCode": "317",
+    "kamisItemName": "호박/애호박"
+  },
+  {
+    "ingredientName": "호박고구마",
+    "kamisItemCode": "20",
+    "kamisItemName": "고구마/밤"
+  },
+  {
+    "ingredientName": "호박씨",
+    "kamisItemCode": "317",
+    "kamisItemName": "호박/애호박"
+  },
+  {
+    "ingredientName": "호박잎",
+    "kamisItemCode": "317",
+    "kamisItemName": "호박/애호박"
+  },
+  {
+    "ingredientName": "홀토마토",
+    "kamisItemCode": "321",
+    "kamisItemName": "토마토/토마토"
+  },
+  {
+    "ingredientName": "홍 토마토",
+    "kamisItemCode": "321",
+    "kamisItemName": "토마토/토마토"
+  },
+  {
+    "ingredientName": "홍합",
+    "kamisItemCode": "2894",
+    "kamisItemName": "홍합/깐홍합(냉장)"
+  },
+  {
+    "ingredientName": "홍합살",
+    "kamisItemCode": "2894",
+    "kamisItemName": "홍합/깐홍합(냉장)"
+  },
+  {
+    "ingredientName": "황금 팽이버섯",
+    "kamisItemCode": "154",
+    "kamisItemName": "팽이버섯/팽이버섯"
+  },
+  {
+    "ingredientName": "황태",
+    "kamisItemCode": "261",
+    "kamisItemName": "북어/황태"
+  },
+  {
+    "ingredientName": "황태 머리",
+    "kamisItemCode": "261",
+    "kamisItemName": "북어/황태"
+  },
+  {
+    "ingredientName": "황태 채",
+    "kamisItemCode": "261",
+    "kamisItemName": "북어/황태"
+  },
+  {
+    "ingredientName": "황태채",
+    "kamisItemCode": "261",
+    "kamisItemName": "북어/황태"
+  },
+  {
+    "ingredientName": "황태포",
+    "kamisItemCode": "261",
+    "kamisItemName": "북어/황태"
+  },
+  {
+    "ingredientName": "흰다리새우",
+    "kamisItemCode": "938",
+    "kamisItemName": "새우/흰다리(수입)"
+  }
+]
