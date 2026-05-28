@@ -39,6 +39,8 @@ class RecommendationRequest {
       preferences: preferences,
       jwtToken: jwtToken,
       candidateMenuIds: candidateMenuIds ?? this.candidateMenuIds,
+      weatherTemp: weatherTemp, // ← 추가
+      weatherCondition: weatherCondition, // ← 추가
     );
   }
 
