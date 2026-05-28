@@ -170,28 +170,111 @@ public class RecipeDataSyncService {
             List<Menu> menusToMigrate = menuRepository.findAll().stream()
                     .filter(m -> m.getMainImageUrl() != null
                             && !m.getMainImageUrl().isBlank()
-                            && !m.getMainImageUrl().contains("amazonaws.com"))
+                            && !s3ImageUploadService.isOurStorageUrl(m.getMainImageUrl()))
                     .collect(Collectors.toList());
 
             if (!menusToMigrate.isEmpty()) {
                 log.info("S3 마이그레이션 대상 메뉴: {}개", menusToMigrate.size());
                 int successCount = 0;
                 for (Menu menu : menusToMigrate) {
-                    String s3Url = s3ImageUploadService.uploadFromUrl(menu.getMainImageUrl());
-                    if (s3Url.contains("amazonaws.com")) {
-                        menu.updateMainImageUrl(s3Url);
+                    String newUrl = s3ImageUploadService.uploadFromUrl(menu.getMainImageUrl());
+                    if (s3ImageUploadService.isOurStorageUrl(newUrl)) {
+                        menu.updateMainImageUrl(newUrl);
                         successCount++;
                     }
                 }
                 menuRepository.saveAll(menusToMigrate);
                 log.info("S3 마이그레이션 완료: {}개 성공 / {}개 대상", successCount, menusToMigrate.size());
             } else {
-                log.info("S3 마이그레이션 대상 없음 (이미 모두 S3 URL)");
+                log.info("S3 마이그레이션 대상 없음 (이미 모두 스토리지 URL)");
             }
 
         } catch (Exception e){
             log.error("API 데이터 동기화 중 에러 발생: ", e);
         }
+    }
+
+    /**
+     * 메뉴 이미지 URL을 점검·정리한다.
+     * - amazonaws.com URL인 메뉴를 대상으로:
+     *   - S3 객체가 정상이면 URL을 CloudFront(또는 설정된 도메인)로 단순 치환.
+     *   - S3 객체가 손상이면 cleaned_recipe_data.json의 원본 URL로 재업로드.
+     * - 멱등하고 반복 호출 가능.
+     */
+    @Transactional
+    public void recoverCorruptedImages() {
+        log.info("[복구] 이미지 URL 점검/복구 시작");
+
+        Map<String, String> codeToOriginalUrl;
+        try {
+            codeToOriginalUrl = loadOriginalImageUrlMap();
+        } catch (Exception e) {
+            log.error("[복구] cleaned_recipe_data.json 로드 실패", e);
+            return;
+        }
+        log.info("[복구] 원본 URL 맵 로드 완료: {}건", codeToOriginalUrl.size());
+
+        List<Menu> candidates = menuRepository.findAll().stream()
+                .filter(m -> m.getMainImageUrl() != null
+                        && !m.getMainImageUrl().isBlank()
+                        && m.getMainImageUrl().contains("amazonaws.com"))
+                .collect(Collectors.toList());
+        log.info("[복구] 검사 대상(amazonaws.com URL) 메뉴: {}개", candidates.size());
+
+        int normalized = 0, corrupt = 0, recovered = 0, missingOrigin = 0, failed = 0;
+        List<Menu> updated = new ArrayList<>();
+        for (Menu menu : candidates) {
+            if (s3ImageUploadService.isS3UrlValid(menu.getMainImageUrl())) {
+                String cfUrl = s3ImageUploadService.toCloudFrontUrl(menu.getMainImageUrl());
+                if (!cfUrl.equals(menu.getMainImageUrl())) {
+                    menu.updateMainImageUrl(cfUrl);
+                    updated.add(menu);
+                    normalized++;
+                }
+                continue;
+            }
+            corrupt++;
+
+            String originalUrl = codeToOriginalUrl.get(menu.getFoodCode());
+            if (originalUrl == null || originalUrl.isBlank()) {
+                log.warn("[복구] 원본 URL 없음, 스킵: foodCode={}, name={}", menu.getFoodCode(), menu.getName());
+                missingOrigin++;
+                continue;
+            }
+
+            String newUrl = s3ImageUploadService.uploadFromUrl(originalUrl);
+            if (s3ImageUploadService.isOurStorageUrl(newUrl)) {
+                menu.updateMainImageUrl(newUrl);
+                updated.add(menu);
+                recovered++;
+            } else {
+                log.warn("[복구] 재업로드 실패: foodCode={}, originalUrl={}", menu.getFoodCode(), originalUrl);
+                failed++;
+            }
+        }
+
+        if (!updated.isEmpty()) {
+            menuRepository.saveAll(updated);
+        }
+        log.info("[복구] 완료 — URL변경={}, 손상={}, 복구성공={}, 원본URL없음={}, 재업로드실패={}",
+                normalized, corrupt, recovered, missingOrigin, failed);
+    }
+
+    private Map<String, String> loadOriginalImageUrlMap() throws Exception {
+        ClassPathResource resource = new ClassPathResource("cleaned_recipe_data.json");
+        String rawJson = new String(Files.readAllBytes(Paths.get(resource.getURI())), StandardCharsets.UTF_8);
+        JsonNode rootNode = objectMapper.readTree(rawJson);
+        JsonNode recipeArray = rootNode.isArray() ? rootNode : rootNode.path("COOKRCP01").path("row");
+
+        Map<String, String> map = new HashMap<>();
+        for (JsonNode recipeNode : recipeArray) {
+            String foodCode = recipeNode.path("RCP_SEQ").asText();
+            String url = recipeNode.path("ATT_FILE_NO_MAIN").asText();
+            if (foodCode != null && !foodCode.isBlank() && url != null && !url.isBlank()) {
+                map.put(foodCode, url);
+            }
+        }
+        return map;
     }
 
     /**
