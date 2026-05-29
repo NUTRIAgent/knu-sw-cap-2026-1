@@ -153,18 +153,21 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
             decoration: BoxDecoration(
-              color: Colors.amber.shade50,
+              color: AppTheme.primaryColor.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.amber.shade200),
+              border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.25)),
             ),
             child: Row(
               children: [
-                Icon(Icons.info_outline, size: 13, color: Colors.amber.shade700),
+                Icon(Icons.info_outline, size: 13, color: AppTheme.primaryColor),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     '도·소매 기준 가격으로, 실제 마트·시장 판매가와 다를 수 있습니다.',
-                    style: TextStyle(fontSize: 11, color: Colors.amber.shade800),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.primaryColor.withValues(alpha: 0.85),
+                    ),
                   ),
                 ),
               ],
