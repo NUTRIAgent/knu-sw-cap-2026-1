@@ -7,12 +7,14 @@ class MenuDetailScreen extends StatefulWidget {
   final MenuCandidate? candidate;
   final RecommendationResult? aiResult;
   final String? jwt;
+  final RecommendationRequest? request; // 단일 AI 분석용 사용자 컨텍스트
 
   const MenuDetailScreen({
     super.key,
     this.candidate,
     this.aiResult,
     this.jwt,
+    this.request,
   });
 
   @override
@@ -23,6 +25,11 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
   MenuDetail? _detail;
   bool _loading = false;
   String? _error;
+
+  // ── 단일 AI 분석 상태 ──
+  RecommendationResult? _aiAnalysis;
+  bool _aiLoading = false;
+  String? _aiError;
 
   bool get _isAiPick => widget.aiResult != null;
 
@@ -45,11 +52,26 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
     }
   }
 
+  Future<void> _requestAiAnalysis() async {
+    if (widget.request == null || widget.candidate == null) return;
+    setState(() { _aiLoading = true; _aiError = null; });
+    try {
+      final result = await RecommendationService.analyzeSelected(
+        SelectMenuRequest.fromRecommendation(
+            widget.request!, widget.candidate!.id),
+      );
+      if (!mounted) return;
+      setState(() { _aiAnalysis = result; _aiLoading = false; });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { _aiLoading = false; _aiError = e.toString(); });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final title = _isAiPick
-        ? widget.aiResult!.menuName
-        : (widget.candidate?.name ?? '메뉴 상세');
+    final shownAi = widget.aiResult ?? _aiAnalysis;
+    final title = shownAi?.menuName ?? (widget.candidate?.name ?? '메뉴 상세');
 
     return Scaffold(
       appBar: AppBar(
@@ -59,7 +81,7 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
         centerTitle: true,
         elevation: 0,
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        actions: _isAiPick
+        actions: shownAi != null
             ? [
                 Container(
                   margin: const EdgeInsets.only(right: 16),
@@ -85,14 +107,18 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
               ]
             : null,
       ),
-      body: _isAiPick
-          ? _AiPickBody(result: widget.aiResult!)
+      body: shownAi != null
+          ? _AiPickBody(result: shownAi)
           : _CandidateBody(
               candidate: widget.candidate!,
               detail: _detail,
               loading: _loading,
               error: _error,
               onRetry: _fetchDetail,
+              canRequestAi: widget.request != null,
+              aiLoading: _aiLoading,
+              aiError: _aiError,
+              onRequestAi: _requestAiAnalysis,
             ),
     );
   }
@@ -163,6 +189,11 @@ class _CandidateBody extends StatelessWidget {
   final bool loading;
   final String? error;
   final VoidCallback onRetry;
+  // ── AI 분석 관련 ──
+  final bool canRequestAi;
+  final bool aiLoading;
+  final String? aiError;
+  final VoidCallback onRequestAi;
 
   const _CandidateBody({
     required this.candidate,
@@ -170,6 +201,10 @@ class _CandidateBody extends StatelessWidget {
     required this.loading,
     required this.error,
     required this.onRetry,
+    required this.canRequestAi,
+    required this.aiLoading,
+    required this.aiError,
+    required this.onRequestAi,
   });
 
   @override
@@ -184,6 +219,15 @@ class _CandidateBody extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (canRequestAi) ...[
+                  _AiAnalyzeButton(loading: aiLoading, onPressed: onRequestAi),
+                  if (aiError != null) ...[
+                    const SizedBox(height: 8),
+                    Text(aiError!,
+                        style: TextStyle(color: Colors.red[400], fontSize: 12)),
+                  ],
+                  const SizedBox(height: 16),
+                ],
                 if (detail != null) ...[
                   if ((detail!.category ?? '').isNotEmpty ||
                       (detail!.cookingMethod ?? '').isNotEmpty)
@@ -731,6 +775,60 @@ class _ErrorSection extends StatelessWidget {
           child: const Text('다시 시도'),
         ),
       ],
+    );
+  }
+}
+
+// ── 이 메뉴 AI 분석 받기 버튼 ─────────────────────────────────
+class _AiAnalyzeButton extends StatelessWidget {
+  final bool loading;
+  final VoidCallback onPressed;
+  const _AiAnalyzeButton({required this.loading, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: 52,
+      decoration: BoxDecoration(
+        gradient: AppTheme.aiGradient,
+        borderRadius: BorderRadius.circular(26),
+      ),
+      child: ElevatedButton(
+        onPressed: loading ? null : onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          shape: const StadiumBorder(),
+        ),
+        child: loading
+            ? const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2.2)),
+                  SizedBox(width: 10),
+                  Text('AI가 이 메뉴를 분석 중...',
+                      style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.bold)),
+                ],
+              )
+            : const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.auto_awesome, color: Colors.white, size: 18),
+                  SizedBox(width: 8),
+                  Text('이 메뉴 AI 분석 받기',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15)),
+                ],
+              ),
+      ),
     );
   }
 }

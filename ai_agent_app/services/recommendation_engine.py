@@ -92,3 +92,33 @@ class RecommendationEngine:
 
         async for result in self.graph_builder.stream_analyze(state):
             yield result
+
+    async def analyze_single(
+        self,
+        recipe: Dict,
+        user_query: Dict,
+    ) -> Dict[str, Any]:
+        """사용자가 직접 고른 메뉴 1개만 가격 조회 + 상세 분석 (candidate/rank 생략).
+
+        Args:
+            recipe: 선택된 메뉴 1개의 레시피 dict (Spring 포맷, MENU_ID 포함)
+            user_query: 사용자 입력 정보
+
+        Returns:
+            analyze 결과 dict (초기 추천 아이템과 동일한 형식)
+        """
+        print("[RecommendationEngine] 단일 메뉴 분석 시작")
+
+        seq = str(recipe.get("MENU_ID", "")).strip()
+        if not seq:
+            raise ValueError("선택한 메뉴의 MENU_ID가 없습니다.")
+
+        location = user_query.get("location")
+        p_info, _ = await self.graph_builder.fetch_price_for(recipe, location)
+
+        state = {
+            "recipes_by_seq": {seq: recipe},
+            "user_query": user_query,
+            "price_cache": {seq: p_info},
+        }
+        return await self.graph_builder._analyze_one(seq, state)

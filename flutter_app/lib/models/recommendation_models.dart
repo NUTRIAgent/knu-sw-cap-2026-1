@@ -60,6 +60,71 @@ class RecommendationRequest {
   };
 }
 
+class SelectMenuRequest {
+  final int selectedMenuId;
+  final double heightCm;
+  final double weightKg;
+  final String location;
+  final double? budget;
+  final List<String> healthConditions;
+  final String fitnessGoal;
+  final List<String> allergies;
+  final List<String> preferences;
+  final String? jwtToken;
+  final double? weatherTemp;
+  final String? weatherCondition;
+
+  const SelectMenuRequest({
+    required this.selectedMenuId,
+    required this.heightCm,
+    required this.weightKg,
+    required this.location,
+    this.budget,
+    required this.fitnessGoal,
+    this.healthConditions = const [],
+    this.allergies = const [],
+    this.preferences = const [],
+    this.jwtToken,
+    this.weatherTemp,
+    this.weatherCondition,
+  });
+
+  /// 추천 요청의 사용자 컨텍스트를 재사용해 단일 분석 요청 생성
+  factory SelectMenuRequest.fromRecommendation(
+    RecommendationRequest req,
+    int menuId,
+  ) =>
+      SelectMenuRequest(
+        selectedMenuId: menuId,
+        heightCm: req.heightCm,
+        weightKg: req.weightKg,
+        location: req.location,
+        budget: req.budget,
+        fitnessGoal: req.fitnessGoal,
+        healthConditions: req.healthConditions,
+        allergies: req.allergies,
+        preferences: req.preferences,
+        jwtToken: req.jwtToken,
+        weatherTemp: req.weatherTemp,
+        weatherCondition: req.weatherCondition,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'selected_menu_id': selectedMenuId,
+        'height_cm': heightCm,
+        'weight_kg': weightKg,
+        'location': location,
+        if (budget != null) 'budget': budget,
+        'health_conditions': healthConditions,
+        'fitness_goal': fitnessGoal,
+        'allergies': allergies,
+        'preferences': preferences,
+        if (jwtToken != null) 'jwt_token': jwtToken,
+        if (weatherTemp != null) 'weather_temp': weatherTemp,
+        if (weatherCondition != null) 'weather_condition': weatherCondition,
+      };
+}
+
 class MenuCandidate {
   final int id;
   final String name;

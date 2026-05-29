@@ -101,6 +101,25 @@ class RecipeGraphBuilder:
         }
 
     # ------------------------------------------------------------------
+    # fetch_price_for: 단일 레시피 가격 조회 (price_node / 단일 분석 공용)
+    # ------------------------------------------------------------------
+    async def fetch_price_for(self, recipe: Dict, location):
+        """레시피 1개의 가격 정보와 추정 1인분 비용을 조회."""
+        try:
+            p_info = await asyncio.to_thread(
+                self.get_market_prices.get_market_prices,
+                recipe["RCP_PARTS_DTLS"],
+                location,
+            )
+            rough_cost = self.get_market_prices.estimate_serving_cost(
+                recipe["RCP_PARTS_DTLS"], p_info
+            )
+        except Exception:
+            p_info = "가격 데이터 조회 실패"
+            rough_cost = 0
+        return p_info, rough_cost
+
+    # ------------------------------------------------------------------
     # price_node: MENU_ID로 룩업 + 가격 조회 (병렬)
     # ------------------------------------------------------------------
     async def price_node(self, state: GraphState) -> GraphState:
@@ -110,18 +129,7 @@ class RecipeGraphBuilder:
 
         async def fetch_one(seq: str):
             r = recipes_by_seq[seq]
-            try:
-                p_info = await asyncio.to_thread(
-                    self.get_market_prices.get_market_prices,
-                    r["RCP_PARTS_DTLS"],
-                    location,
-                )
-                rough_cost = self.get_market_prices.estimate_serving_cost(
-                    r["RCP_PARTS_DTLS"], p_info
-                )
-            except Exception:
-                p_info = "가격 데이터 조회 실패"
-                rough_cost = 0
+            p_info, rough_cost = await self.fetch_price_for(r, location)
             return seq, r, p_info, rough_cost
 
         results = await asyncio.gather(*[fetch_one(seq) for seq in state["candidate_ids"]])

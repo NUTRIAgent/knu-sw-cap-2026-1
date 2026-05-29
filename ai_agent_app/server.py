@@ -162,6 +162,22 @@ class UserRequest(BaseModel):
     )
 
 
+class SelectMenuRequest(BaseModel):
+    """사용자가 후보 중 직접 선택한 메뉴 1개의 상세 분석 요청"""
+    selected_menu_id: int = Field(..., example=104, description="사용자가 선택한 메뉴 MENU_ID")
+    height_cm: float = Field(..., gt=0, example=180.5)
+    weight_kg: float = Field(..., gt=0, example=85.0)
+    location: str = Field(default="서울", example="서울")
+    budget: Optional[float] = Field(default=None, gt=0, example=8000)
+    health_conditions: List[str] = Field(default_factory=list, example=["고혈압"])
+    fitness_goal: str = Field(default="일반식단", example="근력운동")
+    allergies: List[str] = Field(default_factory=list, example=["견과류"])
+    preferences: List[str] = Field(default_factory=list, example=["매운맛"])
+    jwt_token: Optional[str] = Field(default=None, description="Spring 백엔드 JWT")
+    weather_temp: Optional[float] = Field(default=None, example=31.5, description="현재 기온(°C)")
+    weather_condition: Optional[str] = Field(default=None, example="맑음", description="현재 날씨 상태")
+
+
 class HistoryRequest(BaseModel):
     jwt_token: Optional[str] = Field(default=None, description="Spring 백엔드 JWT")
     recipe_id: str = Field(..., description="먹은 레시피 MENU_ID")
@@ -269,6 +285,34 @@ async def get_recommendation(user_input: UserRequest):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI 에이전트 실행 중 오류 발생: {str(e)}")
+
+
+@app.post("/recommend/select")
+async def analyze_selected_menu(req: SelectMenuRequest):
+    """사용자가 후보 중 직접 선택한 메뉴 1개의 AI 상세 분석 (단일 JSON 반환).
+
+    candidate/rank 단계를 건너뛰고 선택 메뉴만 가격 조회 + 분석.
+    응답 형식은 /recommend의 분석 아이템과 동일.
+    """
+    try:
+        recipes = menu_fetcher.fetch_candidates_by_ids([req.selected_menu_id], req.jwt_token)
+        if not recipes:
+            raise HTTPException(status_code=404, detail="선택한 메뉴를 찾을 수 없습니다.")
+        recipe = recipes[0]
+
+        user_query = req.dict(exclude={"jwt_token", "selected_menu_id"})
+        result = await recommendation_engine.analyze_single(recipe, user_query)
+
+        rid = result.get("recipe_id") or result.get("menu_id")
+        try:
+            result["menu_id"] = int(rid) if rid is not None else 0
+        except (TypeError, ValueError):
+            result["menu_id"] = 0
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"단일 메뉴 분석 중 오류: {str(e)}")
 
 
 @app.post("/history")
