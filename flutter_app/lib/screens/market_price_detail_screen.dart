@@ -2,10 +2,35 @@ import 'package:flutter/material.dart';
 import 'package:flutter_app/models/market_price_models.dart';
 import 'package:flutter_app/theme.dart';
 
-class MarketPriceDetailScreen extends StatelessWidget {
+class MarketPriceDetailScreen extends StatefulWidget {
   final IngredientPriceModel price;
+  final bool isFavorite;
+  final VoidCallback? onFavoriteToggle;
 
-  const MarketPriceDetailScreen({super.key, required this.price});
+  const MarketPriceDetailScreen({
+    super.key,
+    required this.price,
+    this.isFavorite = false,
+    this.onFavoriteToggle,
+  });
+
+  @override
+  State<MarketPriceDetailScreen> createState() => _MarketPriceDetailScreenState();
+}
+
+class _MarketPriceDetailScreenState extends State<MarketPriceDetailScreen> {
+  late bool _isFavorite;
+
+  @override
+  void initState() {
+    super.initState();
+    _isFavorite = widget.isFavorite;
+  }
+
+  void _handleFavoriteToggle() {
+    setState(() => _isFavorite = !_isFavorite);
+    widget.onFavoriteToggle?.call();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +63,7 @@ class MarketPriceDetailScreen extends StatelessWidget {
 
   Widget _buildTopBar(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 12, 24, 4),
+      padding: const EdgeInsets.fromLTRB(8, 12, 8, 4),
       child: Row(
         children: [
           IconButton(
@@ -47,10 +72,18 @@ class MarketPriceDetailScreen extends StatelessWidget {
           ),
           Expanded(
             child: Text(
-              price.ingredientName,
+              widget.price.ingredientName,
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
             ),
           ),
+          if (widget.onFavoriteToggle != null)
+            IconButton(
+              icon: Icon(
+                _isFavorite ? Icons.favorite : Icons.favorite_border,
+                color: _isFavorite ? Colors.redAccent : Colors.grey[400],
+              ),
+              onPressed: _handleFavoriteToggle,
+            ),
         ],
       ),
     );
@@ -76,7 +109,7 @@ class MarketPriceDetailScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            price.displayPrice,
+            widget.price.displayPrice,
             style: const TextStyle(
               fontSize: 26,
               fontWeight: FontWeight.w900,
@@ -85,7 +118,7 @@ class MarketPriceDetailScreen extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            price.displayDate,
+            widget.price.displayDate,
             style: TextStyle(
               fontSize: 12,
               color: Colors.white.withValues(alpha: 0.75),
@@ -97,9 +130,8 @@ class MarketPriceDetailScreen extends StatelessWidget {
   }
 
   Widget _buildChangeRatesCard() {
-    final hasAny = price.dayChangeRate != null ||
-        price.weekChangeRate != null ||
-        price.monthChangeRate != null;
+    final p = widget.price;
+    final hasAny = p.dayChangeRate != null || p.weekChangeRate != null || p.monthChangeRate != null;
     if (!hasAny) return const SizedBox.shrink();
 
     return Container(
@@ -120,22 +152,17 @@ class MarketPriceDetailScreen extends StatelessWidget {
         children: [
           const Text(
             '가격 변동률',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: Colors.black87,
-            ),
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.black87),
           ),
           const SizedBox(height: 16),
-          if (price.dayChangeRate != null)
-            _buildRateBar('전일 대비', price.dayChangeRate!),
-          if (price.weekChangeRate != null) ...[
+          if (p.dayChangeRate != null) _buildRateBar('전일 대비', p.dayChangeRate!),
+          if (p.weekChangeRate != null) ...[
             const SizedBox(height: 14),
-            _buildRateBar('1주일 전 대비', price.weekChangeRate!),
+            _buildRateBar('1주일 전 대비', p.weekChangeRate!),
           ],
-          if (price.monthChangeRate != null) ...[
+          if (p.monthChangeRate != null) ...[
             const SizedBox(height: 14),
-            _buildRateBar('1개월 전 대비', price.monthChangeRate!),
+            _buildRateBar('1개월 전 대비', p.monthChangeRate!),
           ],
         ],
       ),
@@ -156,19 +183,10 @@ class MarketPriceDetailScreen extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
+            Text(label, style: const TextStyle(fontSize: 12, color: Colors.black54)),
             Text(
-              label,
-              style: const TextStyle(fontSize: 12, color: Colors.black54),
-            ),
-            Text(
-              isZero
-                  ? '변동 없음'
-                  : '${isPositive ? '+' : ''}${rate.toStringAsFixed(1)}%',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: color,
-              ),
+              isZero ? '변동 없음' : '${isPositive ? '+' : ''}${rate.toStringAsFixed(1)}%',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: color),
             ),
           ],
         ),
@@ -187,9 +205,8 @@ class MarketPriceDetailScreen extends StatelessWidget {
   }
 
   Widget _buildMarketInfoCard() {
-    if (price.marketName == null && price.marketType == null) {
-      return const SizedBox.shrink();
-    }
+    final p = widget.price;
+    if (p.marketName == null && p.marketType == null) return const SizedBox.shrink();
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -209,20 +226,16 @@ class MarketPriceDetailScreen extends StatelessWidget {
         children: [
           const Text(
             '시장 정보',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: Colors.black87,
-            ),
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.black87),
           ),
           const SizedBox(height: 14),
-          if (price.marketName != null) _buildInfoRow('시장명', price.marketName!),
-          if (price.marketType != null) ...[
+          if (p.marketName != null) _buildInfoRow('시장명', p.marketName!),
+          if (p.marketType != null) ...[
             const SizedBox(height: 10),
-            _buildInfoRow('유형', price.marketType!),
+            _buildInfoRow('유형', p.marketType!),
           ],
           const SizedBox(height: 10),
-          _buildInfoRow('기준일', price.displayDate),
+          _buildInfoRow('기준일', p.displayDate),
         ],
       ),
     );
@@ -234,10 +247,7 @@ class MarketPriceDetailScreen extends StatelessWidget {
       children: [
         SizedBox(
           width: 64,
-          child: Text(
-            label,
-            style: const TextStyle(fontSize: 13, color: Colors.black54),
-          ),
+          child: Text(label, style: const TextStyle(fontSize: 13, color: Colors.black54)),
         ),
         Expanded(
           child: Text(
