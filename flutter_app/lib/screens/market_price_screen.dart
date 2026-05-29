@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/models/market_price_models.dart';
 import 'package:flutter_app/screens/market_price_detail_screen.dart';
+import 'package:flutter_app/services/favorite_ingredient_service.dart';
 import 'package:flutter_app/services/market_price_service.dart';
 import 'package:flutter_app/theme.dart';
 
@@ -14,14 +15,16 @@ class MarketPriceScreen extends StatefulWidget {
 class _MarketPriceScreenState extends State<MarketPriceScreen> {
   List<IngredientPriceModel> _allPrices = [];
   List<IngredientPriceModel> _filtered = [];
+  Set<int> _favoriteIds = {};
   bool _isLoading = true;
   String? _error;
+  bool _showFavoritesOnly = false;
   final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _loadPrices();
+    _loadAll();
   }
 
   @override
@@ -30,16 +33,22 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
     super.dispose();
   }
 
-  Future<void> _loadPrices() async {
+  Future<void> _loadAll() async {
     setState(() {
       _isLoading = true;
       _error = null;
     });
     try {
-      final prices = await MarketPriceService.getAllPrices();
+      final results = await Future.wait([
+        MarketPriceService.getAllPrices(),
+        FavoriteIngredientService.getFavoriteIds(),
+      ]);
+      final prices = results[0] as List<IngredientPriceModel>;
+      final favIds = results[1] as Set<int>;
       setState(() {
         _allPrices = prices;
-        _filtered = prices;
+        _favoriteIds = favIds;
+        _filtered = _applyFilter(prices);
         _isLoading = false;
       });
     } catch (e) {
@@ -50,15 +59,57 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
     }
   }
 
+  List<IngredientPriceModel> _applyFilter(List<IngredientPriceModel> source) {
+    final q = _searchController.text.trim();
+    var list = _showFavoritesOnly
+        ? source.where((p) => p.ingredientId != null && _favoriteIds.contains(p.ingredientId)).toList()
+        : source;
+    if (q.isNotEmpty) {
+      list = list.where((p) => p.ingredientName.contains(q)).toList();
+    }
+    return list;
+  }
+
   void _onSearch(String query) {
-    final q = query.trim();
+    setState(() => _filtered = _applyFilter(_allPrices));
+  }
+
+  void _onTabChanged(bool favoritesOnly) {
     setState(() {
-      _filtered = q.isEmpty
-          ? _allPrices
-          : _allPrices
-              .where((p) => p.ingredientName.contains(q))
-              .toList();
+      _showFavoritesOnly = favoritesOnly;
+      _filtered = _applyFilter(_allPrices);
     });
+  }
+
+  Future<void> _toggleFavorite(IngredientPriceModel price) async {
+    final id = price.ingredientId;
+    if (id == null) return;
+    final isFav = _favoriteIds.contains(id);
+    setState(() {
+      if (isFav) {
+        _favoriteIds = Set.from(_favoriteIds)..remove(id);
+      } else {
+        _favoriteIds = Set.from(_favoriteIds)..add(id);
+      }
+      _filtered = _applyFilter(_allPrices);
+    });
+    try {
+      if (isFav) {
+        await FavoriteIngredientService.removeFavorite(id);
+      } else {
+        await FavoriteIngredientService.addFavorite(id);
+      }
+    } catch (_) {
+      // 실패 시 롤백
+      setState(() {
+        if (isFav) {
+          _favoriteIds = Set.from(_favoriteIds)..add(id);
+        } else {
+          _favoriteIds = Set.from(_favoriteIds)..remove(id);
+        }
+        _filtered = _applyFilter(_allPrices);
+      });
+    }
   }
 
   @override
@@ -70,6 +121,7 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(),
+            _buildTabRow(),
             _buildSearchBar(),
             Expanded(child: _buildBody()),
           ],
@@ -88,16 +140,78 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
             blendMode: BlendMode.srcIn,
             shaderCallback: (bounds) => AppTheme.aiGradient.createShader(bounds),
             child: const Text(
-              '오늘의 시세',
+              '식재료 가격 동향',
               style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
             ),
           ),
           const SizedBox(height: 4),
           Text(
-            'KAMIS 실시간 농수산물 가격 정보',
+            'KAMIS 농수산물 전일 대비 등락 정보',
             style: TextStyle(fontSize: 14, color: Colors.grey[500]),
           ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryColor.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.25)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, size: 13, color: AppTheme.primaryColor),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    '도·소매 기준 가격으로, 실제 마트·시장 판매가와 다를 수 있습니다.',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.primaryColor.withValues(alpha: 0.85),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTabRow() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 4),
+      child: Row(
+        children: [
+          _buildTabChip('전체', !_showFavoritesOnly, () => _onTabChanged(false)),
+          const SizedBox(width: 8),
+          _buildTabChip('관심 재료', _showFavoritesOnly, () => _onTabChanged(true)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabChip(String label, bool selected, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected ? AppTheme.primaryColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? AppTheme.primaryColor : Colors.grey.shade300,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: selected ? Colors.white : Colors.grey[600],
+          ),
+        ),
       ),
     );
   }
@@ -129,9 +243,7 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
   Widget _buildBody() {
     if (_isLoading) {
       return const Center(
-        child: CircularProgressIndicator(
-          color: AppTheme.primaryColor,
-        ),
+        child: CircularProgressIndicator(color: AppTheme.primaryColor),
       );
     }
 
@@ -147,10 +259,7 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
               style: TextStyle(color: Colors.grey[600], fontSize: 15),
             ),
             const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _loadPrices,
-              child: const Text('다시 시도'),
-            ),
+            ElevatedButton(onPressed: _loadAll, child: const Text('다시 시도')),
           ],
         ),
       );
@@ -161,24 +270,33 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.search_off, size: 48, color: Colors.grey[400]),
+            Icon(
+              _showFavoritesOnly ? Icons.favorite_border : Icons.search_off,
+              size: 48,
+              color: Colors.grey[400],
+            ),
             const SizedBox(height: 12),
             Text(
-              _searchController.text.isNotEmpty
-                  ? "'${_searchController.text}'에 대한 시세 정보가 없습니다"
-                  : '시세 정보가 없습니다',
-              style: TextStyle(color: Colors.grey[600], fontSize: 15),
+              _showFavoritesOnly
+                  ? '관심 재료를 추가해보세요\n시세 카드의 하트를 눌러 저장할 수 있어요'
+                  : (_searchController.text.isNotEmpty
+                      ? "'${_searchController.text}'에 대한 시세 정보가 없습니다"
+                      : '시세 정보가 없습니다'),
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey[600], fontSize: 15, height: 1.5),
             ),
           ],
         ),
       );
     }
 
-    final bool showSummary = _allPrices.any((p) => p.dayChangeRate != null);
+    final bool showSummary = !_showFavoritesOnly &&
+        _searchController.text.isEmpty &&
+        _allPrices.any((p) => p.dayChangeRate != null);
 
     return RefreshIndicator(
       color: AppTheme.primaryColor,
-      onRefresh: _loadPrices,
+      onRefresh: _loadAll,
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
         itemCount: _filtered.length + (showSummary ? 1 : 0),
@@ -191,7 +309,7 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
     );
   }
 
-  Widget _buildChangeRateBadge(double rate) {
+  Widget _buildChangeRateColumn(double rate) {
     final isPositive = rate > 0;
     final isZero = rate == 0;
     final color = isZero
@@ -200,29 +318,30 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
     final icon = isZero
         ? Icons.remove
         : (isPositive ? Icons.arrow_upward : Icons.arrow_downward);
-    final label = isZero ? '변동없음' : '${rate.abs().toStringAsFixed(1)}% 전일대비';
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 10, color: color),
-          const SizedBox(width: 2),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              color: color,
-              fontWeight: FontWeight.w600,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 13, color: color),
+            const SizedBox(width: 2),
+            Text(
+              isZero ? '0%' : '${rate.abs().toStringAsFixed(1)}%',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: color,
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
+        Text(
+          '전일 대비',
+          style: TextStyle(fontSize: 10, color: Colors.grey[400]),
+        ),
+      ],
     );
   }
 
@@ -288,12 +407,7 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
     final icon = isUp ? Icons.arrow_upward : Icons.arrow_downward;
     final rate = price.dayChangeRate!.abs().toStringAsFixed(1);
     return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => MarketPriceDetailScreen(price: price),
-        ),
-      ),
+      onTap: () => _pushDetail(price),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
@@ -330,87 +444,92 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
   }
 
   Widget _buildPriceCard(IngredientPriceModel price) {
+    final isFav = price.ingredientId != null && _favoriteIds.contains(price.ingredientId);
     return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => MarketPriceDetailScreen(price: price),
-        ),
-      ),
+      onTap: () => _pushDetail(price),
       child: Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-            child: const Icon(
-              Icons.storefront_outlined,
-              color: AppTheme.primaryColor,
-              size: 20,
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.storefront_outlined,
+                color: AppTheme.primaryColor,
+                size: 20,
+              ),
             ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  price.ingredientName,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    price.ingredientName,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  price.marketName != null ? price.marketName! : '',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-                ),
-              ],
+                  if (price.originalPrice != null && price.originalUnit != null) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      '${price.displayPrice} · KAMIS',
+                      style: TextStyle(fontSize: 11, color: Colors.grey[400]),
+                    ),
+                  ],
+                ],
+              ),
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                price.displayPrice,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black87,
+            if (price.dayChangeRate != null)
+              _buildChangeRateColumn(price.dayChangeRate!),
+            const SizedBox(width: 8),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _toggleFavorite(price),
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Icon(
+                  isFav ? Icons.favorite : Icons.favorite_border,
+                  size: 20,
+                  color: isFav ? Colors.redAccent : Colors.grey[400],
                 ),
               ),
-              const SizedBox(height: 3),
-              if (price.dayChangeRate != null)
-                _buildChangeRateBadge(price.dayChangeRate!)
-              else
-                Text(
-                  price.displayDate,
-                  style: TextStyle(fontSize: 11, color: Colors.grey[400]),
-                ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
-    ),
+    );
+  }
+
+  void _pushDetail(IngredientPriceModel price) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MarketPriceDetailScreen(
+          price: price,
+          isFavorite: price.ingredientId != null && _favoriteIds.contains(price.ingredientId),
+          onFavoriteToggle: price.ingredientId != null ? () => _toggleFavorite(price) : null,
+        ),
+      ),
     );
   }
 }

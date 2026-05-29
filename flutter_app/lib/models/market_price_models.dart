@@ -1,4 +1,5 @@
 class IngredientPriceModel {
+  final int? ingredientId;
   final String ingredientName;
   final double pricePerGram;
   final int? originalPrice;
@@ -11,6 +12,7 @@ class IngredientPriceModel {
   final double? monthChangeRate;
 
   const IngredientPriceModel({
+    this.ingredientId,
     required this.ingredientName,
     required this.pricePerGram,
     this.originalPrice,
@@ -25,6 +27,7 @@ class IngredientPriceModel {
 
   factory IngredientPriceModel.fromJson(Map<String, dynamic> json) {
     return IngredientPriceModel(
+      ingredientId: json['ingredientId'] as int?,
       ingredientName: json['ingredientName'] as String,
       pricePerGram: (json['pricePerGram'] as num).toDouble(),
       originalPrice: json['originalPrice'] as int?,
