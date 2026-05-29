@@ -1,9 +1,12 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from typing import List, Optional
+import asyncio
 import os
 import json
+import requests
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 
@@ -26,8 +29,6 @@ from ai_agent_app.WeatherAdvisor import WeatherAdvisor
 # 초기화
 # =====================================================================
 load_dotenv()
-app = FastAPI(title="Recipe AI API")
-
 
 # Spring 백엔드 연동
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8080")
@@ -63,6 +64,61 @@ recommendation_engine = RecommendationEngine(graph_builder)
 recommendation_service = RecommendationService(
     recommendation_engine, session_manager
 )
+
+# =====================================================================
+# 가격 데이터 로드 (백엔드 → GetMarketPrices)
+# =====================================================================
+PRICE_RELOAD_INTERVAL_SEC = 86400  # 24시간
+
+
+def _to_market_price_item(p: dict) -> dict:
+    return {
+        "PRDLST_NM": p.get("ingredientName", ""),
+        "A_PRICE": str(p.get("originalPrice") or 0),
+        "UNIT": p.get("originalUnit") or "100g",
+        "M_GU_NAME": p.get("marketName") or "",
+    }
+
+
+def _fetch_prices() -> list:
+    url = f"{BACKEND_URL}/api/v1/ingredients/prices/all"
+    try:
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        body = resp.json()
+        if body.get("success") and body.get("data"):
+            items = [
+                _to_market_price_item(p)
+                for p in body["data"]
+                if (p.get("originalPrice") or 0) > 0
+            ]
+            print(f"[price-loader] 가격 데이터 로드 완료: {len(items)}개")
+            return items
+    except Exception as e:
+        print(f"[price-loader] 가격 로드 실패 (기존 데이터 유지): {e}")
+    return []
+
+
+async def _price_reload_loop():
+    while True:
+        await asyncio.sleep(PRICE_RELOAD_INTERVAL_SEC)
+        items = await asyncio.to_thread(_fetch_prices)
+        if items:
+            get_market_prices.reload(items)
+            print(f"[price-loader] 가격 데이터 갱신 완료: {len(items)}개")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    items = await asyncio.to_thread(_fetch_prices)
+    if items:
+        get_market_prices.reload(items)
+    reload_task = asyncio.create_task(_price_reload_loop())
+    yield
+    reload_task.cancel()
+
+
+app = FastAPI(title="Recipe AI API", lifespan=lifespan)
 
 # =====================================================================
 # Pydantic 모델

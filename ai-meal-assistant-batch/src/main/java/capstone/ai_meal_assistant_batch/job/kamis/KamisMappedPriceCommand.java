@@ -11,6 +11,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.context.ApplicationContext;
 
 import capstone.ai_meal_assistant_batch.global.log.BatchLog;
+import capstone.ai_meal_assistant_batch.job.price.DefaultPriceFillResult;
+import capstone.ai_meal_assistant_batch.job.price.DefaultPriceFillService;
 import lombok.RequiredArgsConstructor;
 
 @Component
@@ -21,6 +23,7 @@ public class KamisMappedPriceCommand implements ApplicationRunner {
 	private static final String JOB_NAME = "kamisMappedPriceUpdate";
 
 	private final KamisPriceUpdateService service;
+	private final DefaultPriceFillService defaultPriceFillService;
 	private final ApplicationContext applicationContext;
 
 	@Override
@@ -29,11 +32,20 @@ public class KamisMappedPriceCommand implements ApplicationRunner {
 		try {
 			KamisPriceUpdateResult result = service.updateTodayPrices(false, false);
 			BatchLog.success(JOB_NAME, start, result);
-			int exitCode = SpringApplication.exit(applicationContext, () -> 0);
-			System.exit(exitCode);
 		} catch (Exception e) {
 			BatchLog.fail(JOB_NAME, start, e);
 			throw e;
 		}
+
+		Instant fillStart = BatchLog.start("defaultPriceFill");
+		try {
+			DefaultPriceFillResult fillResult = defaultPriceFillService.fillMissingPrices();
+			BatchLog.success("defaultPriceFill", fillStart, fillResult);
+		} catch (Exception e) {
+			BatchLog.fail("defaultPriceFill", fillStart, e);
+		}
+
+		int exitCode = SpringApplication.exit(applicationContext, () -> 0);
+		System.exit(exitCode);
 	}
 }
