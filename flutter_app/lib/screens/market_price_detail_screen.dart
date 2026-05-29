@@ -49,8 +49,6 @@ class _MarketPriceDetailScreenState extends State<MarketPriceDetailScreen> {
                     _buildPriceHeroCard(),
                     const SizedBox(height: 16),
                     _buildChangeRatesCard(),
-                    const SizedBox(height: 16),
-                    _buildMarketInfoCard(),
                   ],
                 ),
               ),
@@ -123,6 +121,21 @@ class _MarketPriceDetailScreenState extends State<MarketPriceDetailScreen> {
               fontSize: 12,
               color: Colors.white.withValues(alpha: 0.75),
             ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Icon(Icons.verified_outlined,
+                  size: 12, color: Colors.white.withValues(alpha: 0.6)),
+              const SizedBox(width: 4),
+              Text(
+                'KAMIS 한국농수산식품유통공사 제공',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.white.withValues(alpha: 0.6),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -204,62 +217,4 @@ class _MarketPriceDetailScreenState extends State<MarketPriceDetailScreen> {
     );
   }
 
-  Widget _buildMarketInfoCard() {
-    final p = widget.price;
-    if (p.marketName == null && p.marketType == null) return const SizedBox.shrink();
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            '시장 정보',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.black87),
-          ),
-          const SizedBox(height: 14),
-          if (p.marketName != null) _buildInfoRow('시장명', p.marketName!),
-          if (p.marketType != null) ...[
-            const SizedBox(height: 10),
-            _buildInfoRow('유형', p.marketType!),
-          ],
-          const SizedBox(height: 10),
-          _buildInfoRow('기준일', p.displayDate),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 64,
-          child: Text(label, style: const TextStyle(fontSize: 13, color: Colors.black54)),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: Colors.black87,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 }

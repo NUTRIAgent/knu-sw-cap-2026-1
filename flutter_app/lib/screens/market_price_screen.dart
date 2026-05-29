@@ -140,13 +140,13 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
             blendMode: BlendMode.srcIn,
             shaderCallback: (bounds) => AppTheme.aiGradient.createShader(bounds),
             child: const Text(
-              '오늘의 시세',
+              '식재료 가격 동향',
               style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
             ),
           ),
           const SizedBox(height: 4),
           Text(
-            'KAMIS 실시간 농수산물 가격 정보',
+            'KAMIS 농수산물 전일 대비 등락 정보',
             style: TextStyle(fontSize: 14, color: Colors.grey[500]),
           ),
         ],
@@ -285,7 +285,7 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
     );
   }
 
-  Widget _buildChangeRateBadge(double rate) {
+  Widget _buildChangeRateColumn(double rate) {
     final isPositive = rate > 0;
     final isZero = rate == 0;
     final color = isZero
@@ -294,29 +294,30 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
     final icon = isZero
         ? Icons.remove
         : (isPositive ? Icons.arrow_upward : Icons.arrow_downward);
-    final label = isZero ? '변동없음' : '${rate.abs().toStringAsFixed(1)}% 전일대비';
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 10, color: color),
-          const SizedBox(width: 2),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              color: color,
-              fontWeight: FontWeight.w600,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 13, color: color),
+            const SizedBox(width: 2),
+            Text(
+              isZero ? '0%' : '${rate.abs().toStringAsFixed(1)}%',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: color,
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
+        Text(
+          '전일 대비',
+          style: TextStyle(fontSize: 10, color: Colors.grey[400]),
+        ),
+      ],
     );
   }
 
@@ -464,36 +465,19 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
                       color: Colors.black87,
                     ),
                   ),
-                  const SizedBox(height: 3),
-                  Text(
-                    price.marketName ?? '',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-                  ),
+                  if (price.originalPrice != null && price.originalUnit != null) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      '${price.displayPrice} · KAMIS',
+                      style: TextStyle(fontSize: 11, color: Colors.grey[400]),
+                    ),
+                  ],
                 ],
               ),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  price.displayPrice,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                if (price.dayChangeRate != null)
-                  _buildChangeRateBadge(price.dayChangeRate!)
-                else
-                  Text(
-                    price.displayDate,
-                    style: TextStyle(fontSize: 11, color: Colors.grey[400]),
-                  ),
-              ],
-            ),
-            const SizedBox(width: 4),
+            if (price.dayChangeRate != null)
+              _buildChangeRateColumn(price.dayChangeRate!),
+            const SizedBox(width: 8),
             GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () => _toggleFavorite(price),
