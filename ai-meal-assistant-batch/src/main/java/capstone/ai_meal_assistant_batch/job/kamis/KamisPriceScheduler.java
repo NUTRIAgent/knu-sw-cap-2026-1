@@ -9,6 +9,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import capstone.ai_meal_assistant_batch.global.log.BatchLog;
+import capstone.ai_meal_assistant_batch.job.price.DefaultPriceFillResult;
+import capstone.ai_meal_assistant_batch.job.price.DefaultPriceFillService;
 import lombok.RequiredArgsConstructor;
 
 @Component
@@ -19,6 +21,7 @@ public class KamisPriceScheduler {
 	private static final String JOB_NAME = "kamisPriceUpdate";
 
 	private final KamisPriceUpdateService service;
+	private final DefaultPriceFillService defaultPriceFillService;
 
 	@EventListener(ApplicationReadyEvent.class)
 	public void runOnStartup() {
@@ -29,6 +32,7 @@ public class KamisPriceScheduler {
 		} catch (Exception e) {
 			BatchLog.fail(JOB_NAME + ".startup", start, e);
 		}
+		fillDefaultPrices();
 	}
 
 	@Scheduled(cron = "${batch.kamis.cron}")
@@ -40,6 +44,17 @@ public class KamisPriceScheduler {
 		} catch (Exception e) {
 			BatchLog.fail(JOB_NAME, start, e);
 			throw e;
+		}
+		fillDefaultPrices();
+	}
+
+	private void fillDefaultPrices() {
+		Instant start = BatchLog.start("defaultPriceFill");
+		try {
+			DefaultPriceFillResult result = defaultPriceFillService.fillMissingPrices();
+			BatchLog.success("defaultPriceFill", start, result);
+		} catch (Exception e) {
+			BatchLog.fail("defaultPriceFill", start, e);
 		}
 	}
 }

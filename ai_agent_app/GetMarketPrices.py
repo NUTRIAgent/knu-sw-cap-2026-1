@@ -4,11 +4,14 @@ from collections import defaultdict
 
 class GetMarketPrices:
     def __init__(self, price_list: List[Dict]):
+        self._build_index(price_list)
+
+    def _build_index(self, price_list: List[Dict]):
         self.price_data_by_district = defaultdict(list)
         for item in price_list:
             district = item.get('M_GU_NAME')
             self.price_data_by_district[district].append(item)
-        
+
         self.index_by_district: Dict[str, Dict[str, Dict]] = {
             district: {p['PRDLST_NM']: p for p in items}
             for district, items in self.price_data_by_district.items()
@@ -18,7 +21,7 @@ class GetMarketPrices:
         for items in self.price_data_by_district.values():
             all_items.extend(items)
         self._national_pool = all_items
-        
+
         # 상품명별로 가격 모아서 평균 계산
         price_groups = defaultdict(list)
         for p in all_items:
@@ -33,6 +36,9 @@ class GetMarketPrices:
             }
             for name, items in price_groups.items()
         }
+
+    def reload(self, price_list: List[Dict]):
+        self._build_index(price_list)
         
     def _get_target_pool(self, user_district: str = None) -> Tuple[List[Dict], Dict[str, Dict]]:
             # [변경] user_district가 None이면 국가 풀 사용
