@@ -60,6 +60,32 @@ class RecommendationService {
     }
   }
 
+  /// 후보 중 선택한 메뉴 1개를 AI 분석 (단일 JSON 응답)
+  static Future<RecommendationResult> analyzeSelected(
+      SelectMenuRequest request) async {
+    final uri = Uri.parse('${ApiConfig.aiBaseUrl}/recommend/select');
+    final response = await http
+        .post(
+          uri,
+          headers: {'Content-Type': 'application/json; charset=utf-8'},
+          body: jsonEncode(request.toJson()),
+        )
+        .timeout(
+          const Duration(seconds: 60),
+          onTimeout: () => throw Exception('AI 서버 응답 시간 초과 (60초)'),
+        );
+
+    if (response.statusCode != 200) {
+      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+      throw Exception(decoded['detail'] ?? 'AI 분석 실패 (${response.statusCode})');
+    }
+
+    final decoded =
+        jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+    if (decoded.containsKey('error')) throw Exception(decoded['error']);
+    return RecommendationResult.fromJson(decoded);
+  }
+
   static Future<void> saveFeedback(int menuId, int feedbackScore, String? jwt) async {
     if (jwt == null || jwt.isEmpty) return;
     final uri = Uri.parse('${ApiConfig.baseUrl}/api/recommendation-logs');

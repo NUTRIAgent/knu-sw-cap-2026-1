@@ -307,6 +307,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                                   builder: (_) => MenuDetailScreen(
                                     candidate: c,
                                     jwt: widget.request.jwtToken,
+                                    request: _currentRequest,
                                   ),
                                 ),
                               ),
