@@ -38,7 +38,6 @@ class GraphState(TypedDict):
 
     # [rank_node] 출력
     top5_ids: List[str]
-    top10_ids: List[str]
 
     # 최종
     final_results: List[Dict[str, Any]]
@@ -145,7 +144,7 @@ class RecipeGraphBuilder:
     # rank_node
     # ------------------------------------------------------------------
     def rank_node(self, state: GraphState) -> GraphState:
-        print("[rank_node] LLM으로 상위 10개 랭킹 선정")
+        print("[rank_node] LLM으로 상위 5개 랭킹 선정")
         enriched = state["enriched"]
         candidate_ids = state["candidate_ids"]
 
@@ -165,9 +164,9 @@ class RecipeGraphBuilder:
             "- 예산을 크게 초과하는지 참고만 하고, 영양/취향/건강 적합성을 우선 고려.\n"
             "- '추정불가'로 표시된 항목도 정상이므로 다른 기준으로 평가할 것.\n"
             "- 선호와 건강 상태에 더 잘 맞는 메뉴가 추정조리비 약간 높아도 우선될 수 있음.\n\n"
-            "아래 후보 중 사용자에게 가장 적합한 10개를 순서대로 선정.\n"
+            "아래 후보 중 사용자에게 가장 적합한 5개를 순서대로 선정.\n"
             "반드시 마지막 줄에 다음 형식으로만 답하세요 (다른 설명 금지):\n"
-            "랭킹ID: <ID1>, <ID2>, <ID3>, <ID4>, <ID5>, <ID6>, <ID7>, <ID8>, <ID9>, <ID10>\n"
+            "랭킹ID: <ID1>, <ID2>, <ID3>, <ID4>, <ID5>\n"
             "----------------------\n"
             + "\n".join(enriched)
         )
@@ -180,13 +179,12 @@ class RecipeGraphBuilder:
 
             parsed = [x.strip() for x in match.group(1).split(",") if x.strip()]
             candidate_set = set(candidate_ids)
-            top10_ids = [s for s in parsed if s in candidate_set][:10]
+            top5_ids = [s for s in parsed if s in candidate_set][:5]
 
-            if not top10_ids:
+            if not top5_ids:
                 raise ValueError("유효한 랭킹 ID가 없습니다.")
 
-            top5_ids = top10_ids[:5]
-            return {**state, "top5_ids": top5_ids, "top10_ids": top10_ids}
+            return {**state, "top5_ids": top5_ids}
         except Exception as e:
             return {**state, "error": str(e)}
 
