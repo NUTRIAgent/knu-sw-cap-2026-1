@@ -68,4 +68,12 @@ public class IngredientPrice extends BaseEntity {
         this.prevMonthPrice = prevMonthPrice;
         this.lastSyncAt = LocalDateTime.now();
     }
+
+    public void updateNaverPrice(double pricePerGram, Integer originalPrice, String originalUnit, LocalDateTime syncAt) {
+        this.pricePerGram = pricePerGram;
+        this.originalPrice = originalPrice;
+        this.originalUnit = originalUnit;
+        this.baseDate = syncAt;
+        this.lastSyncAt = syncAt;
+    }
 }

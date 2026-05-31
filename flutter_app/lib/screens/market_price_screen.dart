@@ -13,13 +13,19 @@ class MarketPriceScreen extends StatefulWidget {
 }
 
 class _MarketPriceScreenState extends State<MarketPriceScreen> {
-  List<IngredientPriceModel> _allPrices = [];
-  List<IngredientPriceModel> _filtered = [];
+  List<IngredientPriceModel> _kamisPrices = [];
+  List<IngredientPriceModel> _kamisFiltered = [];
+  List<IngredientPriceModel> _naverPrices = [];
+  List<IngredientPriceModel> _naverFiltered = [];
   Set<int> _favoriteIds = {};
   bool _isLoading = true;
   String? _error;
+  bool _showNaverTab = false;
   bool _showFavoritesOnly = false;
   final TextEditingController _searchController = TextEditingController();
+
+  List<IngredientPriceModel> get _currentFiltered =>
+      _showNaverTab ? _naverFiltered : _kamisFiltered;
 
   @override
   void initState() {
@@ -41,14 +47,18 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
     try {
       final results = await Future.wait([
         MarketPriceService.getAllPrices(),
+        MarketPriceService.getNaverShoppingPrices(),
         FavoriteIngredientService.getFavoriteIds(),
       ]);
-      final prices = results[0] as List<IngredientPriceModel>;
-      final favIds = results[1] as Set<int>;
+      final kamisPrices = results[0] as List<IngredientPriceModel>;
+      final naverPrices = results[1] as List<IngredientPriceModel>;
+      final favIds = results[2] as Set<int>;
       setState(() {
-        _allPrices = prices;
+        _kamisPrices = kamisPrices;
+        _naverPrices = naverPrices;
         _favoriteIds = favIds;
-        _filtered = _applyFilter(prices);
+        _kamisFiltered = _applyFilter(kamisPrices);
+        _naverFiltered = _applyFilter(naverPrices);
         _isLoading = false;
       });
     } catch (e) {
@@ -62,7 +72,10 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
   List<IngredientPriceModel> _applyFilter(List<IngredientPriceModel> source) {
     final q = _searchController.text.trim();
     var list = _showFavoritesOnly
-        ? source.where((p) => p.ingredientId != null && _favoriteIds.contains(p.ingredientId)).toList()
+        ? source
+            .where((p) =>
+                p.ingredientId != null && _favoriteIds.contains(p.ingredientId))
+            .toList()
         : source;
     if (q.isNotEmpty) {
       list = list.where((p) => p.ingredientName.contains(q)).toList();
@@ -71,13 +84,23 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
   }
 
   void _onSearch(String query) {
-    setState(() => _filtered = _applyFilter(_allPrices));
+    setState(() {
+      _kamisFiltered = _applyFilter(_kamisPrices);
+      _naverFiltered = _applyFilter(_naverPrices);
+    });
   }
 
-  void _onTabChanged(bool favoritesOnly) {
+  void _onFavoritesTabChanged(bool favoritesOnly) {
     setState(() {
       _showFavoritesOnly = favoritesOnly;
-      _filtered = _applyFilter(_allPrices);
+      _kamisFiltered = _applyFilter(_kamisPrices);
+      _naverFiltered = _applyFilter(_naverPrices);
+    });
+  }
+
+  void _onSourceTabChanged(bool showNaver) {
+    setState(() {
+      _showNaverTab = showNaver;
     });
   }
 
@@ -91,7 +114,8 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
       } else {
         _favoriteIds = Set.from(_favoriteIds)..add(id);
       }
-      _filtered = _applyFilter(_allPrices);
+      _kamisFiltered = _applyFilter(_kamisPrices);
+      _naverFiltered = _applyFilter(_naverPrices);
     });
     try {
       if (isFav) {
@@ -100,14 +124,14 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
         await FavoriteIngredientService.addFavorite(id);
       }
     } catch (_) {
-      // 실패 시 롤백
       setState(() {
         if (isFav) {
           _favoriteIds = Set.from(_favoriteIds)..add(id);
         } else {
           _favoriteIds = Set.from(_favoriteIds)..remove(id);
         }
-        _filtered = _applyFilter(_allPrices);
+        _kamisFiltered = _applyFilter(_kamisPrices);
+        _naverFiltered = _applyFilter(_naverPrices);
       });
     }
   }
@@ -121,7 +145,8 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(),
-            _buildTabRow(),
+            _buildSourceTabRow(),
+            if (!_showNaverTab) const SizedBox(height: 4) else _buildFavoritesTabRow(),
             _buildSearchBar(),
             Expanded(child: _buildBody()),
           ],
@@ -131,6 +156,13 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
   }
 
   Widget _buildHeader() {
+    final subtitle = _showNaverTab
+        ? '네이버쇼핑 기준 실시간 재료 단가'
+        : 'KAMIS 농수산물 전일 대비 등락 정보';
+    final notice = _showNaverTab
+        ? '온라인 쇼핑 기준 가격으로, 실제 마트·시장 판매가와 다를 수 있습니다.'
+        : '도·소매 기준 가격으로, 실제 마트·시장 판매가와 다를 수 있습니다.';
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
       child: Column(
@@ -138,7 +170,8 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
         children: [
           ShaderMask(
             blendMode: BlendMode.srcIn,
-            shaderCallback: (bounds) => AppTheme.aiGradient.createShader(bounds),
+            shaderCallback: (bounds) =>
+                AppTheme.aiGradient.createShader(bounds),
             child: const Text(
               '식재료 가격 동향',
               style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
@@ -146,7 +179,7 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            'KAMIS 농수산물 전일 대비 등락 정보',
+            subtitle,
             style: TextStyle(fontSize: 14, color: Colors.grey[500]),
           ),
           const SizedBox(height: 10),
@@ -155,15 +188,17 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
             decoration: BoxDecoration(
               color: AppTheme.primaryColor.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.25)),
+              border:
+                  Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.25)),
             ),
             child: Row(
               children: [
-                Icon(Icons.info_outline, size: 13, color: AppTheme.primaryColor),
+                Icon(Icons.info_outline,
+                    size: 13, color: AppTheme.primaryColor),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    '도·소매 기준 가격으로, 실제 마트·시장 판매가와 다를 수 있습니다.',
+                    notice,
                     style: TextStyle(
                       fontSize: 11,
                       color: AppTheme.primaryColor.withValues(alpha: 0.85),
@@ -178,25 +213,51 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
     );
   }
 
-  Widget _buildTabRow() {
+  Widget _buildSourceTabRow() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 4),
       child: Row(
         children: [
-          _buildTabChip('전체', !_showFavoritesOnly, () => _onTabChanged(false)),
+          _buildTabChip(
+            '가격 동향',
+            !_showNaverTab,
+            () => _onSourceTabChanged(false),
+            icon: Icons.trending_up,
+          ),
           const SizedBox(width: 8),
-          _buildTabChip('관심 재료', _showFavoritesOnly, () => _onTabChanged(true)),
+          _buildTabChip(
+            '실시간 가격',
+            _showNaverTab,
+            () => _onSourceTabChanged(true),
+            icon: Icons.shopping_cart_outlined,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildTabChip(String label, bool selected, VoidCallback onTap) {
+  Widget _buildFavoritesTabRow() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 4),
+      child: Row(
+        children: [
+          _buildTabChip('전체', !_showFavoritesOnly,
+              () => _onFavoritesTabChanged(false)),
+          const SizedBox(width: 8),
+          _buildTabChip('관심 재료', _showFavoritesOnly,
+              () => _onFavoritesTabChanged(true)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabChip(String label, bool selected, VoidCallback onTap,
+      {IconData? icon}) {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
           color: selected ? AppTheme.primaryColor : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
@@ -204,13 +265,24 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
             color: selected ? AppTheme.primaryColor : Colors.grey.shade300,
           ),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: selected ? Colors.white : Colors.grey[600],
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon,
+                  size: 13,
+                  color: selected ? Colors.white : Colors.grey[600]),
+              const SizedBox(width: 4),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: selected ? Colors.white : Colors.grey[600],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -265,7 +337,7 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
       );
     }
 
-    if (_filtered.isEmpty) {
+    if (_currentFiltered.isEmpty) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -283,26 +355,28 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
                       ? "'${_searchController.text}'에 대한 시세 정보가 없습니다"
                       : '시세 정보가 없습니다'),
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey[600], fontSize: 15, height: 1.5),
+              style:
+                  TextStyle(color: Colors.grey[600], fontSize: 15, height: 1.5),
             ),
           ],
         ),
       );
     }
 
-    final bool showSummary = !_showFavoritesOnly &&
+    final bool showSummary = !_showNaverTab &&
+        !_showFavoritesOnly &&
         _searchController.text.isEmpty &&
-        _allPrices.any((p) => p.dayChangeRate != null);
+        _kamisPrices.any((p) => p.dayChangeRate != null);
 
     return RefreshIndicator(
       color: AppTheme.primaryColor,
       onRefresh: _loadAll,
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-        itemCount: _filtered.length + (showSummary ? 1 : 0),
+        itemCount: _currentFiltered.length + (showSummary ? 1 : 0),
         itemBuilder: (context, index) {
           if (showSummary && index == 0) return _buildSummarySection();
-          final item = _filtered[showSummary ? index - 1 : index];
+          final item = _currentFiltered[showSummary ? index - 1 : index];
           return _buildPriceCard(item);
         },
       ),
@@ -346,7 +420,8 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
   }
 
   Widget _buildSummarySection() {
-    final withRates = _allPrices.where((p) => p.dayChangeRate != null).toList();
+    final withRates =
+        _kamisPrices.where((p) => p.dayChangeRate != null).toList();
     final topUp = (withRates.where((p) => p.dayChangeRate! > 0).toList()
           ..sort((a, b) => b.dayChangeRate!.compareTo(a.dayChangeRate!)))
         .take(3)
@@ -395,7 +470,8 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
             Wrap(
               spacing: 6,
               runSpacing: 6,
-              children: topDown.map((p) => _buildSummaryChip(p, false)).toList(),
+              children:
+                  topDown.map((p) => _buildSummaryChip(p, false)).toList(),
             ),
         ],
       ),
@@ -403,7 +479,8 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
   }
 
   Widget _buildSummaryChip(IngredientPriceModel price, bool isUp) {
-    final color = isUp ? const Color(0xFFE53935) : const Color(0xFF1E88E5);
+    final color =
+        isUp ? const Color(0xFFE53935) : const Color(0xFF1E88E5);
     final icon = isUp ? Icons.arrow_upward : Icons.arrow_downward;
     final rate = price.dayChangeRate!.abs().toStringAsFixed(1);
     return GestureDetector(
@@ -444,7 +521,10 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
   }
 
   Widget _buildPriceCard(IngredientPriceModel price) {
-    final isFav = price.ingredientId != null && _favoriteIds.contains(price.ingredientId);
+    final isFav =
+        price.ingredientId != null && _favoriteIds.contains(price.ingredientId);
+    final sourceLabel = _showNaverTab ? '네이버쇼핑' : 'KAMIS';
+
     return GestureDetector(
       onTap: () => _pushDetail(price),
       child: Container(
@@ -489,11 +569,13 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
                       color: Colors.black87,
                     ),
                   ),
-                  if (price.originalPrice != null && price.originalUnit != null) ...[
+                  if (price.originalPrice != null &&
+                      price.originalUnit != null) ...[
                     const SizedBox(height: 3),
                     Text(
-                      '${price.displayPrice} · KAMIS',
-                      style: TextStyle(fontSize: 11, color: Colors.grey[400]),
+                      '${price.displayPrice} · $sourceLabel',
+                      style:
+                          TextStyle(fontSize: 11, color: Colors.grey[400]),
                     ),
                   ],
                 ],
@@ -501,19 +583,21 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
             ),
             if (price.dayChangeRate != null)
               _buildChangeRateColumn(price.dayChangeRate!),
-            const SizedBox(width: 8),
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => _toggleFavorite(price),
-              child: Padding(
-                padding: const EdgeInsets.all(4),
-                child: Icon(
-                  isFav ? Icons.favorite : Icons.favorite_border,
-                  size: 20,
-                  color: isFav ? Colors.redAccent : Colors.grey[400],
+            if (!_showNaverTab) const SizedBox(width: 4) else ...[
+              const SizedBox(width: 8),
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => _toggleFavorite(price),
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Icon(
+                    isFav ? Icons.favorite : Icons.favorite_border,
+                    size: 20,
+                    color: isFav ? Colors.redAccent : Colors.grey[400],
+                  ),
                 ),
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -526,8 +610,11 @@ class _MarketPriceScreenState extends State<MarketPriceScreen> {
       MaterialPageRoute(
         builder: (_) => MarketPriceDetailScreen(
           price: price,
-          isFavorite: price.ingredientId != null && _favoriteIds.contains(price.ingredientId),
-          onFavoriteToggle: price.ingredientId != null ? () => _toggleFavorite(price) : null,
+          isFavorite: price.ingredientId != null &&
+              _favoriteIds.contains(price.ingredientId),
+          onFavoriteToggle: price.ingredientId != null
+              ? () => _toggleFavorite(price)
+              : null,
         ),
       ),
     );

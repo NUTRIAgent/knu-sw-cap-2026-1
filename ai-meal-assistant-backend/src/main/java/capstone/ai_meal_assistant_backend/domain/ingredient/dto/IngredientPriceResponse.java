@@ -1,5 +1,6 @@
 package capstone.ai_meal_assistant_backend.domain.ingredient.dto;
 
+import capstone.ai_meal_assistant_backend.domain.ingredient.entity.IngredientKamisPrice;
 import capstone.ai_meal_assistant_backend.domain.ingredient.entity.IngredientPrice;
 
 import java.time.LocalDateTime;
@@ -21,6 +22,22 @@ public record IngredientPriceResponse(
         return new IngredientPriceResponse(
                 price.getIngredient().getId(),
                 price.getIngredient().getName(),
+                price.getPricePerGram(),
+                price.getOriginalPrice(),
+                price.getOriginalUnit(),
+                price.getMarketName(),
+                price.getMarketType(),
+                price.getBaseDate(),
+                calcChangeRate(price.getOriginalPrice(), price.getPrevDayPrice()),
+                calcChangeRate(price.getOriginalPrice(), price.getPrevWeekPrice()),
+                calcChangeRate(price.getOriginalPrice(), price.getPrevMonthPrice())
+        );
+    }
+
+    public static IngredientPriceResponse fromKamis(IngredientKamisPrice price) {
+        return new IngredientPriceResponse(
+                null,
+                price.getKamisItemName(),
                 price.getPricePerGram(),
                 price.getOriginalPrice(),
                 price.getOriginalUnit(),

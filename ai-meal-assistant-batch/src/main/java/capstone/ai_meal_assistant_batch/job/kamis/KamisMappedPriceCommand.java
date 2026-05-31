@@ -11,8 +11,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.context.ApplicationContext;
 
 import capstone.ai_meal_assistant_batch.global.log.BatchLog;
-import capstone.ai_meal_assistant_batch.job.price.DefaultPriceFillResult;
-import capstone.ai_meal_assistant_batch.job.price.DefaultPriceFillService;
+import capstone.ai_meal_assistant_batch.job.naver.NaverShoppingPriceResult;
+import capstone.ai_meal_assistant_batch.job.naver.NaverShoppingPriceService;
 import lombok.RequiredArgsConstructor;
 
 @Component
@@ -23,7 +23,7 @@ public class KamisMappedPriceCommand implements ApplicationRunner {
 	private static final String JOB_NAME = "kamisMappedPriceUpdate";
 
 	private final KamisPriceUpdateService service;
-	private final DefaultPriceFillService defaultPriceFillService;
+	private final NaverShoppingPriceService naverShoppingPriceService;
 	private final ApplicationContext applicationContext;
 
 	@Override
@@ -34,15 +34,14 @@ public class KamisMappedPriceCommand implements ApplicationRunner {
 			BatchLog.success(JOB_NAME, start, result);
 		} catch (Exception e) {
 			BatchLog.fail(JOB_NAME, start, e);
-			throw e;
 		}
 
-		Instant fillStart = BatchLog.start("defaultPriceFill");
+		Instant naverStart = BatchLog.start("naverShoppingPriceFetch");
 		try {
-			DefaultPriceFillResult fillResult = defaultPriceFillService.fillMissingPrices();
-			BatchLog.success("defaultPriceFill", fillStart, fillResult);
+			NaverShoppingPriceResult naverResult = naverShoppingPriceService.updateAllPrices();
+			BatchLog.success("naverShoppingPriceFetch", naverStart, naverResult);
 		} catch (Exception e) {
-			BatchLog.fail("defaultPriceFill", fillStart, e);
+			BatchLog.fail("naverShoppingPriceFetch", naverStart, e);
 		}
 
 		int exitCode = SpringApplication.exit(applicationContext, () -> 0);
