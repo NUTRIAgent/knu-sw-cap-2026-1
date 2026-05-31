@@ -26,7 +26,7 @@ class SelectCandidates:
             return "(이력 없음)"
         return "\n".join(f"- {t}" for t in history_texts)
 
-    def select_candidates(
+    async def select_candidates(
         self,
         recipes: List[Dict],
         query: Dict,
@@ -60,7 +60,7 @@ class SelectCandidates:
 
         chain = prompt | self.model | self.parser
         try:
-            response = chain.invoke({
+            response = await chain.ainvoke({
                 "height": query.get('height_cm'),
                 "weight": query.get('weight_kg'),
                 "health": ", ".join(query.get('health_conditions', [])) or "없음",

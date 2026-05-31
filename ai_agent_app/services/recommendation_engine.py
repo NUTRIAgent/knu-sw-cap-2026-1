@@ -78,7 +78,7 @@ class RecommendationEngine:
             "error": None,
         }
 
-        state = self.graph_builder.candidate_node(state)
+        state = await self.graph_builder.candidate_node(state)
         if state.get("error"):
             raise ValueError(state["error"])
 
@@ -86,7 +86,7 @@ class RecommendationEngine:
         if state.get("error"):
             raise ValueError(state.get("error", "price_node 오류"))
 
-        state = self.graph_builder.rank_node(state)
+        state = await self.graph_builder.rank_node(state)
         if state.get("error"):
             raise ValueError(state["error"])
 
