@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app/models/market_price_models.dart';
 import 'package:flutter_app/models/recommendation_models.dart';
 import 'package:flutter_app/models/user_profile_models.dart';
+import 'package:flutter_app/services/market_price_service.dart';
 import 'package:flutter_app/services/recommendation_service.dart';
 import 'package:flutter_app/services/token_storage.dart';
 import 'package:flutter_app/services/user_profile_service.dart';
@@ -26,16 +28,36 @@ class _DashboardScreenState extends State<DashboardScreen>
   String _locationName = '현재위치';
   static String? _aiBriefing;
 
+  // ── 정보 카드 공통 ────────────────────────────────
+  final PageController _infoCardController = PageController();
+  int _infoCardIndex = 0;
+
+  // ── 카드 1: 저렴한 재료 ───────────────────────────
+  List<IngredientPriceModel> _priceDrops = [];
+  bool _isPriceLoading = true;
+
+  // ── 카드 2: AI 픽 이력 ────────────────────────────
+  List<AiPickItem> _aiPicks = [];
+  bool _isAiPickLoading = true;
+
+  // ── 카드 3: 프로필 요약 ───────────────────────────
+  UserProfileData? _profileData;
+  bool _isProfileLoading = true;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadWeather();
+    _loadPriceDrops();
+    _loadAiPicks();
+    _loadDashboardProfile();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _infoCardController.dispose();
     super.dispose();
   }
 
@@ -122,6 +144,53 @@ class _DashboardScreenState extends State<DashboardScreen>
           _isWeatherLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _loadPriceDrops() async {
+    try {
+      final prices = await MarketPriceService.getAllPrices();
+      final drops = prices
+          .where((p) => p.dayChangeRate != null && p.dayChangeRate! < 0)
+          .toList()
+        ..sort((a, b) => a.dayChangeRate!.compareTo(b.dayChangeRate!));
+      if (mounted) {
+        setState(() {
+          _priceDrops = drops.take(3).toList();
+          _isPriceLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isPriceLoading = false);
+    }
+  }
+
+  Future<void> _loadAiPicks() async {
+    try {
+      final jwt = await TokenStorage.getAccessToken();
+      final items = await RecommendationService.fetchMyAiPicks(jwt);
+      if (mounted) {
+        setState(() {
+          _aiPicks = items.take(3).toList();
+          _isAiPickLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isAiPickLoading = false);
+    }
+  }
+
+  Future<void> _loadDashboardProfile() async {
+    try {
+      final result = await UserProfileService.getProfile();
+      if (mounted) {
+        setState(() {
+          _profileData = (result.success) ? result.data : null;
+          _isProfileLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isProfileLoading = false);
     }
   }
 
@@ -227,6 +296,303 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
+  // ── 정보 카드 영역 ────────────────────────────────
+
+  Widget _buildInfoCards() {
+    return Column(
+      children: [
+        // PageView: 저렴한 재료 ↔ AI 픽 이력 (2장)
+        SizedBox(
+          height: 175,
+          child: PageView(
+            controller: _infoCardController,
+            onPageChanged: (i) => setState(() => _infoCardIndex = i),
+            children: [
+              _buildPriceDropCard(),
+              _buildAiPickCard(),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(2, (i) {
+            final active = _infoCardIndex == i;
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              width: active ? 16 : 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: active ? AppTheme.primaryColor : Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(3),
+              ),
+            );
+          }),
+        ),
+        const SizedBox(height: 12),
+        // 프로필 카드: 항상 표시 (고정 높이로 Expanded 제약 보장)
+        SizedBox(height: 115, child: _buildProfileCard()),
+      ],
+    );
+  }
+
+  Widget _buildInfoCardShell({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required Widget body,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 2),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 15, color: iconColor),
+              const SizedBox(width: 6),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Expanded(child: body),
+        ],
+      ),
+    );
+  }
+
+  // ── 카드 1: 저렴한 재료 ───────────────────────────
+
+  Widget _buildPriceDropCard() {
+    return _buildInfoCardShell(
+      icon: Icons.trending_down_rounded,
+      iconColor: Colors.green.shade600,
+      title: '오늘의 저렴한 재료',
+      body: _isPriceLoading
+          ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+          : _priceDrops.isEmpty
+              ? Center(
+                  child: Text(
+                    '가격 하락 재료 데이터 없음',
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade400),
+                  ),
+                )
+              : Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: _priceDrops.map(_buildPriceDropRow).toList(),
+                ),
+    );
+  }
+
+  Widget _buildPriceDropRow(IngredientPriceModel p) {
+    final rate = p.dayChangeRate!;
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            p.ingredientName,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          p.displayPrice,
+          style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          '${rate.toStringAsFixed(1)}%',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: Colors.green.shade600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── 카드 2: AI 픽 이력 ────────────────────────────
+
+  Widget _buildAiPickCard() {
+    return _buildInfoCardShell(
+      icon: Icons.auto_awesome_rounded,
+      iconColor: AppTheme.primaryColor,
+      title: 'AI 픽 이력',
+      body: _isAiPickLoading
+          ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+          : _aiPicks.isEmpty
+              ? Center(
+                  child: Text(
+                    '아직 AI 픽 이력이 없어요',
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade400),
+                  ),
+                )
+              : Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: _aiPicks.map(_buildAiPickRow).toList(),
+                ),
+    );
+  }
+
+  Widget _buildAiPickRow(AiPickItem item) {
+    return Row(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: item.menuImageUrl != null && item.menuImageUrl!.isNotEmpty
+              ? Image.network(
+                  item.menuImageUrl!,
+                  width: 26,
+                  height: 26,
+                  fit: BoxFit.cover,
+                  errorBuilder: (ctx, err, st) => _miniMenuIcon(),
+                )
+              : _miniMenuIcon(),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            item.menuName,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        if (item.starRating != null)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.star_rounded, size: 13, color: Colors.amber),
+              const SizedBox(width: 2),
+              Text(
+                '${item.starRating}',
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+
+  Widget _miniMenuIcon() => Container(
+        width: 26,
+        height: 26,
+        decoration: BoxDecoration(
+          color: Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Icon(Icons.restaurant, color: Colors.grey.shade400, size: 14),
+      );
+
+  // ── 카드 3: 프로필 요약 ───────────────────────────
+
+  Widget _buildProfileCard() {
+    return _buildInfoCardShell(
+      icon: Icons.person_outline_rounded,
+      iconColor: AppTheme.primaryColor,
+      title: '내 식단 프로필',
+      body: _isProfileLoading
+          ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+          : _profileData == null
+              ? Center(
+                  child: Text(
+                    '프로필을 불러올 수 없습니다',
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade400),
+                  ),
+                )
+              : Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildProfileKVRow(
+                      '식단 목표',
+                      _fitnessGoalMap[_profileData!.fitnessGoal] ?? '일반식단',
+                    ),
+                    _buildProfileKVRow(
+                      '매운맛',
+                      '${_profileData!.spicyPreference ?? 3}단계',
+                    ),
+                    _buildProfileAllergyRow(_profileData!.allergies),
+                  ],
+                ),
+    );
+  }
+
+  Widget _buildProfileKVRow(String label, String value) {
+    return Row(
+      children: [
+        Text(
+          label,
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+        ),
+        const Spacer(),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProfileAllergyRow(List<String> allergies) {
+    return Row(
+      children: [
+        Text(
+          '알레르기',
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+        ),
+        const Spacer(),
+        if (allergies.isEmpty)
+          const Text(
+            '없음',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          )
+        else
+          Row(
+            children: allergies.take(3).map((a) => Container(
+              margin: const EdgeInsets.only(left: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange.shade200),
+              ),
+              child: Text(
+                a,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: Colors.orange.shade800,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            )).toList(),
+          ),
+      ],
+    );
+  }
+
+  // ── 빌드 ─────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -313,71 +679,8 @@ class _DashboardScreenState extends State<DashboardScreen>
 
             const SizedBox(height: 16),
 
-            // 예산 카드
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Theme.of(
-                            context,
-                          ).primaryColor.withOpacity(0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.account_balance_wallet,
-                          color: Theme.of(context).primaryColor,
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '끼니당 목표 예산',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            '8,000 원',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.edit_outlined, color: Colors.grey),
-                  ),
-                ],
-              ),
-            ),
+            // 정보 카드 (스와이프)
+            _buildInfoCards(),
 
             const Spacer(),
 

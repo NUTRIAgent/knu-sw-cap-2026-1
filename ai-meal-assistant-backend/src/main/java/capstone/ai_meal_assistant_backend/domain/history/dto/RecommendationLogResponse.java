@@ -14,6 +14,8 @@ public class RecommendationLogResponse {
     private String menuName;
     private String menuImageUrl;
     private Integer feedbackScore;
+    private Integer starRating;
+    private String feedbackReason;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDateTime createdAt;

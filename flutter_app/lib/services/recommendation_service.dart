@@ -142,6 +142,25 @@ class RecommendationService {
     }
   }
 
+  static Future<List<AiPickItem>> fetchMyAiPicks(String? jwt) async {
+    if (jwt == null || jwt.isEmpty) return [];
+    final uri = Uri.parse('${ApiConfig.baseUrl}/api/recommendation-logs/ai-picks');
+    try {
+      final response = await http.get(
+        uri,
+        headers: {'Authorization': 'Bearer $jwt'},
+      ).timeout(const Duration(seconds: 10));
+      if (response.statusCode != 200) return [];
+      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      if (json['success'] != true || json['data'] == null) return [];
+      return (json['data'] as List)
+          .map((e) => AiPickItem.fromJson(e))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
   static Future<bool> deleteFeedback(int logId, String? jwt) async {
     if (jwt == null || jwt.isEmpty) return false;
     final uri =
