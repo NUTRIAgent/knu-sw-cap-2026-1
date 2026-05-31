@@ -12,12 +12,5 @@ public interface IngredientPriceRepository extends JpaRepository<IngredientPrice
     // 특정 식재료(예: 양파)의 가장 최근(날짜 내림차순) 가격 1개만 가져옴
     Optional<IngredientPrice> findTopByIngredientIdOrderByBaseDateDesc(Long ingredientId);
 
-    Optional<IngredientPrice> findByIngredientIdAndSourceApiAndMarketNameAndMarketTypeAndOriginalUnitAndBaseDate(
-            Long ingredientId,
-            String sourceApi,
-            String marketName,
-            String marketType,
-            String originalUnit,
-            LocalDateTime baseDate
-    );
+    Optional<IngredientPrice> findTopByIngredientIdAndSourceApi(Long ingredientId, String sourceApi);
 }

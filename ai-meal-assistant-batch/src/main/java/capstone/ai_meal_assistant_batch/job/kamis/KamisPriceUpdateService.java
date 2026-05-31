@@ -4,19 +4,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Locale;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import capstone.ai_meal_assistant_batch.domain.ingredient.entity.Ingredient;
-import capstone.ai_meal_assistant_batch.domain.ingredient.entity.IngredientKamisMapping;
-import capstone.ai_meal_assistant_batch.domain.ingredient.entity.IngredientPrice;
-import capstone.ai_meal_assistant_batch.domain.ingredient.repository.IngredientKamisMappingRepository;
-import capstone.ai_meal_assistant_batch.domain.ingredient.repository.IngredientPriceRepository;
+import capstone.ai_meal_assistant_batch.domain.ingredient.entity.IngredientKamisPrice;
+import capstone.ai_meal_assistant_batch.domain.ingredient.repository.IngredientKamisPriceRepository;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -25,8 +19,7 @@ public class KamisPriceUpdateService {
 
     private static final String SOURCE_API = "KAMIS_DAILY_SALES";
 
-    private final IngredientPriceRepository ingredientPriceRepository;
-    private final IngredientKamisMappingRepository mappingRepository;
+    private final IngredientKamisPriceRepository ingredientKamisPriceRepository;
     private final KamisNaturePriceListClient client;
     private final KamisNaturePriceListXmlParser parser;
 
@@ -63,58 +56,30 @@ public class KamisPriceUpdateService {
 
         totalFetched = parsed.items().size();
 
-        Map<String, List<KamisNaturePriceListXmlParser.KamisDailySalesItem>> itemsByCode = parsed.items().stream()
-                .filter(item -> item.productno() != null)
-                .collect(Collectors.groupingBy(KamisNaturePriceListXmlParser.KamisDailySalesItem::productno));
-
-        List<IngredientKamisMapping> mappings = mappingRepository.findAllByConfirmedTrue();
-
-        for (IngredientKamisMapping mapping : mappings) {
-            List<KamisNaturePriceListXmlParser.KamisDailySalesItem> matchedItems =
-                    itemsByCode.get(mapping.getKamisItemCode());
-
-            if (matchedItems == null || matchedItems.isEmpty()) {
+        for (var item : parsed.items()) {
+            NormalizedRow row = normalize(item);
+            if (row == null) {
                 skipped++;
                 continue;
             }
 
-            for (var item : matchedItems) {
-                NormalizedRow row = normalize(mapping.getIngredient(), item);
-                if (row == null) {
-                    skipped++;
-                    continue;
-                }
+            if (dryRun) {
+                skipped++;
+                continue;
+            }
 
-                if (dryRun) {
-                    skipped++;
-                    continue;
-                }
-
-                UpsertOutcome outcome = upsertPrice(
-                        row.ingredient(),
-                        row.pricePerGram(),
-                        row.originalPrice(),
-                        row.originalUnit(),
-                        row.marketName(),
-                        row.marketType(),
-                        row.baseDate(),
-                        row.prevDayPrice(),
-                        row.prevWeekPrice(),
-                        row.prevMonthPrice(),
-                        forceUpdate);
-
-                switch (outcome) {
-                    case INSERTED -> inserted++;
-                    case UPDATED -> updated++;
-                    case SKIPPED -> skipped++;
-                }
+            UpsertOutcome outcome = upsertPrice(row, forceUpdate);
+            switch (outcome) {
+                case INSERTED -> inserted++;
+                case UPDATED -> updated++;
+                case SKIPPED -> skipped++;
             }
         }
 
         return new KamisPriceUpdateResult(totalFetched, inserted, updated, skipped);
     }
 
-    private NormalizedRow normalize(Ingredient ingredient, KamisNaturePriceListXmlParser.KamisDailySalesItem item) {
+    private NormalizedRow normalize(KamisNaturePriceListXmlParser.KamisDailySalesItem item) {
         Integer originalPrice = parsePrice(item.dpr1());
         if (originalPrice == null) return null;
 
@@ -122,6 +87,10 @@ public class KamisPriceUpdateService {
         Double pricePerGram = convertToPricePerGram(originalPrice, originalUnit);
         if (pricePerGram == null) return null;
 
+        String kamisItemCode = item.productno();
+        String kamisItemName = (item.itemName() != null && !item.itemName().isBlank())
+                ? item.itemName()
+                : kamisItemCode;
         LocalDateTime baseDate = parseKamisDate(item.lastestDay());
         String marketName = item.productClsName();
         String marketType = item.categoryName();
@@ -129,8 +98,8 @@ public class KamisPriceUpdateService {
         Integer prevWeekPrice = parsePrice(item.dpr3());
         Integer prevMonthPrice = parsePrice(item.dpr5());
 
-        return new NormalizedRow(ingredient, pricePerGram, originalPrice, originalUnit,
-                marketName, marketType, baseDate, prevDayPrice, prevWeekPrice, prevMonthPrice);
+        return new NormalizedRow(kamisItemCode, kamisItemName, pricePerGram, originalPrice,
+                originalUnit, marketName, marketType, baseDate, prevDayPrice, prevWeekPrice, prevMonthPrice);
     }
 
     private LocalDateTime parseKamisDate(String day1) {
@@ -178,7 +147,8 @@ public class KamisPriceUpdateService {
     }
 
     private record NormalizedRow(
-            Ingredient ingredient,
+            String kamisItemCode,
+            String kamisItemName,
             double pricePerGram,
             Integer originalPrice,
             String originalUnit,
@@ -191,52 +161,42 @@ public class KamisPriceUpdateService {
 
     private enum UpsertOutcome { INSERTED, UPDATED, SKIPPED }
 
-    private UpsertOutcome upsertPrice(
-            Ingredient ingredient,
-            double pricePerGram,
-            Integer originalPrice,
-            String originalUnit,
-            String marketName,
-            String marketType,
-            LocalDateTime baseDate,
-            Integer prevDayPrice,
-            Integer prevWeekPrice,
-            Integer prevMonthPrice,
-            boolean forceUpdate) {
-
-        var existing = ingredientPriceRepository
-                .findByIngredientIdAndSourceApiAndMarketNameAndMarketTypeAndOriginalUnitAndBaseDate(
-                        ingredient.getId(),
-                        SOURCE_API,
-                        marketName,
-                        marketType,
-                        originalUnit,
-                        baseDate);
+    private UpsertOutcome upsertPrice(NormalizedRow row, boolean forceUpdate) {
+        var existing = ingredientKamisPriceRepository
+                .findByKamisItemCodeAndMarketNameAndMarketTypeAndOriginalUnitAndBaseDate(
+                        row.kamisItemCode(),
+                        row.marketName(),
+                        row.marketType(),
+                        row.originalUnit(),
+                        row.baseDate());
 
         if (existing.isEmpty()) {
-            ingredientPriceRepository.save(IngredientPrice.builder()
-                    .ingredient(ingredient)
-                    .pricePerGram(pricePerGram)
+            ingredientKamisPriceRepository.save(IngredientKamisPrice.builder()
+                    .kamisItemCode(row.kamisItemCode())
+                    .kamisItemName(row.kamisItemName())
+                    .pricePerGram(row.pricePerGram())
                     .sourceApi(SOURCE_API)
-                    .originalPrice(originalPrice)
-                    .originalUnit(originalUnit)
-                    .marketName(marketName)
-                    .marketType(marketType)
-                    .baseDate(baseDate)
-                    .prevDayPrice(prevDayPrice)
-                    .prevWeekPrice(prevWeekPrice)
-                    .prevMonthPrice(prevMonthPrice)
+                    .originalPrice(row.originalPrice())
+                    .originalUnit(row.originalUnit())
+                    .marketName(row.marketName())
+                    .marketType(row.marketType())
+                    .baseDate(row.baseDate())
+                    .prevDayPrice(row.prevDayPrice())
+                    .prevWeekPrice(row.prevWeekPrice())
+                    .prevMonthPrice(row.prevMonthPrice())
                     .build());
             return UpsertOutcome.INSERTED;
         }
 
-        IngredientPrice old = existing.get();
-        if (!forceUpdate && old.getPricePerGram() != null && Double.compare(old.getPricePerGram(), pricePerGram) == 0) {
+        IngredientKamisPrice old = existing.get();
+        if (!forceUpdate && old.getPricePerGram() != null
+                && Double.compare(old.getPricePerGram(), row.pricePerGram()) == 0) {
             return UpsertOutcome.SKIPPED;
         }
 
-        old.updatePrice(pricePerGram, originalPrice, originalUnit, prevDayPrice, prevWeekPrice, prevMonthPrice);
-        ingredientPriceRepository.save(old);
+        old.updatePrice(row.pricePerGram(), row.originalPrice(), row.originalUnit(),
+                row.prevDayPrice(), row.prevWeekPrice(), row.prevMonthPrice());
+        ingredientKamisPriceRepository.save(old);
         return UpsertOutcome.UPDATED;
     }
 }
