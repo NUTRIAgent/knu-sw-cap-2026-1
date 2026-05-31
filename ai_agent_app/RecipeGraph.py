@@ -38,7 +38,6 @@ class GraphState(TypedDict):
 
     # [rank_node] 출력
     top5_ids: List[str]
-    top10_ids: List[str]
 
     # 최종
     final_results: List[Dict[str, Any]]
@@ -145,7 +144,7 @@ class RecipeGraphBuilder:
     # rank_node
     # ------------------------------------------------------------------
     def rank_node(self, state: GraphState) -> GraphState:
-        print("[rank_node] LLM으로 상위 10개 랭킹 선정")
+        print("[rank_node] LLM으로 상위 5개 랭킹 선정")
         enriched = state["enriched"]
         candidate_ids = state["candidate_ids"]
 
@@ -180,13 +179,12 @@ class RecipeGraphBuilder:
 
             parsed = [x.strip() for x in match.group(1).split(",") if x.strip()]
             candidate_set = set(candidate_ids)
-            top10_ids = [s for s in parsed if s in candidate_set][:10]
+            top5_ids = [s for s in parsed if s in candidate_set][:5]
 
-            if not top10_ids:
+            if not top5_ids:
                 raise ValueError("유효한 랭킹 ID가 없습니다.")
 
-            top5_ids = top10_ids[:5]
-            return {**state, "top5_ids": top5_ids, "top10_ids": top10_ids}
+            return {**state, "top5_ids": top5_ids}
         except Exception as e:
             return {**state, "error": str(e)}
 
