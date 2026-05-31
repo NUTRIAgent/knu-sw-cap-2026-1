@@ -46,7 +46,7 @@ public class UserFavoriteIngredientController {
     @PostMapping("/{ingredientId}")
     public ResponseEntity<ApiResponse<Void>> addFavorite(
             @RequestHeader("Authorization") String authHeader,
-            @PathVariable Long ingredientId) {
+            @PathVariable("ingredientId") Long ingredientId) {
         String email = extractEmail(authHeader);
         favoriteService.addFavorite(email, ingredientId);
         return ResponseEntity.ok(ApiResponse.ok(null));
@@ -56,7 +56,7 @@ public class UserFavoriteIngredientController {
     @DeleteMapping("/{ingredientId}")
     public ResponseEntity<ApiResponse<Void>> removeFavorite(
             @RequestHeader("Authorization") String authHeader,
-            @PathVariable Long ingredientId) {
+            @PathVariable("ingredientId") Long ingredientId) {
         String email = extractEmail(authHeader);
         favoriteService.removeFavorite(email, ingredientId);
         return ResponseEntity.ok(ApiResponse.ok(null));
