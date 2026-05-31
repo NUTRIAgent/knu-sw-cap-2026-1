@@ -62,7 +62,7 @@ class RecipeGraphBuilder:
     # ------------------------------------------------------------------
     # candidate_node: 전체 후보(이미 Spring이 알러지 필터링함)에서 LLM이 10개 선정
     # ------------------------------------------------------------------
-    def candidate_node(self, state: GraphState) -> GraphState:
+    async def candidate_node(self, state: GraphState) -> GraphState:
         print("[candidate_node] 후보 추출 시작")
 
         # 식별자/목록 생성 (알러지·거절은 Spring 백엔드가 이미 처리)
@@ -82,7 +82,7 @@ class RecipeGraphBuilder:
         print(f"[candidate_node] 후보 {len(allowed_ids)}개 / 관련 이력 {len(history_texts)}개 컨텍스트로 사용")
 
         try:
-            llm_local_ids = self.select_candidates.select_candidates(
+            llm_local_ids = await self.select_candidates.select_candidates(
                 filtered_recipes,
                 state["user_query"],
                 history_texts=history_texts,
@@ -144,7 +144,7 @@ class RecipeGraphBuilder:
     # ------------------------------------------------------------------
     # rank_node
     # ------------------------------------------------------------------
-    def rank_node(self, state: GraphState) -> GraphState:
+    async def rank_node(self, state: GraphState) -> GraphState:
         print("[rank_node] LLM으로 상위 10개 랭킹 선정")
         enriched = state["enriched"]
         candidate_ids = state["candidate_ids"]
@@ -173,7 +173,7 @@ class RecipeGraphBuilder:
         )
 
         try:
-            raw = self.model.invoke(prompt).content
+            raw = (await self.model.ainvoke(prompt)).content
             match = re.search(r"랭킹ID:\s*([\w,\s]+)", raw)
             if not match:
                 raise ValueError(f"LLM 응답에서 '랭킹ID:' 앵커를 찾을 수 없습니다. 응답: {raw!r}")
