@@ -420,9 +420,247 @@ class _MyPageScreenState extends State<MyPageScreen>
     );
   }
 
-  // ── 프로필 탭 ─────────────────────────────────────
+  // ── 프로필 탭 (뷰/편집 분기) ──────────────────────
 
   Widget _buildProfileTab() {
+    return _isEditMode ? _buildEditForm() : _buildProfileView();
+  }
+
+  // ── 뷰 모드 ───────────────────────────────────────
+
+  Widget _buildProfileView() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildProfileHeaderCard(),
+            const SizedBox(height: 16),
+            _buildViewCard(
+              '체성분',
+              Column(children: [
+                Row(children: [
+                  Expanded(child: _buildStat('키', _fmtVal(_heightController, 'cm'))),
+                  Expanded(child: _buildStat('체중', _fmtVal(_weightController, 'kg'))),
+                  Expanded(child: _buildStat('체지방률', _fmtVal(_fatController, '%'))),
+                ]),
+                const SizedBox(height: 14),
+                Row(children: [
+                  Expanded(child: _buildStat('골격근량', _fmtVal(_muscleController, 'kg'))),
+                  Expanded(child: _buildStat('기초대사량', _fmtVal(_bmrController, 'kcal'))),
+                  Expanded(child: _buildStat('인바디', _fmtVal(_inbodyScoreController, '점'))),
+                ]),
+              ]),
+            ),
+            const SizedBox(height: 12),
+            _buildViewCard(
+              '식습관',
+              Column(children: [
+                _buildKVRow('끼니 예산', _fmtBudget()),
+                _buildKVRow('채식 유형', _vegOptions[_selectedVegType] ?? '해당 없음'),
+                _buildKVRow('매운맛', '${_spicyLevel.toInt()}단계'),
+                _buildKVRow('식단 목표', _fitnessGoalOptions[_selectedFitnessGoal] ?? '일반식단',
+                    isLast: true),
+              ]),
+            ),
+            const SizedBox(height: 12),
+            _buildViewCard(
+              '음식 스타일',
+              _buildTagChips(
+                _selectedFoodPreferences.toList(),
+                chipColor: AppTheme.primaryColor.withValues(alpha: 0.08),
+                borderColor: AppTheme.primaryColor.withValues(alpha: 0.3),
+                textColor: AppTheme.primaryColor,
+                emptyText: '설정된 스타일 없음',
+              ),
+            ),
+            const SizedBox(height: 12),
+            _buildViewCard(
+              '알레르기',
+              _buildTagChips(
+                _selectedAllergies.toList(),
+                chipColor: Colors.orange.shade50,
+                borderColor: Colors.orange.shade200,
+                textColor: Colors.orange.shade800,
+                emptyText: '설정된 알레르기 없음',
+              ),
+            ),
+            const SizedBox(height: 12),
+            _buildViewCard(
+              '건강 상태',
+              _buildTagChips(
+                _selectedHealthConditions.toList(),
+                chipColor: Colors.blue.shade50,
+                borderColor: Colors.blue.shade200,
+                textColor: Colors.blue.shade800,
+                emptyText: '설정된 건강 상태 없음',
+              ),
+            ),
+            const SizedBox(height: 32),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileHeaderCard() {
+    final nickname = _nicknameController.text.trim();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryColor.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 34,
+            backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.18),
+            child: Icon(Icons.person_rounded, size: 38, color: AppTheme.primaryColor),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  nickname.isEmpty ? '닉네임 없음' : nickname,
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 6),
+                if (_selectedGender != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      _selectedGender!,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.primaryColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildViewCard(String title, Widget body) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: Colors.grey.shade500,
+              letterSpacing: 0.4,
+            ),
+          ),
+          const SizedBox(height: 12),
+          body,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStat(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+        const SizedBox(height: 3),
+        Text(value,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+      ],
+    );
+  }
+
+  Widget _buildKVRow(String key, String value, {bool isLast = false}) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: isLast ? 0 : 8),
+      child: Row(
+        children: [
+          Text(key,
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+          const Spacer(),
+          Text(value,
+              style: const TextStyle(
+                  fontSize: 14, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTagChips(
+    List<String> items, {
+    required Color chipColor,
+    required Color borderColor,
+    required Color textColor,
+    required String emptyText,
+  }) {
+    if (items.isEmpty) {
+      return Text(emptyText,
+          style: TextStyle(fontSize: 14, color: Colors.grey.shade400));
+    }
+    return Wrap(
+      spacing: 8,
+      runSpacing: 6,
+      children: items
+          .map((item) => Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                decoration: BoxDecoration(
+                  color: chipColor,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: borderColor),
+                ),
+                child: Text(item,
+                    style: TextStyle(
+                        fontSize: 13,
+                        color: textColor,
+                        fontWeight: FontWeight.w500)),
+              ))
+          .toList(),
+    );
+  }
+
+  String _fmtVal(TextEditingController c, String suffix) {
+    final v = c.text.trim();
+    return v.isEmpty ? '-' : '$v$suffix';
+  }
+
+  String _fmtBudget() {
+    final v = _budgetController.text.trim();
+    if (v.isEmpty) return '-';
+    final n = int.tryParse(v);
+    if (n == null) return '-';
+    return '${n.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}원';
+  }
+
+  // ── 편집 모드 ─────────────────────────────────────
+
+  Widget _buildEditForm() {
     return SafeArea(
       child: Form(
         key: _formKey,
@@ -431,148 +669,116 @@ class _MyPageScreenState extends State<MyPageScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildSectionTitle('1. 기본 정보'),
+              _buildSectionTitle('기본 정보'),
               _buildTextField(_nicknameController, '닉네임', isNumber: false),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: '성별',
                   filled: true,
-                  fillColor:
-                      _isEditMode ? Colors.white : Colors.grey.shade100,
+                  fillColor: Colors.white,
                 ),
                 value: _selectedGender,
-                onChanged: _isEditMode
-                    ? (v) => setState(() => _selectedGender = v!)
-                    : null,
+                onChanged: (v) => setState(() => _selectedGender = v!),
                 items: ['남성', '여성']
                     .map((s) => DropdownMenuItem(value: s, child: Text(s)))
                     .toList(),
               ),
               const SizedBox(height: 32),
 
-              _buildSectionTitle('2. 체성분 (InBody) 정보'),
-              Row(
-                children: [
-                  Expanded(
-                      child:
-                          _buildTextField(_heightController, '키', suffix: 'cm')),
-                  const SizedBox(width: 12),
-                  Expanded(
-                      child: _buildTextField(_weightController, '몸무게',
-                          suffix: 'kg')),
-                ],
-              ),
+              _buildSectionTitle('체성분 정보'),
+              Row(children: [
+                Expanded(
+                    child: _buildTextField(_heightController, '키',
+                        suffix: 'cm')),
+                const SizedBox(width: 12),
+                Expanded(
+                    child: _buildTextField(_weightController, '몸무게',
+                        suffix: 'kg')),
+              ]),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                      child: _buildTextField(_muscleController, '골격근량',
-                          suffix: 'kg')),
-                  const SizedBox(width: 12),
-                  Expanded(
-                      child: _buildTextField(_fatController, '체지방률',
-                          suffix: '%')),
-                ],
-              ),
+              Row(children: [
+                Expanded(
+                    child: _buildTextField(_muscleController, '골격근량',
+                        suffix: 'kg')),
+                const SizedBox(width: 12),
+                Expanded(
+                    child: _buildTextField(_fatController, '체지방률',
+                        suffix: '%')),
+              ]),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                      child: _buildTextField(_bmrController, '기초대사량',
-                          suffix: 'kcal')),
-                  const SizedBox(width: 12),
-                  Expanded(
-                      child: _buildTextField(_inbodyScoreController, '인바디 점수',
-                          suffix: '점')),
-                ],
-              ),
+              Row(children: [
+                Expanded(
+                    child: _buildTextField(_bmrController, '기초대사량',
+                        suffix: 'kcal')),
+                const SizedBox(width: 12),
+                Expanded(
+                    child: _buildTextField(_inbodyScoreController, '인바디 점수',
+                        suffix: '점')),
+              ]),
               const SizedBox(height: 32),
 
-              _buildSectionTitle('3. 식습관 및 예산 설정'),
+              _buildSectionTitle('식습관 설정'),
               _buildTextField(_budgetController, '끼니당 허용 예산', suffix: '원'),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                decoration: InputDecoration(
-                  labelText: '채식 유형 선택',
+                decoration: const InputDecoration(
+                  labelText: '채식 유형',
                   filled: true,
-                  fillColor:
-                      _isEditMode ? Colors.white : Colors.grey.shade100,
+                  fillColor: Colors.white,
                 ),
                 value: _selectedVegType,
-                onChanged: _isEditMode
-                    ? (v) => setState(() => _selectedVegType = v!)
-                    : null,
+                onChanged: (v) => setState(() => _selectedVegType = v!),
                 items: _vegOptions.entries
-                    .map((e) => DropdownMenuItem(
-                        value: e.key, child: Text(e.value)))
+                    .map((e) =>
+                        DropdownMenuItem(value: e.key, child: Text(e.value)))
                     .toList(),
               ),
               const SizedBox(height: 24),
-              Opacity(
-                opacity: _isEditMode ? 1.0 : 0.5,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '매운맛 선호도 (${_spicyLevel.toInt()}단계)',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    Slider(
-                      value: _spicyLevel,
-                      min: 1,
-                      max: 5,
-                      divisions: 4,
-                      activeColor: AppTheme.primaryColor,
-                      onChanged: _isEditMode
-                          ? (v) => setState(() => _spicyLevel = v)
-                          : null,
-                    ),
-                  ],
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '매운맛 선호도 (${_spicyLevel.toInt()}단계)',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Slider(
+                    value: _spicyLevel,
+                    min: 1,
+                    max: 5,
+                    divisions: 4,
+                    activeColor: AppTheme.primaryColor,
+                    onChanged: (v) => setState(() => _spicyLevel = v),
+                  ),
+                ],
               ),
               const SizedBox(height: 24),
               const Text('식단 목표',
                   style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-              IgnorePointer(
-                ignoring: !_isEditMode,
-                child: Opacity(
-                  opacity: _isEditMode ? 1.0 : 0.5,
-                  child: Wrap(
-                    spacing: 8.0,
-                    runSpacing: 8.0,
-                    children: _fitnessGoalOptions.entries.map((e) {
-                      final isSelected = _selectedFitnessGoal == e.key;
-                      return ChoiceChip(
-                        label: Text(e.value,
-                            style: TextStyle(
-                                color: _isEditMode
-                                    ? Colors.black87
-                                    : Colors.grey.shade600)),
-                        selected: isSelected,
-                        selectedColor: _isEditMode
-                            ? AppTheme.primaryColor.withValues(alpha: 0.2)
-                            : Colors.grey.shade300,
-                        checkmarkColor: _isEditMode
-                            ? AppTheme.primaryColor
-                            : Colors.grey.shade600,
-                        shape: RoundedRectangleBorder(
-                          side: BorderSide(
-                              color: _isEditMode
-                                  ? Colors.grey.shade300
-                                  : Colors.transparent),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        onSelected: (_) =>
-                            setState(() => _selectedFitnessGoal = e.key),
-                      );
-                    }).toList(),
-                  ),
-                ),
+              Wrap(
+                spacing: 8.0,
+                runSpacing: 8.0,
+                children: _fitnessGoalOptions.entries.map((e) {
+                  final isSelected = _selectedFitnessGoal == e.key;
+                  return ChoiceChip(
+                    label: Text(e.value,
+                        style: const TextStyle(color: Colors.black87)),
+                    selected: isSelected,
+                    selectedColor:
+                        AppTheme.primaryColor.withValues(alpha: 0.2),
+                    checkmarkColor: AppTheme.primaryColor,
+                    shape: RoundedRectangleBorder(
+                      side: BorderSide(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    onSelected: (_) =>
+                        setState(() => _selectedFitnessGoal = e.key),
+                  );
+                }).toList(),
               ),
               const SizedBox(height: 24),
-              const Text('선호하는 음식 스타일 (복수 선택 가능)',
+              const Text('선호하는 음식 스타일',
                   style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               _buildChipBox(
@@ -580,24 +786,14 @@ class _MyPageScreenState extends State<MyPageScreen>
                   final isSelected = _selectedFoodPreferences.contains(pref);
                   return FilterChip(
                     label: Text(pref,
-                        style: TextStyle(
-                            color: _isEditMode
-                                ? Colors.black87
-                                : Colors.grey.shade600)),
+                        style: const TextStyle(color: Colors.black87)),
                     selected: isSelected,
-                    backgroundColor:
-                        _isEditMode ? Colors.white : Colors.grey.shade200,
-                    selectedColor: _isEditMode
-                        ? AppTheme.primaryColor.withValues(alpha: 0.2)
-                        : Colors.grey.shade300,
-                    checkmarkColor: _isEditMode
-                        ? AppTheme.primaryColor
-                        : Colors.grey.shade600,
+                    backgroundColor: Colors.white,
+                    selectedColor:
+                        AppTheme.primaryColor.withValues(alpha: 0.2),
+                    checkmarkColor: AppTheme.primaryColor,
                     shape: RoundedRectangleBorder(
-                      side: BorderSide(
-                          color: _isEditMode
-                              ? Colors.grey.shade300
-                              : Colors.transparent),
+                      side: BorderSide(color: Colors.grey.shade300),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     onSelected: (selected) => setState(() => selected
@@ -608,30 +804,20 @@ class _MyPageScreenState extends State<MyPageScreen>
               ),
               const SizedBox(height: 32),
 
-              _buildSectionTitle('4. 건강 상태'),
+              _buildSectionTitle('건강 상태'),
               _buildChipBox(
                 children: _healthConditionOptions.map((cond) {
                   final isSelected = _selectedHealthConditions.contains(cond);
                   return FilterChip(
                     label: Text(cond,
-                        style: TextStyle(
-                            color: _isEditMode
-                                ? Colors.black87
-                                : Colors.grey.shade600)),
+                        style: const TextStyle(color: Colors.black87)),
                     selected: isSelected,
-                    backgroundColor:
-                        _isEditMode ? Colors.white : Colors.grey.shade200,
-                    selectedColor: _isEditMode
-                        ? AppTheme.primaryColor.withValues(alpha: 0.2)
-                        : Colors.grey.shade300,
-                    checkmarkColor: _isEditMode
-                        ? AppTheme.primaryColor
-                        : Colors.grey.shade600,
+                    backgroundColor: Colors.white,
+                    selectedColor:
+                        AppTheme.primaryColor.withValues(alpha: 0.2),
+                    checkmarkColor: AppTheme.primaryColor,
                     shape: RoundedRectangleBorder(
-                      side: BorderSide(
-                          color: _isEditMode
-                              ? Colors.grey.shade300
-                              : Colors.transparent),
+                      side: BorderSide(color: Colors.grey.shade300),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     onSelected: (selected) => setState(() => selected
@@ -642,30 +828,20 @@ class _MyPageScreenState extends State<MyPageScreen>
               ),
               const SizedBox(height: 32),
 
-              _buildSectionTitle('5. 알레르기 유발 물질'),
+              _buildSectionTitle('알레르기'),
               _buildChipBox(
                 children: _allergyOptions.map((allergy) {
                   final isSelected = _selectedAllergies.contains(allergy);
                   return FilterChip(
                     label: Text(allergy,
-                        style: TextStyle(
-                            color: _isEditMode
-                                ? Colors.black87
-                                : Colors.grey.shade600)),
+                        style: const TextStyle(color: Colors.black87)),
                     selected: isSelected,
-                    backgroundColor:
-                        _isEditMode ? Colors.white : Colors.grey.shade200,
-                    selectedColor: _isEditMode
-                        ? AppTheme.primaryColor.withValues(alpha: 0.2)
-                        : Colors.grey.shade300,
-                    checkmarkColor: _isEditMode
-                        ? AppTheme.primaryColor
-                        : Colors.grey.shade600,
+                    backgroundColor: Colors.white,
+                    selectedColor:
+                        AppTheme.primaryColor.withValues(alpha: 0.2),
+                    checkmarkColor: AppTheme.primaryColor,
                     shape: RoundedRectangleBorder(
-                      side: BorderSide(
-                          color: _isEditMode
-                              ? Colors.grey.shade300
-                              : Colors.transparent),
+                      side: BorderSide(color: Colors.grey.shade300),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     onSelected: (selected) => setState(() => selected
@@ -800,7 +976,9 @@ class _MyPageScreenState extends State<MyPageScreen>
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: isActive ? activeColor.withValues(alpha: 0.1) : Colors.grey.shade100,
+          color: isActive
+              ? activeColor.withValues(alpha: 0.1)
+              : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: isActive ? activeColor : Colors.grey.shade300,
@@ -847,7 +1025,8 @@ class _MyPageScreenState extends State<MyPageScreen>
                 width: 48,
                 height: 48,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => _defaultMenuIcon(),
+                errorBuilder: (context, error, stackTrace) =>
+                    _defaultMenuIcon(),
               )
             : _defaultMenuIcon(),
       ),
@@ -894,17 +1073,8 @@ class _MyPageScreenState extends State<MyPageScreen>
   Widget _buildChipBox({required List<Widget> children}) {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(_isEditMode ? 0 : 16.0),
-      decoration: BoxDecoration(
-        color: _isEditMode ? Colors.transparent : Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(16),
-        border:
-            _isEditMode ? null : Border.all(color: Colors.grey.shade300),
-      ),
-      child: IgnorePointer(
-        ignoring: !_isEditMode,
-        child: Wrap(spacing: 8.0, runSpacing: 8.0, children: children),
-      ),
+      decoration: const BoxDecoration(color: Colors.transparent),
+      child: Wrap(spacing: 8.0, runSpacing: 8.0, children: children),
     );
   }
 
@@ -916,22 +1086,20 @@ class _MyPageScreenState extends State<MyPageScreen>
   }) {
     return TextFormField(
       controller: controller,
-      readOnly: !_isEditMode || _isLoading,
+      readOnly: _isLoading,
       keyboardType: isNumber
           ? const TextInputType.numberWithOptions(decimal: true)
           : TextInputType.text,
-      onChanged: (_) {
-        if (_isEditMode) setState(() {});
-      },
+      onChanged: (_) => setState(() {}),
       decoration: InputDecoration(
         labelText: label,
         suffixText: suffix,
         filled: true,
-        fillColor: _isEditMode ? Colors.white : Colors.grey.shade100,
+        fillColor: Colors.white,
       ),
       validator: (value) {
         if (value == null || value.isEmpty) return '필수 입력 항목입니다.';
-        if (isNumber && double.tryParse(value) == null) return '숫자만 입력';
+        if (isNumber && double.tryParse(value) == null) return '올바른 숫자를 입력해주세요';
         return null;
       },
     );
