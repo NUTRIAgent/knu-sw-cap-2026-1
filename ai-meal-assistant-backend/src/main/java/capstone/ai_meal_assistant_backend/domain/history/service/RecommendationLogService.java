@@ -60,6 +60,23 @@ public class RecommendationLogService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    public List<RecommendationLogResponse> getUserAiPickHistory(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        return recommendationLogRepository.findAiPicksByUser(user).stream()
+                .map(log -> RecommendationLogResponse.builder()
+                        .id(log.getId())
+                        .menuId(log.getSelectedMenu().getId())
+                        .menuName(log.getSelectedMenu().getName())
+                        .menuImageUrl(log.getSelectedMenu().getMainImageUrl())
+                        .starRating(log.getStarRating())
+                        .feedbackReason(log.getFeedbackReason())
+                        .createdAt(log.getCreatedAt())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
     @Transactional
     public void deleteFeedback(String email, Long logId) {
         User user = userRepository.findByEmail(email)

@@ -300,6 +300,36 @@ class FeedbackHistoryItem {
       );
 }
 
+class AiPickItem {
+  final int id;
+  final int menuId;
+  final String menuName;
+  final String? menuImageUrl;
+  final int? starRating;
+  final String? feedbackReason;
+  final String? createdAt;
+
+  const AiPickItem({
+    required this.id,
+    required this.menuId,
+    required this.menuName,
+    this.menuImageUrl,
+    this.starRating,
+    this.feedbackReason,
+    this.createdAt,
+  });
+
+  factory AiPickItem.fromJson(Map<String, dynamic> json) => AiPickItem(
+        id: (json['id'] as num).toInt(),
+        menuId: (json['menuId'] as num).toInt(),
+        menuName: json['menuName'] ?? '',
+        menuImageUrl: json['menuImageUrl'],
+        starRating: (json['starRating'] as num?)?.toInt(),
+        feedbackReason: json['feedbackReason'],
+        createdAt: json['createdAt'],
+      );
+}
+
 class MenuDetail {
   final int id;
   final String name;

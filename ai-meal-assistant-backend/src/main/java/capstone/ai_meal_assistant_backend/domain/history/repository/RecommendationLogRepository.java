@@ -18,4 +18,7 @@ public interface RecommendationLogRepository extends JpaRepository<Recommendatio
 
     @Query("SELECT r FROM RecommendationLog r WHERE r.user = :user AND r.feedbackScore IS NOT NULL ORDER BY r.createdAt DESC")
     List<RecommendationLog> findFeedbacksByUser(@Param("user") User user);
+
+    @Query("SELECT r FROM RecommendationLog r WHERE r.user = :user AND r.starRating IS NOT NULL ORDER BY r.createdAt DESC")
+    List<RecommendationLog> findAiPicksByUser(@Param("user") User user);
 }

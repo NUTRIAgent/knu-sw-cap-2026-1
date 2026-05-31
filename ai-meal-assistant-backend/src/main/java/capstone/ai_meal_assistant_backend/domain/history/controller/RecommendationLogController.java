@@ -49,6 +49,19 @@ public class RecommendationLogController {
         return ResponseEntity.ok(Map.of("success", true, "data", feedbacks));
     }
 
+    @GetMapping("/ai-picks")
+    public ResponseEntity<?> getMyAiPicks(
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(401).body(Map.of("success", false, "error", "인증이 필요합니다."));
+        }
+
+        String email = jwtUtil.getEmailFromToken(authHeader.substring(7));
+        List<RecommendationLogResponse> picks = recommendationLogService.getUserAiPickHistory(email);
+        return ResponseEntity.ok(Map.of("success", true, "data", picks));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteFeedback(
             @RequestHeader(value = "Authorization", required = false) String authHeader,
