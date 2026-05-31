@@ -654,7 +654,7 @@ class _MyPageScreenState extends State<MyPageScreen>
     final v = _budgetController.text.trim();
     if (v.isEmpty) return '-';
     final n = int.tryParse(v);
-    if (n == null) return '$v원';
+    if (n == null) return '-';
     return '${n.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}원';
   }
 
@@ -1099,7 +1099,7 @@ class _MyPageScreenState extends State<MyPageScreen>
       ),
       validator: (value) {
         if (value == null || value.isEmpty) return '필수 입력 항목입니다.';
-        if (isNumber && double.tryParse(value) == null) return '숫자만 입력';
+        if (isNumber && double.tryParse(value) == null) return '올바른 숫자를 입력해주세요';
         return null;
       },
     );
