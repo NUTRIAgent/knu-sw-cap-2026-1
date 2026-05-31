@@ -47,6 +47,9 @@ public class RecipeDataSyncService {
     private final ObjectMapper objectMapper;
     private final S3ImageUploadService s3ImageUploadService;
 
+    /** 이미지 복구 시 변경분을 끊어 저장하는 청크 크기. */
+    private static final int RECOVERY_SAVE_CHUNK = 100;
+
     @Transactional
     public void syncAllDataFromApi(){
         try{
@@ -200,8 +203,12 @@ public class RecipeDataSyncService {
      *   - S3 객체가 정상이면 URL을 CloudFront(또는 설정된 도메인)로 단순 치환.
      *   - S3 객체가 손상이면 cleaned_recipe_data.json의 원본 URL로 재업로드.
      * - 멱등하고 반복 호출 가능.
+     *
+     * <p>메뉴 수만큼 네트워크 I/O(S3 HEAD/PUT, 원본 이미지 다운로드)를 수행하므로
+     * 메서드 전체를 하나의 트랜잭션으로 묶지 않는다 — 그러면 DB 커넥션을 수십 분간
+     * 점유해 HikariCP 고갈/트랜잭션 타임아웃을 유발한다. 변경분은
+     * {@link #RECOVERY_SAVE_CHUNK}개 단위로 끊어 각자의 짧은 트랜잭션으로 저장한다.
      */
-    @Transactional
     public void recoverCorruptedImages() {
         log.info("[복구] 이미지 URL 점검/복구 시작");
 
@@ -214,23 +221,24 @@ public class RecipeDataSyncService {
         }
         log.info("[복구] 원본 URL 맵 로드 완료: {}건", codeToOriginalUrl.size());
 
+        // 우리 스토리지(S3 직링크 + CloudFront 도메인)에 올라간 메뉴를 모두 검사 대상으로.
+        // amazonaws.com 만 보면 CloudFront 전환 이후 후보가 0개가 되어 재검증이 불가능하다.
         List<Menu> candidates = menuRepository.findAll().stream()
-                .filter(m -> m.getMainImageUrl() != null
-                        && !m.getMainImageUrl().isBlank()
-                        && m.getMainImageUrl().contains("amazonaws.com"))
+                .filter(m -> s3ImageUploadService.isOurStorageUrl(m.getMainImageUrl()))
                 .collect(Collectors.toList());
-        log.info("[복구] 검사 대상(amazonaws.com URL) 메뉴: {}개", candidates.size());
+        log.info("[복구] 검사 대상(S3/CloudFront URL) 메뉴: {}개", candidates.size());
 
         int normalized = 0, corrupt = 0, recovered = 0, missingOrigin = 0, failed = 0;
-        List<Menu> updated = new ArrayList<>();
+        List<Menu> buffer = new ArrayList<>();
         for (Menu menu : candidates) {
             if (s3ImageUploadService.isS3UrlValid(menu.getMainImageUrl())) {
                 String cfUrl = s3ImageUploadService.toCloudFrontUrl(menu.getMainImageUrl());
                 if (!cfUrl.equals(menu.getMainImageUrl())) {
                     menu.updateMainImageUrl(cfUrl);
-                    updated.add(menu);
+                    buffer.add(menu);
                     normalized++;
                 }
+                flushIfFull(buffer);
                 continue;
             }
             corrupt++;
@@ -245,19 +253,28 @@ public class RecipeDataSyncService {
             String newUrl = s3ImageUploadService.uploadFromUrl(originalUrl);
             if (s3ImageUploadService.isOurStorageUrl(newUrl)) {
                 menu.updateMainImageUrl(newUrl);
-                updated.add(menu);
+                buffer.add(menu);
                 recovered++;
             } else {
                 log.warn("[복구] 재업로드 실패: foodCode={}, originalUrl={}", menu.getFoodCode(), originalUrl);
                 failed++;
             }
+            flushIfFull(buffer);
         }
 
-        if (!updated.isEmpty()) {
-            menuRepository.saveAll(updated);
+        if (!buffer.isEmpty()) {
+            menuRepository.saveAll(buffer);
         }
         log.info("[복구] 완료 — URL변경={}, 손상={}, 복구성공={}, 원본URL없음={}, 재업로드실패={}",
                 normalized, corrupt, recovered, missingOrigin, failed);
+    }
+
+    /** 변경 버퍼가 청크 크기에 도달하면 즉시 저장(각자 짧은 트랜잭션)해 커넥션·메모리 부담을 줄인다. */
+    private void flushIfFull(List<Menu> buffer) {
+        if (buffer.size() >= RECOVERY_SAVE_CHUNK) {
+            menuRepository.saveAll(buffer);
+            buffer.clear();
+        }
     }
 
     private Map<String, String> loadOriginalImageUrlMap() throws Exception {

@@ -125,43 +125,46 @@ public class S3ImageUploadService {
         String currentUrl = originalUrl;
         for (int hop = 0; hop < MAX_REDIRECTS; hop++) {
             HttpURLConnection conn = (HttpURLConnection) URI.create(currentUrl).toURL().openConnection();
-            conn.setConnectTimeout(CONNECT_TIMEOUT_MS);
-            conn.setReadTimeout(READ_TIMEOUT_MS);
-            conn.setRequestMethod("GET");
-            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (compatible; NUTRIAgentBatch/1.0)");
-            conn.setRequestProperty("Accept", "image/*,*/*;q=0.8");
-            // http↔https 간 리다이렉트는 기본 false라 직접 추적
-            conn.setInstanceFollowRedirects(false);
+            // 성공/리다이렉트/에러 모든 경로에서 소켓이 정리되도록 finally 에서 disconnect.
+            try {
+                conn.setConnectTimeout(CONNECT_TIMEOUT_MS);
+                conn.setReadTimeout(READ_TIMEOUT_MS);
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (compatible; NUTRIAgentBatch/1.0)");
+                conn.setRequestProperty("Accept", "image/*,*/*;q=0.8");
+                // http↔https 간 리다이렉트는 기본 false라 직접 추적
+                conn.setInstanceFollowRedirects(false);
 
-            int code = conn.getResponseCode();
-            if (code >= 300 && code < 400) {
-                String location = conn.getHeaderField("Location");
-                conn.disconnect();
-                if (location == null || location.isBlank()) {
-                    throw new IOException("리다이렉트 응답에 Location 헤더 없음 (status=" + code + ")");
+                int code = conn.getResponseCode();
+                if (code >= 300 && code < 400) {
+                    String location = conn.getHeaderField("Location");
+                    if (location == null || location.isBlank()) {
+                        throw new IOException("리다이렉트 응답에 Location 헤더 없음 (status=" + code + ")");
+                    }
+                    currentUrl = URI.create(currentUrl).resolve(location).toString();
+                    continue;
                 }
-                currentUrl = URI.create(currentUrl).resolve(location).toString();
-                continue;
-            }
-            if (code < 200 || code >= 300) {
-                conn.disconnect();
-                throw new IOException("HTTP " + code + " " + currentUrl);
-            }
+                if (code < 200 || code >= 300) {
+                    throw new IOException("HTTP " + code + " " + currentUrl);
+                }
 
-            String responseContentType = conn.getContentType();
-            try (InputStream is = conn.getInputStream()) {
-                byte[] bytes = is.readAllBytes();
-                if (bytes.length < MIN_VALID_IMAGE_SIZE) {
-                    throw new IOException("응답 본문이 비정상적으로 작음 (size=" + bytes.length + ")");
+                String responseContentType = conn.getContentType();
+                try (InputStream is = conn.getInputStream()) {
+                    byte[] bytes = is.readAllBytes();
+                    if (bytes.length < MIN_VALID_IMAGE_SIZE) {
+                        throw new IOException("응답 본문이 비정상적으로 작음 (size=" + bytes.length + ")");
+                    }
+                    String contentType = resolveContentType(responseContentType, currentUrl, bytes);
+                    if (!contentType.startsWith("image/")) {
+                        throw new IOException("응답이 이미지가 아님 (header contentType=" + responseContentType + ")");
+                    }
+                    if (!hasImageMagicBytes(bytes)) {
+                        throw new IOException("유효한 이미지 매직 바이트가 아님 (앞 4바이트=" + previewHex(bytes) + ")");
+                    }
+                    return new DownloadedImage(bytes, contentType);
                 }
-                String contentType = resolveContentType(responseContentType, currentUrl, bytes);
-                if (!contentType.startsWith("image/")) {
-                    throw new IOException("응답이 이미지가 아님 (header contentType=" + responseContentType + ")");
-                }
-                if (!hasImageMagicBytes(bytes)) {
-                    throw new IOException("유효한 이미지 매직 바이트가 아님 (앞 4바이트=" + previewHex(bytes) + ")");
-                }
-                return new DownloadedImage(bytes, contentType);
+            } finally {
+                conn.disconnect();
             }
         }
         throw new IOException("리다이렉트 최대 " + MAX_REDIRECTS + "회 초과: " + originalUrl);

@@ -33,11 +33,11 @@ public class ImageRecoveryAsyncRunner {
         try {
             // 다른 빈의 public @Async 메서드 → 프록시 경유 → 백그라운드 스레드에서 실행.
             imageRecoveryTask.run(running);
-        } catch (RuntimeException e) {
-            // 비동기 디스패치 자체가 실패한 경우 플래그가 영구히 잠기지 않도록 해제.
+        } catch (Throwable t) {
+            // 디스패치 실패(스레드 풀 거부, OOM 등 Error 포함) 시 플래그가 영구히 잠기지 않도록 해제.
             running.set(false);
-            log.error("[복구] 비동기 작업 디스패치 실패", e);
-            throw e;
+            log.error("[복구] 비동기 작업 디스패치 실패", t);
+            throw t;
         }
         return true;
     }
