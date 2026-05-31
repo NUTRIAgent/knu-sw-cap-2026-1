@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_app/models/recommendation_models.dart';
 import 'auth_service.dart';
@@ -100,7 +101,9 @@ class RecommendationService {
             body: jsonEncode({'menuId': menuId, 'feedbackScore': feedbackScore}),
           )
           .timeout(const Duration(seconds: 5));
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('피드백 저장 실패: $e');
+    }
   }
 
   static Future<void> saveDetailedFeedback(
@@ -120,7 +123,9 @@ class RecommendationService {
             body: jsonEncode(body),
           )
           .timeout(const Duration(seconds: 5));
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('상세 피드백 저장 실패: $e');
+    }
   }
 
   static Future<List<FeedbackHistoryItem>> fetchMyFeedbacks(String? jwt) async {
@@ -137,7 +142,8 @@ class RecommendationService {
       return (json['data'] as List)
           .map((e) => FeedbackHistoryItem.fromJson(e))
           .toList();
-    } catch (_) {
+    } catch (e) {
+      debugPrint('피드백 이력 조회 실패: $e');
       return [];
     }
   }
@@ -156,7 +162,8 @@ class RecommendationService {
       return (json['data'] as List)
           .map((e) => AiPickItem.fromJson(e))
           .toList();
-    } catch (_) {
+    } catch (e) {
+      debugPrint('AI Pick 조회 실패: $e');
       return [];
     }
   }
@@ -173,7 +180,8 @@ class RecommendationService {
       if (response.statusCode != 200) return false;
       final json = jsonDecode(utf8.decode(response.bodyBytes));
       return json['success'] == true;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('피드백 삭제 실패: $e');
       return false;
     }
   }
@@ -192,7 +200,8 @@ class RecommendationService {
       final json = jsonDecode(utf8.decode(response.bodyBytes));
       if (json['success'] != true || json['data'] == null) return null;
       return MenuDetail.fromJson(json['data'] as Map<String, dynamic>);
-    } catch (_) {
+    } catch (e) {
+      debugPrint('메뉴 상세 조회 실패: $e');
       return null;
     }
   }
