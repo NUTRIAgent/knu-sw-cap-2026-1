@@ -23,6 +23,7 @@ public interface IngredientPriceRepository extends JpaRepository<IngredientPrice
             JOIN FETCH ip.ingredient i
             WHERE ip.id IN (
                 SELECT MAX(ip2.id) FROM IngredientPrice ip2
+                WHERE ip2.sourceApi = 'NAVER_SHOPPING'
                 GROUP BY ip2.ingredient.id
             )
             ORDER BY i.name ASC

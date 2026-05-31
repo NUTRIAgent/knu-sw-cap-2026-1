@@ -9,8 +9,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import capstone.ai_meal_assistant_batch.global.log.BatchLog;
-import capstone.ai_meal_assistant_batch.job.price.DefaultPriceFillResult;
-import capstone.ai_meal_assistant_batch.job.price.DefaultPriceFillService;
+import capstone.ai_meal_assistant_batch.job.naver.NaverShoppingPriceResult;
+import capstone.ai_meal_assistant_batch.job.naver.NaverShoppingPriceService;
 import lombok.RequiredArgsConstructor;
 
 @Component
@@ -21,7 +21,7 @@ public class KamisPriceScheduler {
 	private static final String JOB_NAME = "kamisPriceUpdate";
 
 	private final KamisPriceUpdateService service;
-	private final DefaultPriceFillService defaultPriceFillService;
+	private final NaverShoppingPriceService naverShoppingPriceService;
 
 	@EventListener(ApplicationReadyEvent.class)
 	public void runOnStartup() {
@@ -32,7 +32,7 @@ public class KamisPriceScheduler {
 		} catch (Exception e) {
 			BatchLog.fail(JOB_NAME + ".startup", start, e);
 		}
-		fillDefaultPrices();
+		fetchNaverShoppingPrices();
 	}
 
 	@Scheduled(cron = "${batch.kamis.cron}")
@@ -45,16 +45,16 @@ public class KamisPriceScheduler {
 			BatchLog.fail(JOB_NAME, start, e);
 			throw e;
 		}
-		fillDefaultPrices();
+		fetchNaverShoppingPrices();
 	}
 
-	private void fillDefaultPrices() {
-		Instant start = BatchLog.start("defaultPriceFill");
+	private void fetchNaverShoppingPrices() {
+		Instant start = BatchLog.start("naverShoppingPriceFetch");
 		try {
-			DefaultPriceFillResult result = defaultPriceFillService.fillMissingPrices();
-			BatchLog.success("defaultPriceFill", start, result);
+			NaverShoppingPriceResult result = naverShoppingPriceService.updateAllPrices();
+			BatchLog.success("naverShoppingPriceFetch", start, result);
 		} catch (Exception e) {
-			BatchLog.fail("defaultPriceFill", start, e);
+			BatchLog.fail("naverShoppingPriceFetch", start, e);
 		}
 	}
 }
