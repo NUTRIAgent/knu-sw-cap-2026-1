@@ -11,7 +11,6 @@ class PriceAlertService {
   static Future<void> registerToken(String? jwt) async {
     if (jwt == null || jwt.isEmpty) return;
     try {
-      // iOS는 APNs 토큰이 준비된 뒤에 FCM 토큰을 얻을 수 있음
       if (Platform.isIOS) {
         String? apnsToken;
         for (int i = 0; i < 5; i++) {
@@ -39,12 +38,20 @@ class PriceAlertService {
     }
   }
 
-  static Future<bool> follow(int ingredientId, String? jwt) async {
+  static Future<bool> follow(
+      String kamisItemCode, String kamisItemName, String? jwt) async {
     if (jwt == null || jwt.isEmpty) return false;
     try {
       final res = await http.post(
-        Uri.parse('${ApiConfig.baseUrl}/api/notifications/alerts/$ingredientId'),
-        headers: {'Authorization': 'Bearer $jwt'},
+        Uri.parse('${ApiConfig.baseUrl}/api/notifications/alerts'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $jwt',
+        },
+        body: jsonEncode({
+          'kamisItemCode': kamisItemCode,
+          'kamisItemName': kamisItemName,
+        }),
       ).timeout(const Duration(seconds: 10));
       final body = jsonDecode(utf8.decode(res.bodyBytes));
       return body['success'] == true;
@@ -54,17 +61,34 @@ class PriceAlertService {
     }
   }
 
-  static Future<bool> unfollow(int ingredientId, String? jwt) async {
+  static Future<bool> unfollow(String kamisItemCode, String? jwt) async {
     if (jwt == null || jwt.isEmpty) return false;
     try {
       final res = await http.delete(
-        Uri.parse('${ApiConfig.baseUrl}/api/notifications/alerts/$ingredientId'),
+        Uri.parse(
+            '${ApiConfig.baseUrl}/api/notifications/alerts/${Uri.encodeComponent(kamisItemCode)}'),
         headers: {'Authorization': 'Bearer $jwt'},
       ).timeout(const Duration(seconds: 10));
       final body = jsonDecode(utf8.decode(res.bodyBytes));
       return body['success'] == true;
     } catch (e) {
       debugPrint('알림 팔로우 해제 실패: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> isFollowing(String kamisItemCode, String? jwt) async {
+    if (jwt == null || jwt.isEmpty) return false;
+    try {
+      final res = await http.get(
+        Uri.parse(
+            '${ApiConfig.baseUrl}/api/notifications/alerts/${Uri.encodeComponent(kamisItemCode)}/status'),
+        headers: {'Authorization': 'Bearer $jwt'},
+      ).timeout(const Duration(seconds: 10));
+      final body = jsonDecode(utf8.decode(res.bodyBytes));
+      return body['following'] == true;
+    } catch (e) {
+      debugPrint('알림 상태 조회 실패: $e');
       return false;
     }
   }
@@ -82,22 +106,6 @@ class PriceAlertService {
     } catch (e) {
       debugPrint('알림 목록 조회 실패: $e');
       return [];
-    }
-  }
-
-  static Future<bool> isFollowing(int ingredientId, String? jwt) async {
-    if (jwt == null || jwt.isEmpty) return false;
-    try {
-      final res = await http.get(
-        Uri.parse(
-            '${ApiConfig.baseUrl}/api/notifications/alerts/$ingredientId/status'),
-        headers: {'Authorization': 'Bearer $jwt'},
-      ).timeout(const Duration(seconds: 10));
-      final body = jsonDecode(utf8.decode(res.bodyBytes));
-      return body['following'] == true;
-    } catch (e) {
-      debugPrint('알림 상태 조회 실패: $e');
-      return false;
     }
   }
 }

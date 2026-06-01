@@ -29,33 +29,33 @@ public class NotificationController {
         return ResponseEntity.ok(Map.of("success", true));
     }
 
-    @PostMapping("/alerts/{ingredientId}")
+    @PostMapping("/alerts")
     public ResponseEntity<?> follow(
             @RequestHeader(value = "Authorization", required = false) String authHeader,
-            @PathVariable Long ingredientId) {
+            @RequestBody AlertRequest request) {
         String email = extractEmail(authHeader);
         if (email == null) return unauthorized();
-        notificationService.follow(email, ingredientId);
+        notificationService.follow(email, request.getKamisItemCode(), request.getKamisItemName());
         return ResponseEntity.ok(Map.of("success", true));
     }
 
-    @DeleteMapping("/alerts/{ingredientId}")
+    @DeleteMapping("/alerts/{kamisItemCode}")
     public ResponseEntity<?> unfollow(
             @RequestHeader(value = "Authorization", required = false) String authHeader,
-            @PathVariable Long ingredientId) {
+            @PathVariable String kamisItemCode) {
         String email = extractEmail(authHeader);
         if (email == null) return unauthorized();
-        notificationService.unfollow(email, ingredientId);
+        notificationService.unfollow(email, kamisItemCode);
         return ResponseEntity.ok(Map.of("success", true));
     }
 
-    @GetMapping("/alerts/{ingredientId}/status")
+    @GetMapping("/alerts/{kamisItemCode}/status")
     public ResponseEntity<?> followStatus(
             @RequestHeader(value = "Authorization", required = false) String authHeader,
-            @PathVariable Long ingredientId) {
+            @PathVariable String kamisItemCode) {
         String email = extractEmail(authHeader);
         if (email == null) return unauthorized();
-        boolean following = notificationService.isFollowing(email, ingredientId);
+        boolean following = notificationService.isFollowing(email, kamisItemCode);
         return ResponseEntity.ok(Map.of("success", true, "following", following));
     }
 
@@ -80,5 +80,11 @@ public class NotificationController {
     static class TokenRequest {
         private String fcmToken;
         private String platform;
+    }
+
+    @Getter @Setter @NoArgsConstructor
+    static class AlertRequest {
+        private String kamisItemCode;
+        private String kamisItemName;
     }
 }

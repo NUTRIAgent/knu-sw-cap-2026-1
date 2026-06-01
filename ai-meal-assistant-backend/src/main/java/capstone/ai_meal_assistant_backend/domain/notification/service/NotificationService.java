@@ -1,7 +1,5 @@
 package capstone.ai_meal_assistant_backend.domain.notification.service;
 
-import capstone.ai_meal_assistant_backend.domain.ingredient.entity.Ingredient;
-import capstone.ai_meal_assistant_backend.domain.ingredient.repository.IngredientRepository;
 import capstone.ai_meal_assistant_backend.domain.notification.entity.UserDeviceToken;
 import capstone.ai_meal_assistant_backend.domain.notification.entity.UserIngredientAlert;
 import capstone.ai_meal_assistant_backend.domain.notification.repository.UserDeviceTokenRepository;
@@ -21,7 +19,6 @@ import java.util.stream.Collectors;
 public class NotificationService {
 
     private final UserRepository userRepository;
-    private final IngredientRepository ingredientRepository;
     private final UserDeviceTokenRepository deviceTokenRepository;
     private final UserIngredientAlertRepository alertRepository;
 
@@ -38,29 +35,27 @@ public class NotificationService {
     }
 
     @Transactional
-    public void follow(String email, Long ingredientId) {
+    public void follow(String email, String kamisItemCode, String kamisItemName) {
         User user = findUser(email);
-        Ingredient ingredient = findIngredient(ingredientId);
-        if (!alertRepository.existsByUserAndIngredient(user, ingredient)) {
+        if (!alertRepository.existsByUserAndKamisItemCode(user, kamisItemCode)) {
             alertRepository.save(UserIngredientAlert.builder()
                     .user(user)
-                    .ingredient(ingredient)
+                    .kamisItemCode(kamisItemCode)
+                    .kamisItemName(kamisItemName)
                     .build());
         }
     }
 
     @Transactional
-    public void unfollow(String email, Long ingredientId) {
+    public void unfollow(String email, String kamisItemCode) {
         User user = findUser(email);
-        Ingredient ingredient = findIngredient(ingredientId);
-        alertRepository.deleteByUserAndIngredient(user, ingredient);
+        alertRepository.deleteByUserAndKamisItemCode(user, kamisItemCode);
     }
 
     @Transactional(readOnly = true)
-    public boolean isFollowing(String email, Long ingredientId) {
+    public boolean isFollowing(String email, String kamisItemCode) {
         User user = findUser(email);
-        Ingredient ingredient = findIngredient(ingredientId);
-        return alertRepository.existsByUserAndIngredient(user, ingredient);
+        return alertRepository.existsByUserAndKamisItemCode(user, kamisItemCode);
     }
 
     @Transactional(readOnly = true)
@@ -68,18 +63,13 @@ public class NotificationService {
         User user = findUser(email);
         return alertRepository.findByUser(user).stream()
                 .map(a -> Map.<String, Object>of(
-                        "ingredientId", a.getIngredient().getId(),
-                        "ingredientName", a.getIngredient().getName()))
+                        "kamisItemCode", a.getKamisItemCode(),
+                        "kamisItemName", a.getKamisItemName()))
                 .collect(Collectors.toList());
     }
 
     private User findUser(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
-    }
-
-    private Ingredient findIngredient(Long id) {
-        return ingredientRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("재료를 찾을 수 없습니다. id=" + id));
     }
 }

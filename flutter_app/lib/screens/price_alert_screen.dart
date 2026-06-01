@@ -28,11 +28,11 @@ class _PriceAlertScreenState extends State<PriceAlertScreen> {
     if (mounted) setState(() { _alerts = items; _loading = false; });
   }
 
-  Future<void> _unfollow(int ingredientId, String name) async {
-    final ok = await PriceAlertService.unfollow(ingredientId, widget.jwt);
+  Future<void> _unfollow(String kamisItemCode, String name) async {
+    final ok = await PriceAlertService.unfollow(kamisItemCode, widget.jwt);
     if (!mounted) return;
     if (ok) {
-      setState(() => _alerts.removeWhere((a) => a['ingredientId'] == ingredientId));
+      setState(() => _alerts.removeWhere((a) => a['kamisItemCode'] == kamisItemCode));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('$name 알림을 해제했습니다')),
       );
@@ -87,8 +87,8 @@ class _PriceAlertScreenState extends State<PriceAlertScreen> {
   }
 
   Widget _buildCard(Map<String, dynamic> alert) {
-    final ingredientId = alert['ingredientId'] as int;
-    final name = alert['ingredientName'] as String? ?? '';
+    final kamisItemCode = alert['kamisItemCode'] as String? ?? '';
+    final name = alert['kamisItemName'] as String? ?? '';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -118,7 +118,7 @@ class _PriceAlertScreenState extends State<PriceAlertScreen> {
                     fontSize: 15, fontWeight: FontWeight.w600)),
           ),
           TextButton(
-            onPressed: () => _unfollow(ingredientId, name),
+            onPressed: () => _unfollow(kamisItemCode, name),
             style: TextButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 10),
               minimumSize: Size.zero,

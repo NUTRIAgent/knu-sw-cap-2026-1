@@ -1,6 +1,6 @@
 package capstone.ai_meal_assistant_batch.job.alert;
 
-import capstone.ai_meal_assistant_batch.domain.ingredient.entity.IngredientPrice;
+import capstone.ai_meal_assistant_batch.domain.ingredient.entity.IngredientKamisPrice;
 import capstone.ai_meal_assistant_batch.domain.ingredient.repository.IngredientPriceRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -29,17 +29,17 @@ public class PriceAlertNotificationService {
     private EntityManager entityManager;
 
     /**
-     * KAMIS 가격 갱신 후 호출. 변동률 ≥ threshold인 재료의 팔로워에게 FCM 발송.
+     * KAMIS 가격 갱신 후 호출.
+     * ingredient_kamis_prices 테이블을 직접 조회해 변동률 감지 → FCM 발송.
      */
     @Transactional(readOnly = true)
     public void dispatchAlerts() {
         log.info("[알림] 가격 변동 알림 발송 시작 (임계값: {}%)", thresholdPercent);
 
-        List<IngredientPrice> kamisPrices = ingredientPriceRepository
-                .findAllBySourceApi(KAMIS_SOURCE);
+        List<IngredientKamisPrice> kamisPrices = findLatestKamisPrices();
 
         int dispatched = 0;
-        for (IngredientPrice price : kamisPrices) {
+        for (IngredientKamisPrice price : kamisPrices) {
             if (price.getOriginalPrice() == null || price.getPrevDayPrice() == null
                     || price.getPrevDayPrice() == 0) continue;
 
@@ -48,13 +48,11 @@ public class PriceAlertNotificationService {
 
             if (Math.abs(changeRate) < thresholdPercent) continue;
 
-            Long ingredientId = price.getIngredient().getId();
-            List<String> tokens = findFcmTokensByIngredientId(ingredientId);
+            List<String> tokens = findFcmTokensByKamisItemCode(price.getKamisItemCode());
             if (tokens.isEmpty()) continue;
 
-            String ingredientName = price.getIngredient().getName();
             String direction = changeRate > 0 ? "▲" : "▼";
-            String title = String.format("📊 %s 가격 변동", ingredientName);
+            String title = String.format("📊 %s 가격 변동", price.getKamisItemName());
             String body = String.format("%s %.1f%% 변동 (%,d원 → %,d원)",
                     direction, Math.abs(changeRate),
                     price.getPrevDayPrice(), price.getOriginalPrice());
@@ -66,19 +64,32 @@ public class PriceAlertNotificationService {
     }
 
     @SuppressWarnings("unchecked")
-    private List<String> findFcmTokensByIngredientId(Long ingredientId) {
+    private List<IngredientKamisPrice> findLatestKamisPrices() {
+        return entityManager.createNativeQuery(
+                        """
+                        SELECT * FROM ingredient_kamis_prices
+                        WHERE id IN (
+                            SELECT MAX(id) FROM ingredient_kamis_prices
+                            GROUP BY kamis_item_code
+                        )
+                        """, IngredientKamisPrice.class)
+                .getResultList();
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<String> findFcmTokensByKamisItemCode(String kamisItemCode) {
         try {
             return entityManager.createNativeQuery(
                             """
                             SELECT t.fcm_token
                             FROM user_ingredient_alerts a
                             JOIN user_device_tokens t ON t.user_id = a.user_id
-                            WHERE a.ingredient_id = :ingredientId
+                            WHERE a.kamis_item_code = :kamisItemCode
                             """)
-                    .setParameter("ingredientId", ingredientId)
+                    .setParameter("kamisItemCode", kamisItemCode)
                     .getResultList();
         } catch (Exception e) {
-            log.warn("[알림] FCM 토큰 조회 실패 (테이블 미존재 가능): {}", e.getMessage());
+            log.warn("[알림] FCM 토큰 조회 실패: {}", e.getMessage());
             return List.of();
         }
     }

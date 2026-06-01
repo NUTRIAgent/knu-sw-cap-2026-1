@@ -33,7 +33,7 @@ class _MarketPriceDetailScreenState extends State<MarketPriceDetailScreen> {
   void initState() {
     super.initState();
     _isFavorite = widget.isFavorite;
-    if (widget.isKamis && widget.price.ingredientId != null) {
+    if (widget.isKamis && widget.price.kamisItemCode != null) {
       _followLoading = true;
       _loadFollowStatus();
     }
@@ -42,17 +42,20 @@ class _MarketPriceDetailScreenState extends State<MarketPriceDetailScreen> {
   Future<void> _loadFollowStatus() async {
     final jwt = await TokenStorage.getAccessToken();
     final following = await PriceAlertService.isFollowing(
-        widget.price.ingredientId!, jwt);
+        widget.price.kamisItemCode!, jwt);
     if (mounted) setState(() { _isFollowing = following; _followLoading = false; });
   }
 
   Future<void> _toggleFollow() async {
-    if (widget.price.ingredientId == null) return;
+    if (widget.price.kamisItemCode == null) return;
     setState(() => _followLoading = true);
     final jwt = await TokenStorage.getAccessToken();
     final success = _isFollowing
-        ? await PriceAlertService.unfollow(widget.price.ingredientId!, jwt)
-        : await PriceAlertService.follow(widget.price.ingredientId!, jwt);
+        ? await PriceAlertService.unfollow(widget.price.kamisItemCode!, jwt)
+        : await PriceAlertService.follow(
+            widget.price.kamisItemCode!,
+            widget.price.ingredientName,
+            jwt);
     if (!mounted) return;
     if (success) setState(() => _isFollowing = !_isFollowing);
     setState(() => _followLoading = false);
@@ -223,19 +226,7 @@ class _MarketPriceDetailScreenState extends State<MarketPriceDetailScreen> {
   }
 
   Widget _buildFollowButton() {
-    // ingredientId 없으면(KAMIS 매핑 미존재) 비활성 안내
-    if (widget.price.ingredientId == null) {
-      return OutlinedButton.icon(
-        onPressed: null,
-        icon: const Icon(Icons.notifications_off_outlined, size: 18),
-        label: const Text('알림 준비 중 (매핑 미등록)'),
-        style: OutlinedButton.styleFrom(
-          minimumSize: const Size(double.infinity, 50),
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16)),
-        ),
-      );
-    }
+    if (widget.price.kamisItemCode == null) return const SizedBox.shrink();
 
     return SizedBox(
       width: double.infinity,
