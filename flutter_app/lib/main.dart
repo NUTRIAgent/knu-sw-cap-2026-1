@@ -36,6 +36,12 @@ Future<void> _initFcm() async {
       badge: true,
       sound: true,
     );
+    // 앱이 포그라운드일 때도 알림 배너 표시
+    await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
     final token = await FirebaseMessaging.instance.getToken();
     if (token != null) debugPrint('🔔 FCM TOKEN: $token');
   } catch (e) {
