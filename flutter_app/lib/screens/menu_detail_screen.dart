@@ -268,7 +268,7 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
                   onPressed: () =>
                       _showFeedbackBottomSheet(shownAi.menuId),
                   child: Text(
-                    '피드백 남기기',
+                    '피드백',
                     style: TextStyle(
                         fontSize: 13, color: Colors.grey[600]),
                   ),
