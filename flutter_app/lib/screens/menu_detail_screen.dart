@@ -76,97 +76,106 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModal) => Padding(
+        builder: (ctx, setModal) => Container(
           padding: EdgeInsets.only(
-            left: 24, right: 24, top: 32,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+            left: 24,
+            right: 24,
+            top: 28,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 28,
           ),
-          child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-            ),
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text('이번 추천은 어떠셨나요?',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(
-                    5,
-                    (i) => IconButton(
-                      icon: Icon(
-                        i < _feedbackRating
-                            ? Icons.star_rounded
-                            : Icons.star_outline_rounded,
-                        size: 48,
-                        color: i < _feedbackRating
-                            ? Colors.amber
-                            : Colors.grey[300],
-                      ),
-                      onPressed: () =>
-                          setModal(() => _feedbackRating = i + 1),
-                    ),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _feedbackController,
-                  maxLines: 3,
-                  onChanged: (_) => setModal(() {}),
-                  decoration: InputDecoration(
-                    hintText: '아쉬운 점이 있다면 알려주세요...',
-                    filled: true,
-                    fillColor: Colors.grey.shade100,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide.none,
+              ),
+              const SizedBox(height: 20),
+              const Text('이번 추천은 어떠셨나요?',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  5,
+                  (i) => IconButton(
+                    icon: Icon(
+                      i < _feedbackRating
+                          ? Icons.star_rounded
+                          : Icons.star_outline_rounded,
+                      size: 44,
+                      color: i < _feedbackRating
+                          ? Colors.amber
+                          : Colors.grey[300],
                     ),
+                    onPressed: () =>
+                        setModal(() => _feedbackRating = i + 1),
                   ),
                 ),
-                const SizedBox(height: 24),
-                Builder(builder: (_) {
-                  final canSubmit = _feedbackRating > 0 &&
-                      _feedbackController.text.trim().isNotEmpty;
-                  return Container(
-                    height: 56,
-                    decoration: BoxDecoration(
-                      gradient: canSubmit ? AppTheme.aiGradient : null,
-                      color: canSubmit ? null : Colors.grey[300],
-                      borderRadius: BorderRadius.circular(30),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _feedbackController,
+                maxLines: 3,
+                onChanged: (_) => setModal(() {}),
+                decoration: InputDecoration(
+                  hintText: '아쉬운 점이 있다면 알려주세요...',
+                  hintStyle:
+                      TextStyle(color: Colors.grey[400], fontSize: 14),
+                  filled: true,
+                  fillColor: Colors.grey.shade100,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Builder(builder: (_) {
+                final canSubmit = _feedbackRating > 0 &&
+                    _feedbackController.text.trim().isNotEmpty;
+                return SizedBox(
+                  height: 52,
+                  child: ElevatedButton(
+                    onPressed: canSubmit
+                        ? () async {
+                            final rating = _feedbackRating;
+                            final reason = _feedbackController.text;
+                            Navigator.pop(ctx);
+                            await RecommendationService.saveDetailedFeedback(
+                                menuId, rating, reason, widget.jwt);
+                            messenger.showSnackBar(const SnackBar(
+                                content: Text('소중한 피드백 감사합니다!')));
+                          }
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      disabledBackgroundColor: Colors.grey[300],
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: ElevatedButton(
-                      onPressed: canSubmit
-                          ? () async {
-                              final rating = _feedbackRating;
-                              final reason = _feedbackController.text;
-                              Navigator.pop(ctx);
-                              await RecommendationService.saveDetailedFeedback(
-                                  menuId, rating, reason, widget.jwt);
-                              messenger.showSnackBar(const SnackBar(
-                                  content: Text('소중한 피드백 감사합니다!')));
-                            }
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        shadowColor: Colors.transparent,
-                      ),
-                      child: const Text('제출',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold)),
-                    ),
-                  );
-                }),
-              ],
-            ),
+                    child: const Text('제출',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600)),
+                  ),
+                );
+              }),
+            ],
           ),
         ),
       ),
@@ -210,65 +219,83 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(title,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-            overflow: TextOverflow.ellipsis),
-        centerTitle: true,
+        titleSpacing: 0,
+        title: Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (shownAi != null)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ShaderMask(
+                      blendMode: BlendMode.srcIn,
+                      shaderCallback: (b) =>
+                          AppTheme.aiGradient.createShader(b),
+                      child: const Icon(Icons.auto_awesome, size: 11),
+                    ),
+                    const SizedBox(width: 3),
+                    ShaderMask(
+                      blendMode: BlendMode.srcIn,
+                      shaderCallback: (b) =>
+                          AppTheme.aiGradient.createShader(b),
+                      child: const Text('AI 픽',
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              Text(
+                title,
+                style: const TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.bold),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+        centerTitle: false,
+        toolbarHeight: 64,
         elevation: 0,
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        actions: shownAi != null
+        actions: shownAi != null && widget.jwt != null
             ? [
-                if (widget.jwt != null) ...[
-                  IconButton(
-                    icon: Icon(Icons.star_outline_rounded,
-                        color: Colors.grey[600]),
-                    tooltip: '피드백',
-                    onPressed: () =>
-                        _showFeedbackBottomSheet(shownAi.menuId),
+                TextButton(
+                  onPressed: () =>
+                      _showFeedbackBottomSheet(shownAi.menuId),
+                  child: Text(
+                    '피드백 남기기',
+                    style: TextStyle(
+                        fontSize: 13, color: Colors.grey[600]),
                   ),
-                  IconButton(
-                    icon: _saving
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppTheme.primaryColor),
-                          )
-                        : Icon(
-                            _saved
-                                ? Icons.bookmark_rounded
-                                : Icons.bookmark_border_rounded,
+                ),
+                TextButton(
+                  onPressed:
+                      _saving ? null : () => _saveAiResult(shownAi),
+                  child: _saving
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppTheme.primaryColor),
+                        )
+                      : Text(
+                          _saved ? '저장됨' : '저장',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
                             color: _saved
                                 ? AppTheme.primaryColor
                                 : Colors.grey[600],
                           ),
-                    tooltip: '저장',
-                    onPressed:
-                        _saving ? null : () => _saveAiResult(shownAi),
-                  ),
-                ],
-                Container(
-                  margin: const EdgeInsets.only(right: 16),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    gradient: AppTheme.aiGradient,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.auto_awesome, color: Colors.white, size: 12),
-                      SizedBox(width: 4),
-                      Text('AI 픽',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold)),
-                    ],
-                  ),
+                        ),
                 ),
+                const SizedBox(width: 4),
               ]
             : null,
       ),
