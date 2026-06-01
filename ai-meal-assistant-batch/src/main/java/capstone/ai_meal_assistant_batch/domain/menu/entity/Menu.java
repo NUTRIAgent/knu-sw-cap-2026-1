@@ -37,6 +37,9 @@ public class Menu extends BaseEntity {
     @Column(length = 1000)
     private String healthTip;    // 매핑: RCP_NA_TIP (예: "나트륨 배출을 도와주는...")
 
+    @Column(length = 20)
+    private String youtubeVideoId; // 배치(YouTube Data API)로 매핑되는 대표 요리 영상 ID
+
     // --- 핵심 영양 성분 (1회 제공량 기준) ---
     private Double calories;     // 매핑: INFO_ENG (열량)
     private Double protein;      // 매핑: INFO_PRO (단백질)
@@ -46,6 +49,10 @@ public class Menu extends BaseEntity {
 
     public void updateMainImageUrl(String url) {
         this.mainImageUrl = url;
+    }
+
+    public void updateYoutubeVideoId(String youtubeVideoId) {
+        this.youtubeVideoId = youtubeVideoId;
     }
 
     // 메뉴 삭제 시 레시피(MenuIngredient)도 한 번에 날아가도록 Cascade 걸기 (벌크성 작업 최적화)

@@ -2,10 +2,13 @@ package capstone.ai_meal_assistant_batch.domain.etl.controller;
 
 import capstone.ai_meal_assistant_batch.domain.ingredient.service.ImageRecoveryAsyncRunner;
 import capstone.ai_meal_assistant_batch.domain.ingredient.service.RecipeDataSyncService;
+import capstone.ai_meal_assistant_batch.job.youtube.YoutubeVideoMappingResult;
+import capstone.ai_meal_assistant_batch.job.youtube.YoutubeVideoMappingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -15,6 +18,7 @@ public class AdminDataController {
 
     private final RecipeDataSyncService syncService;
     private final ImageRecoveryAsyncRunner imageRecoveryAsyncRunner;
+    private final YoutubeVideoMappingService youtubeVideoMappingService;
 
     @PostMapping("/sync-recipes")
     public ResponseEntity<String> syncRecipes(){
@@ -46,6 +50,24 @@ public class AdminDataController {
     public ResponseEntity<String> cleanupUnusedIngredients(){
         int deleted = syncService.deleteUnusedIngredients();
         return ResponseEntity.ok("미사용 재료 " + deleted + "건을 정리했습니다.");
+    }
+
+    /**
+     * 메뉴별 유튜브 대표 영상(videoId)을 YouTube Data API로 검색해 menus.youtube_video_id에 적재.
+     * 이미 매핑된 메뉴는 건너뛴다(idempotent).
+     *
+     * @param dryRun true(기본)면 DB 저장 없이 검색만 수행해 결과만 확인. 실제 적재는 dryRun=false 필요.
+     * @param limit  이번 실행에서 검색 시도할 미매핑 메뉴 최대 수(할당량 보호). 미지정 시 전체.
+     *
+     * 예) 소량 확인: POST /api/admin/data/map-youtube-videos?limit=5
+     *     실제 적재: POST /api/admin/data/map-youtube-videos?dryRun=false&limit=50
+     */
+    @PostMapping("/map-youtube-videos")
+    public ResponseEntity<String> mapYoutubeVideos(
+            @RequestParam(defaultValue = "true") boolean dryRun,
+            @RequestParam(required = false) Integer limit) {
+        YoutubeVideoMappingResult result = youtubeVideoMappingService.mapVideos(dryRun, limit);
+        return ResponseEntity.ok(result.toString());
     }
 
     @PostMapping("/recover-images")

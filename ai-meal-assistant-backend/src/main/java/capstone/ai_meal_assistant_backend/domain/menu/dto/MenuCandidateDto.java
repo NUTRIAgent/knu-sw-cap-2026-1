@@ -20,6 +20,7 @@ public class MenuCandidateDto {
     private final Integer basePrice;
     private final String mainImageUrl;
     private final String healthTip;
+    private final String youtubeVideoId;
     private final String ingredientsText;
     private final List<StepDto> steps;
 
@@ -36,6 +37,7 @@ public class MenuCandidateDto {
         this.basePrice       = menu.getBasePrice();
         this.mainImageUrl    = menu.getMainImageUrl();
         this.healthTip       = menu.getHealthTip();
+        this.youtubeVideoId  = menu.getYoutubeVideoId();
         this.ingredientsText = ingredientsText;
         this.steps           = steps;
     }

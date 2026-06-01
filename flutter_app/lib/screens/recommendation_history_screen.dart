@@ -5,6 +5,7 @@ import 'package:flutter_app/models/recommendation_models.dart';
 import 'package:flutter_app/screens/recommendation_history_detail_screen.dart';
 import 'package:flutter_app/services/recommendation_service.dart';
 import 'package:flutter_app/theme.dart';
+import 'package:flutter_app/widgets/menu_video_section.dart';
 
 class RecommendationHistoryScreen extends StatefulWidget {
   final String jwt;
@@ -98,6 +99,7 @@ class _RecommendationHistoryScreenState
               result: result!,
               initialStarRating: item.starRating,
               initialFeedbackReason: item.feedbackReason,
+              youtubeVideoId: item.youtubeVideoId,
               jwt: widget.jwt,
             ),
           ),
@@ -139,10 +141,21 @@ class _RecommendationHistoryScreenState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    item.menuName,
-                    style: const TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w700),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          item.menuName,
+                          style: const TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      if (item.youtubeVideoId != null &&
+                          item.youtubeVideoId!.isNotEmpty) ...[
+                        const SizedBox(width: 6),
+                        const VideoBadge(),
+                      ],
+                    ],
                   ),
                   if (item.createdAt != null) ...[
                     const SizedBox(height: 4),

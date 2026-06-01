@@ -3,6 +3,7 @@ import 'package:flutter_app/models/recommendation_models.dart';
 import 'package:flutter_app/services/cart_service.dart';
 import 'package:flutter_app/services/recommendation_service.dart';
 import 'package:flutter_app/theme.dart';
+import 'package:flutter_app/widgets/menu_video_section.dart';
 
 class MenuDetailScreen extends StatefulWidget {
   final MenuCandidate? candidate;
@@ -27,6 +28,9 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
   bool _loading = false;
   String? _error;
 
+  // ── AI 픽 영상 ID (라이브 추천 결과엔 RecommendationResult에 영상 ID가 없어 menuId로 조회) ──
+  String? _aiVideoId;
+
   // ── 단일 AI 분석 상태 ──
   RecommendationResult? _aiAnalysis;
   bool _aiLoading = false;
@@ -45,7 +49,22 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
   @override
   void initState() {
     super.initState();
-    if (!_isAiPick) _fetchDetail();
+    if (!_isAiPick) {
+      _fetchDetail();
+    } else {
+      _fetchAiVideoId();
+    }
+  }
+
+  /// 라이브 AI 픽 상세: menuId로 메뉴 상세를 조회해 영상 ID만 가져온다.
+  Future<void> _fetchAiVideoId() async {
+    final menuId = widget.aiResult?.menuId;
+    if (menuId == null) return;
+    final detail = await RecommendationService.fetchMenuDetail(menuId, widget.jwt);
+    if (!mounted) return;
+    if (detail?.youtubeVideoId != null) {
+      setState(() => _aiVideoId = detail!.youtubeVideoId);
+    }
   }
 
   Future<void> _fetchDetail() async {
@@ -300,7 +319,10 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
             : null,
       ),
       body: shownAi != null
-          ? AiPickBody(result: shownAi)
+          ? AiPickBody(
+              result: shownAi,
+              youtubeVideoId: _aiVideoId ?? _detail?.youtubeVideoId,
+            )
           : _CandidateBody(
               candidate: widget.candidate!,
               detail: _detail,
@@ -319,7 +341,8 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
 // ── AI 픽 상세 본문 ──────────────────────────────────────────
 class AiPickBody extends StatelessWidget {
   final RecommendationResult result;
-  const AiPickBody({super.key, required this.result});
+  final String? youtubeVideoId;
+  const AiPickBody({super.key, required this.result, this.youtubeVideoId});
 
   @override
   Widget build(BuildContext context) {
@@ -328,6 +351,7 @@ class AiPickBody extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _HeroImage(url: result.mainImg),
+          MenuVideoSection(videoId: youtubeVideoId ?? result.youtubeVideoId),
           Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -411,6 +435,7 @@ class _CandidateBody extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _HeroImage(url: detail?.mainImageUrl ?? candidate.mainImageUrl ?? ''),
+          MenuVideoSection(videoId: detail?.youtubeVideoId),
           Padding(
             padding: const EdgeInsets.all(20),
             child: Column(

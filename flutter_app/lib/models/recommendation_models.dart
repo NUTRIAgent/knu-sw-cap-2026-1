@@ -266,6 +266,7 @@ class RecommendationResult {
   final String personalizedRecipeTip;
   final num totalEstimatedCost;
   final List<MarketPriceItem> marketPrices;
+  final String? youtubeVideoId;
 
   const RecommendationResult({
     required this.menuId,
@@ -278,6 +279,7 @@ class RecommendationResult {
     this.personalizedRecipeTip = '',
     required this.totalEstimatedCost,
     required this.marketPrices,
+    this.youtubeVideoId,
   });
 
   factory RecommendationResult.fromJson(Map<String, dynamic> json) =>
@@ -296,6 +298,7 @@ class RecommendationResult {
         marketPrices: (json['market_prices'] as List? ?? [])
             .map((e) => MarketPriceItem.fromJson(e))
             .toList(),
+        youtubeVideoId: json['youtube_video_id'],
       );
 
   Map<String, dynamic> toJson() => {
@@ -309,6 +312,7 @@ class RecommendationResult {
     'personalized_recipe_tip': personalizedRecipeTip,
     'total_estimated_cost': totalEstimatedCost,
     'market_prices': marketPrices.map((p) => p.toJson()).toList(),
+    if (youtubeVideoId != null) 'youtube_video_id': youtubeVideoId,
   };
 }
 
@@ -317,6 +321,7 @@ class FeedbackHistoryItem {
   final int menuId;
   final String menuName;
   final String? menuImageUrl;
+  final String? youtubeVideoId;
   final int feedbackScore;
   final String? createdAt;
 
@@ -325,6 +330,7 @@ class FeedbackHistoryItem {
     required this.menuId,
     required this.menuName,
     this.menuImageUrl,
+    this.youtubeVideoId,
     required this.feedbackScore,
     this.createdAt,
   });
@@ -335,6 +341,7 @@ class FeedbackHistoryItem {
         menuId: (json['menuId'] as num).toInt(),
         menuName: json['menuName'] ?? '',
         menuImageUrl: json['menuImageUrl'],
+        youtubeVideoId: json['youtubeVideoId'],
         feedbackScore: (json['feedbackScore'] as num).toInt(),
         createdAt: json['createdAt'],
       );
@@ -345,6 +352,7 @@ class AiPickItem {
   final int menuId;
   final String menuName;
   final String? menuImageUrl;
+  final String? youtubeVideoId;
   final int? starRating;
   final String? feedbackReason;
   final String? aiResultJson;
@@ -355,6 +363,7 @@ class AiPickItem {
     required this.menuId,
     required this.menuName,
     this.menuImageUrl,
+    this.youtubeVideoId,
     this.starRating,
     this.feedbackReason,
     this.aiResultJson,
@@ -366,6 +375,7 @@ class AiPickItem {
         menuId: (json['menuId'] as num).toInt(),
         menuName: json['menuName'] ?? '',
         menuImageUrl: json['menuImageUrl'],
+        youtubeVideoId: json['youtubeVideoId'],
         starRating: (json['starRating'] as num?)?.toInt(),
         feedbackReason: json['feedbackReason'],
         aiResultJson: json['aiResultJson'],
@@ -387,6 +397,7 @@ class MenuDetail {
   final String? mainImageUrl;
   final String? healthTip;
   final String? ingredientsText;
+  final String? youtubeVideoId;
 
   const MenuDetail({
     required this.id,
@@ -402,6 +413,7 @@ class MenuDetail {
     this.mainImageUrl,
     this.healthTip,
     this.ingredientsText,
+    this.youtubeVideoId,
   });
 
   factory MenuDetail.fromJson(Map<String, dynamic> json) => MenuDetail(
@@ -418,5 +430,6 @@ class MenuDetail {
     mainImageUrl: json['mainImageUrl'],
     healthTip: json['healthTip'],
     ingredientsText: json['ingredientsText'],
+    youtubeVideoId: json['youtubeVideoId'],
   );
 }

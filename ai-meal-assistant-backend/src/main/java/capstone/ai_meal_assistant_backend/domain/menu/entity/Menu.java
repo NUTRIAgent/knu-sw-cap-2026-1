@@ -33,4 +33,7 @@ public class Menu {
 
     @Column(length = 1000)
     private String healthTip;
+
+    @Column(length = 20)
+    private String youtubeVideoId;
 }

@@ -9,6 +9,7 @@ class RecommendationHistoryDetailScreen extends StatefulWidget {
   final RecommendationResult result;
   final int? initialStarRating;
   final String? initialFeedbackReason;
+  final String? youtubeVideoId;
   final String jwt;
 
   const RecommendationHistoryDetailScreen({
@@ -17,6 +18,7 @@ class RecommendationHistoryDetailScreen extends StatefulWidget {
     required this.result,
     this.initialStarRating,
     this.initialFeedbackReason,
+    this.youtubeVideoId,
     required this.jwt,
   });
 
@@ -106,7 +108,10 @@ class _RecommendationHistoryDetailScreenState
         child: Column(
           children: [
             // AI 결과 본문 재현
-            AiPickBody(result: widget.result),
+            AiPickBody(
+              result: widget.result,
+              youtubeVideoId: widget.youtubeVideoId,
+            ),
             // 피드백 폼
             _buildFeedbackSection(),
             const SizedBox(height: 32),

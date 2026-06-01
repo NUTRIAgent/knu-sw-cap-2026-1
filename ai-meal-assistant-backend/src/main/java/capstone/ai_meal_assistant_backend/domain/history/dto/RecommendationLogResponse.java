@@ -13,6 +13,7 @@ public class RecommendationLogResponse {
     private Long menuId;
     private String menuName;
     private String menuImageUrl;
+    private String youtubeVideoId;
     private Integer feedbackScore;
     private Integer starRating;
     private String feedbackReason;
