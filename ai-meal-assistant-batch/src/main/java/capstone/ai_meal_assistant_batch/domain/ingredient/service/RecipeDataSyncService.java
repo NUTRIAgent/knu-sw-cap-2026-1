@@ -394,29 +394,16 @@ public class RecipeDataSyncService {
     }
 
     /**
-     * 메뉴 이미지 URL을 점검·정리한다.
-     * - amazonaws.com URL인 메뉴를 대상으로:
-     *   - S3 객체가 정상이면 URL을 CloudFront(또는 설정된 도메인)로 단순 치환.
-     *   - S3 객체가 손상이면 cleaned_recipe_data.json의 원본 URL로 재업로드.
-     * - 멱등하고 반복 호출 가능.
-     *
-     * <p>메뉴 수만큼 네트워크 I/O(S3 HEAD/PUT, 원본 이미지 다운로드)를 수행하므로
-     * 메서드 전체를 하나의 트랜잭션으로 묶지 않는다 — 그러면 DB 커넥션을 수십 분간
-     * 점유해 HikariCP 고갈/트랜잭션 타임아웃을 유발한다. 변경분은
-     * {@link #RECOVERY_SAVE_CHUNK}개 단위로 끊어 각자의 짧은 트랜잭션으로 저장한다.
-     */
-    public void recoverCorruptedImages() {
-        // 안전 기본값: 실제 변경 없이 점검만 한다. 실제 적용은 파라미터 버전을 명시 호출.
-        recoverCorruptedImages(true, 0, false);
-    }
-
-    /**
      * 메뉴 이미지의 S3 key를 foodCode 기반 규칙으로 점검/재정렬(re-key)한다.
      *
      * <p>현재 URL이 목표 key({@code images/food/{foodCode}})와 다르면 재키잉한다.
      * 이미 S3에 사본이 있으면 <b>원본 재다운로드 없이 CopyObject</b>로 옮기고(원본 소스가
      * 죽어도 안전), 사본이 없을 때만 원본 URL에서 재업로드한다.
      * old key 객체는 삭제하지 않는다(검증 후 별도 정리 → 롤백 가능).
+     *
+     * <p>메뉴 수만큼 네트워크 I/O(S3 HEAD/COPY/PUT)를 수행하므로 메서드 전체를 하나의
+     * 트랜잭션으로 묶지 않는다 — DB 커넥션을 수십 분간 점유해 HikariCP 고갈/트랜잭션
+     * 타임아웃을 유발한다. 변경분은 {@link #RECOVERY_SAVE_CHUNK}개 단위로 끊어 저장한다.
      *
      * @param dryRun     true면 S3/DB를 변경하지 않고 예정 작업만 로그로 남긴다.
      * @param limit      처리 건수 상한(0이면 무제한).
@@ -454,7 +441,10 @@ public class RecipeDataSyncService {
             String desiredKey = s3ImageUploadService.objectKeyFor(foodCode, originalUrl);
             String desiredUrl = s3ImageUploadService.urlForKey(desiredKey);
 
-            if (currentUrl.equals(desiredUrl)) {           // 이미 통일됨
+            // 이미 목표 key면 통일 완료 → 스킵. URL 문자열이 아니라 key로 비교해
+            // CloudFront/S3 직링크 등 도메인 표기 차이에 영향받지 않게 한다.
+            String currentKey = s3ImageUploadService.s3KeyOf(currentUrl);
+            if (desiredKey.equals(currentKey)) {           // 이미 통일됨
                 skipped++;
                 continue;
             }
