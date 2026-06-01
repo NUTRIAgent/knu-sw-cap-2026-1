@@ -158,6 +158,11 @@ class _CartScreenState extends State<CartScreen> {
           ),
           child: Row(
             children: [
+              IconButton(
+                icon: Icon(Icons.close, size: 18, color: Colors.grey[400]),
+                tooltip: '삭제',
+                onPressed: () => _remove(item),
+              ),
               Expanded(
                 child: Text(
                   item,
@@ -196,12 +201,6 @@ class _CartScreenState extends State<CartScreen> {
                     ],
                   ),
                 ),
-              ),
-              const SizedBox(width: 4),
-              IconButton(
-                icon: Icon(Icons.close, size: 18, color: Colors.grey[400]),
-                tooltip: '삭제',
-                onPressed: () => _remove(item),
               ),
             ],
           ),
