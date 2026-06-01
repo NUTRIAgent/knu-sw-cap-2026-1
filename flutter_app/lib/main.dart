@@ -1,10 +1,14 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'theme.dart';
 // import 'screens/dashboard_screen.dart';
 // import 'screens/main_screen.dart';
 import 'screens/login_screen.dart';
+
+final FlutterLocalNotificationsPlugin localNotifications =
+    FlutterLocalNotificationsPlugin();
 
 const _firebaseOptions = FirebaseOptions(
   apiKey: 'AIzaSyC-ThMJGj1K3Q7XgHfI3YguHZ1fF-DoReg',
@@ -24,9 +28,21 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: _firebaseOptions);
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  await _initLocalNotifications();
   // 알림 권한 요청 및 토큰 출력은 앱 시작을 막지 않도록 비동기로 처리
   _initFcm();
   runApp(const NutriAgentApp());
+}
+
+Future<void> _initLocalNotifications() async {
+  const iosInit = DarwinInitializationSettings(
+    requestAlertPermission: false,
+    requestBadgePermission: false,
+    requestSoundPermission: false,
+  );
+  await localNotifications.initialize(
+    const InitializationSettings(iOS: iosInit),
+  );
 }
 
 Future<void> _initFcm() async {
