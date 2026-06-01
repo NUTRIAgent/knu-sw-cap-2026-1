@@ -783,7 +783,7 @@ class _MarqueeStrip extends StatefulWidget {
 }
 
 class _MarqueeStripState extends State<_MarqueeStrip>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final ScrollController _controller = ScrollController();
   Ticker? _ticker;
   Duration _lastElapsed = Duration.zero;
