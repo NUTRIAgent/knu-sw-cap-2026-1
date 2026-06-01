@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,9 +32,14 @@ public class RecommendationLogController {
         }
 
         String email = jwtUtil.getEmailFromToken(authHeader.substring(7));
-        recommendationLogService.saveFeedback(email, request.getMenuId(),
-                request.getFeedbackScore(), request.getStarRating(), request.getFeedbackReason());
-        return ResponseEntity.ok(Map.of("success", true));
+        try {
+            recommendationLogService.saveFeedback(email, request.getMenuId(),
+                    request.getFeedbackScore(), request.getStarRating(), request.getFeedbackReason());
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (DataIntegrityViolationException e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "error", "이미 저장된 메뉴입니다."));
+        }
     }
 
     @GetMapping("/my")
@@ -72,8 +78,13 @@ public class RecommendationLogController {
         }
 
         String email = jwtUtil.getEmailFromToken(authHeader.substring(7));
-        Long logId = recommendationLogService.saveAiResult(email, request.getMenuId(), request.getAiResultJson());
-        return ResponseEntity.ok(Map.of("success", true, "id", logId));
+        try {
+            Long logId = recommendationLogService.saveAiResult(email, request.getMenuId(), request.getAiResultJson());
+            return ResponseEntity.ok(Map.of("success", true, "id", logId));
+        } catch (DataIntegrityViolationException e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "error", "이미 저장된 메뉴입니다."));
+        }
     }
 
     @PatchMapping("/{id}/feedback")
