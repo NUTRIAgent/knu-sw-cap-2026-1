@@ -144,7 +144,7 @@ class RecipeGraphBuilder:
     # rank_node
     # ------------------------------------------------------------------
     async def rank_node(self, state: GraphState) -> GraphState:
-          print("[rank_node] LLM으로 상위 5개 랭킹 선정")
+        print("[rank_node] LLM으로 상위 5개 랭킹 선정")
         enriched = state["enriched"]
         candidate_ids = state["candidate_ids"]
 
