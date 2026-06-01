@@ -1,7 +1,6 @@
 package capstone.ai_meal_assistant_batch.job.alert;
 
 import capstone.ai_meal_assistant_batch.domain.ingredient.entity.IngredientKamisPrice;
-import capstone.ai_meal_assistant_batch.domain.ingredient.repository.IngredientPriceRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +21,6 @@ public class PriceAlertNotificationService {
     @Value("${price-alert.change-threshold-percent:3.0}")
     private double thresholdPercent;
 
-    private final IngredientPriceRepository ingredientPriceRepository;
     private final FcmPushService fcmPushService;
 
     @PersistenceContext

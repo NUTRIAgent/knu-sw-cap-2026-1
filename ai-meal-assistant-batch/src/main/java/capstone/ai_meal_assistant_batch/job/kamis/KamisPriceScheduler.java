@@ -35,6 +35,8 @@ public class KamisPriceScheduler {
 			BatchLog.fail(JOB_NAME + ".startup", start, e);
 		}
 		fetchNaverShoppingPrices();
+		// 서버 시작 시에는 가격 변동 알림을 발송하지 않는다.
+		// 실제 사용자가 기대하는 알림은 매일 정해진 시간(cron)에 갱신된 뒤 run()에서 발송된다.
 	}
 
 	@Scheduled(cron = "${batch.kamis.cron}")
