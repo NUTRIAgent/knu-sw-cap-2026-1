@@ -7,12 +7,14 @@ import 'package:url_launcher/url_launcher.dart';
 
 class MarketPriceDetailScreen extends StatefulWidget {
   final IngredientPriceModel price;
+  final bool isKamis;
   final bool isFavorite;
   final VoidCallback? onFavoriteToggle;
 
   const MarketPriceDetailScreen({
     super.key,
     required this.price,
+    this.isKamis = false,
     this.isFavorite = false,
     this.onFavoriteToggle,
   });
@@ -25,19 +27,15 @@ class MarketPriceDetailScreen extends StatefulWidget {
 class _MarketPriceDetailScreenState extends State<MarketPriceDetailScreen> {
   late bool _isFavorite;
   bool _isFollowing = false;
-  bool _followLoading = true;
-
-  // KAMIS 항목 판별: dayChangeRate가 있으면 KAMIS
-  bool get _isKamis => widget.price.dayChangeRate != null;
+  bool _followLoading = false;
 
   @override
   void initState() {
     super.initState();
     _isFavorite = widget.isFavorite;
-    if (_isKamis && widget.price.ingredientId != null) {
+    if (widget.isKamis && widget.price.ingredientId != null) {
+      _followLoading = true;
       _loadFollowStatus();
-    } else {
-      _followLoading = false;
     }
   }
 
@@ -99,7 +97,7 @@ class _MarketPriceDetailScreenState extends State<MarketPriceDetailScreen> {
                     _buildPriceHeroCard(),
                     const SizedBox(height: 12),
                     _buildNaverShoppingButton(),
-                    if (_isKamis) ...[
+                    if (widget.isKamis) ...[
                       const SizedBox(height: 12),
                       _buildFollowButton(),
                     ],
@@ -225,6 +223,20 @@ class _MarketPriceDetailScreenState extends State<MarketPriceDetailScreen> {
   }
 
   Widget _buildFollowButton() {
+    // ingredientId 없으면(KAMIS 매핑 미존재) 비활성 안내
+    if (widget.price.ingredientId == null) {
+      return OutlinedButton.icon(
+        onPressed: null,
+        icon: const Icon(Icons.notifications_off_outlined, size: 18),
+        label: const Text('알림 준비 중 (매핑 미등록)'),
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(double.infinity, 50),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16)),
+        ),
+      );
+    }
+
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton.icon(
