@@ -42,7 +42,7 @@ public class NotificationController {
     @DeleteMapping("/alerts/{kamisItemCode}")
     public ResponseEntity<?> unfollow(
             @RequestHeader(value = "Authorization", required = false) String authHeader,
-            @PathVariable String kamisItemCode) {
+            @PathVariable("kamisItemCode") String kamisItemCode) {
         String email = extractEmail(authHeader);
         if (email == null) return unauthorized();
         notificationService.unfollow(email, kamisItemCode);
@@ -52,7 +52,7 @@ public class NotificationController {
     @GetMapping("/alerts/{kamisItemCode}/status")
     public ResponseEntity<?> followStatus(
             @RequestHeader(value = "Authorization", required = false) String authHeader,
-            @PathVariable String kamisItemCode) {
+            @PathVariable("kamisItemCode") String kamisItemCode) {
         String email = extractEmail(authHeader);
         if (email == null) return unauthorized();
         boolean following = notificationService.isFollowing(email, kamisItemCode);
