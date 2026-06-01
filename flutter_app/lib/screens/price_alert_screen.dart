@@ -81,13 +81,6 @@ class _PriceAlertScreenState extends State<PriceAlertScreen> {
       return;
     }
     final name = _alerts.first['kamisItemName'] as String? ?? '양파';
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('5초 후 알림이 옵니다 — 지금 앱을 백그라운드로 내려주세요'),
-        duration: Duration(seconds: 4),
-      ),
-    );
-    await Future.delayed(const Duration(seconds: 5));
     await LocalNotificationService.show(
       '📊 $name 가격 변동',
       '▲ 5.3% 변동 (1,200원 → 1,264원)',

@@ -22,21 +22,19 @@ class LocalNotificationService {
   }
 
   static Future<void> show(String title, String body) async {
-    try {
-      await _plugin.show(
-        0,
-        title,
-        body,
-        const NotificationDetails(
-          iOS: DarwinNotificationDetails(
-            presentAlert: true,
-            presentBadge: true,
-            presentSound: true,
-          ),
+    debugPrint('[LocalNotification] show() 호출: $title');
+    await _plugin.show(
+      0,
+      title,
+      body,
+      const NotificationDetails(
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
         ),
-      );
-    } catch (e) {
-      debugPrint('로컬 알림 발송 실패: $e');
-    }
+      ),
+    );
+    debugPrint('[LocalNotification] show() 완료');
   }
 }
