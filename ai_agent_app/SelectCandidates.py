@@ -50,6 +50,7 @@ class SelectCandidates:
                 "건강 상태: {health}\n"
                 "알러지: {allergy}\n"
                 "선호: {preferences}\n"
+                "추가 선호사항: {custom_note}\n"
                 "운동 목표: {goal}\n\n"
                 "{guideline}\n\n"
                 "[과거 식사 이력 (현재 요청과 관련 있는 항목)]\n"
@@ -66,6 +67,7 @@ class SelectCandidates:
                 "health": ", ".join(query.get('health_conditions', [])) or "없음",
                 "allergy": ", ".join(query.get('allergies', [])) or "없음",
                 "preferences": ", ".join(query.get('preferences', [])) or "없음",
+                "custom_note": (query.get('custom_note') or '').replace(chr(10), ' ').replace(chr(13), '').strip() or "없음",
                 "goal": query.get('fitness_goal'),
                 "guideline": format_guideline(query.get('fitness_goal', '일반식단')),
                 "history": history_block,

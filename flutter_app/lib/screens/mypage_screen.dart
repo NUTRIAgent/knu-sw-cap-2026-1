@@ -309,7 +309,8 @@ class _MyPageScreenState extends State<MyPageScreen>
         _selectedAllergies.length != _bkAllergies.length ||
         !_selectedAllergies.containsAll(_bkAllergies) ||
         _selectedHealthConditions.length != _bkHealthConditions.length ||
-        !_selectedHealthConditions.containsAll(_bkHealthConditions);
+        !_selectedHealthConditions.containsAll(_bkHealthConditions) ||
+        _customNoteController.text != _bkCustomNote;
   }
 
   // ── 피드백 탭 로직 ────────────────────────────────
@@ -817,6 +818,7 @@ class _MyPageScreenState extends State<MyPageScreen>
                 maxLength: 200,
                 maxLines: 3,
                 enabled: _isEditMode,
+                onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
                   hintText: '예: 제육볶음 같은 고기 요리가 좋아요. 국물 요리는 별로예요.',
                   hintStyle: const TextStyle(color: Colors.grey),
