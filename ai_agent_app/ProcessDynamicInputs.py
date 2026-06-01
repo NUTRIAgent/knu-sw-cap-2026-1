@@ -53,7 +53,8 @@ def build_llm_input(recipe: Dict, price_info: str, user_query: Dict) -> Dict:
             f"체중 {user_query.get('weight_kg')}kg, "
             f"운동 목표: {user_query.get('fitness_goal', '일반식단')}, "
             f"건강 상태: {', '.join(user_query.get('health_conditions', []) or []) or '없음'}, "
-            f"선호 음식: {', '.join(user_query.get('preferences', []) or []) or '없음'}"
+            f"선호 음식: {', '.join(user_query.get('preferences', []) or []) or '없음'}, "
+            f"추가 선호사항: {(user_query.get('custom_note') or '').replace(chr(10), ' ').replace(chr(13), '').strip() or '없음'}"
         ),
         "user_restrictions": (
             f"알러지: {', '.join(user_query.get('allergies', []) or [])}, "

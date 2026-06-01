@@ -11,6 +11,7 @@ class RecommendationRequest {
   final List<int> candidateMenuIds;
   final double? weatherTemp; // ← 추가
   final String? weatherCondition; // ← 추가
+  final String? customNote;
 
   const RecommendationRequest({
     required this.heightCm,
@@ -25,6 +26,7 @@ class RecommendationRequest {
     this.candidateMenuIds = const [],
     this.weatherTemp,
     this.weatherCondition,
+    this.customNote,
   });
 
   RecommendationRequest copyWith({List<int>? candidateMenuIds}) {
@@ -41,6 +43,7 @@ class RecommendationRequest {
       candidateMenuIds: candidateMenuIds ?? this.candidateMenuIds,
       weatherTemp: weatherTemp, // ← 추가
       weatherCondition: weatherCondition, // ← 추가
+      customNote: customNote,
     );
   }
 
@@ -57,6 +60,7 @@ class RecommendationRequest {
     if (candidateMenuIds.isNotEmpty) 'candidate_menu_ids': candidateMenuIds,
     if (weatherTemp != null) 'weather_temp': weatherTemp,
     if (weatherCondition != null) 'weather_condition': weatherCondition,
+    if (customNote != null) 'custom_note': customNote,
   };
 }
 

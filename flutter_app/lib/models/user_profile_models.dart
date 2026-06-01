@@ -20,6 +20,7 @@ class UserProfileRequest {
   final List<String>? foodPreferences;
   final List<String>? allergies;
   final List<String>? healthConditions;
+  final String? customNote;
 
   UserProfileRequest({
     this.nickname,
@@ -40,6 +41,7 @@ class UserProfileRequest {
     this.foodPreferences,
     this.allergies,
     this.healthConditions,
+    this.customNote,
   });
 
   Map<String, dynamic> toJson() {
@@ -62,6 +64,7 @@ class UserProfileRequest {
     if (foodPreferences != null) data['foodPreferences'] = foodPreferences;
     if (allergies != null) data['allergies'] = allergies;
     if (healthConditions != null) data['healthConditions'] = healthConditions;
+    if (customNote != null) data['customNote'] = customNote;
     return data;
   }
 }
@@ -113,6 +116,7 @@ class UserProfileData {
   final List<String> foodPreferences;
   final List<String> allergies;
   final List<String> healthConditions;
+  final String? customNote;
 
   const UserProfileData({
     this.userId,
@@ -134,6 +138,7 @@ class UserProfileData {
     this.foodPreferences = const [],
     this.allergies = const [],
     this.healthConditions = const [],
+    this.customNote,
   });
 
   factory UserProfileData.fromJson(Map<String, dynamic> json) {
@@ -157,6 +162,7 @@ class UserProfileData {
       foodPreferences: (json['foodPreferences'] as List?)?.map((e) => e.toString()).toList() ?? const [],
       allergies: (json['allergies'] as List?)?.map((e) => e.toString()).toList() ?? const [],
       healthConditions: (json['healthConditions'] as List?)?.map((e) => e.toString()).toList() ?? const [],
+      customNote: json['customNote'],
     );
   }
 }

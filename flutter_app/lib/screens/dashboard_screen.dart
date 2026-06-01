@@ -229,6 +229,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         candidateMenuIds: candidates.map((c) => c.id).toList(),
         weatherTemp: _weather?.temperature, // ← 추가
         weatherCondition: _weather?.precipitationName, // ← 추가
+        customNote: profile.customNote,
       );
 
       if (!mounted) return;

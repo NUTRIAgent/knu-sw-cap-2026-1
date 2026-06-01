@@ -44,4 +44,7 @@ public class UserProfileRequest {
 
     // 건강 상태 (예: 고혈압, 당뇨 등)
     private List<String> healthConditions;
+
+    // 자유 입력 선호사항
+    private String customNote;
 }

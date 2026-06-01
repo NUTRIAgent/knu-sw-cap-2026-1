@@ -160,6 +160,9 @@ class UserRequest(BaseModel):
     weather_condition: Optional[str] = Field(
         default=None, example="맑음", description="현재 날씨 상태 (맑음/비/눈/흐림 등)"
     )
+    custom_note: Optional[str] = Field(
+        default=None, description="사용자 자유 입력 선호사항 (최대 500자)"
+    )
 
 
 class SelectMenuRequest(BaseModel):
