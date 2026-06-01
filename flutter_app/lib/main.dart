@@ -24,13 +24,23 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: _firebaseOptions);
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-  await FirebaseMessaging.instance.requestPermission(
-    alert: true,
-    badge: true,
-    sound: true,
-  );
-  FirebaseMessaging.instance.getToken().then((t) => print('🔔 FCM TOKEN: $t'));
+  // 알림 권한 요청 및 토큰 출력은 앱 시작을 막지 않도록 비동기로 처리
+  _initFcm();
   runApp(const NutriAgentApp());
+}
+
+Future<void> _initFcm() async {
+  try {
+    await FirebaseMessaging.instance.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+    final token = await FirebaseMessaging.instance.getToken();
+    if (token != null) debugPrint('🔔 FCM TOKEN: $token');
+  } catch (e) {
+    debugPrint('FCM 초기화 스킵 (시뮬레이터 또는 권한 없음): $e');
+  }
 }
 
 class NutriAgentApp extends StatelessWidget {
