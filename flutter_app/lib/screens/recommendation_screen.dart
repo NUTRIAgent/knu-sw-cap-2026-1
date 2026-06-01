@@ -243,7 +243,10 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                       onDetailTap: (result) => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => MenuDetailScreen(aiResult: result),
+                          builder: (_) => MenuDetailScreen(
+                            aiResult: result,
+                            jwt: widget.request.jwtToken,
+                          ),
                         ),
                       ),
                       onFeedbackTap: (result) => _showFeedbackBottomSheet(result.menuId),
