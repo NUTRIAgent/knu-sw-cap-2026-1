@@ -47,7 +47,7 @@ class CartService {
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getStringList(_key) ?? [];
-    final existing = raw.map(CartItem.fromStorageString).toList();
+    final existing = raw.map((s) => CartItem.fromStorageString(s)).toList();
     final existingKeys = existing.map((e) => e.dedupKey).toSet();
 
     final toAdd = ingredients
@@ -70,7 +70,7 @@ class CartService {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getStringList(_key) ?? [];
     final updated = raw
-        .map(CartItem.fromStorageString)
+        .map((s) => CartItem.fromStorageString(s))
         .where((e) => e.dedupKey != item.dedupKey)
         .map((e) => e._toStorageString())
         .toList();
