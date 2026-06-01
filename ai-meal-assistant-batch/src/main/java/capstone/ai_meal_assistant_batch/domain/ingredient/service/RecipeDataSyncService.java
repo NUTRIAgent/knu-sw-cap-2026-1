@@ -4,6 +4,8 @@ import capstone.ai_meal_assistant_batch.domain.etl.FoodSafetyApiFetcher;
 import capstone.ai_meal_assistant_batch.domain.etl.parser.RecipeDataParser;
 import capstone.ai_meal_assistant_batch.domain.ingredient.dto.IngredientDto;
 import capstone.ai_meal_assistant_batch.domain.ingredient.entity.Ingredient;
+import capstone.ai_meal_assistant_batch.domain.ingredient.repository.IngredientKamisMappingRepository;
+import capstone.ai_meal_assistant_batch.domain.ingredient.repository.IngredientPriceRepository;
 import capstone.ai_meal_assistant_batch.domain.ingredient.repository.IngredientRepository;
 import capstone.ai_meal_assistant_batch.domain.menu.entity.Allergy;
 import capstone.ai_meal_assistant_batch.domain.menu.entity.Menu;
@@ -16,6 +18,8 @@ import capstone.ai_meal_assistant_batch.domain.menu.repository.MenuRepository;
 import capstone.ai_meal_assistant_batch.global.s3.S3ImageUploadService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
@@ -42,10 +46,15 @@ public class RecipeDataSyncService {
     private final MenuRepository menuRepository;
     private final IngredientRepository ingredientRepository;
     private final MenuIngredientRepository menuIngredientRepository;
+    private final IngredientPriceRepository ingredientPriceRepository;
+    private final IngredientKamisMappingRepository ingredientKamisMappingRepository;
     private final AllergyRepository allergyRepository;
     private final MenuAllergyRepository menuAllergyRepository;
     private final ObjectMapper objectMapper;
     private final S3ImageUploadService s3ImageUploadService;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     /** 이미지 복구 시 변경분을 끊어 저장하는 청크 크기. */
     private static final int RECOVERY_SAVE_CHUNK = 100;
@@ -195,6 +204,133 @@ public class RecipeDataSyncService {
         } catch (Exception e){
             log.error("API 데이터 동기화 중 에러 발생: ", e);
         }
+    }
+
+    /**
+     * 이미 적재된 메뉴 기준으로 menu_ingredients를 현재 파서로 재구축한다.
+     * - menus / 이미지 / 기존 가격(ingredient_prices)은 건드리지 않는다.
+     * - menu_ingredients 전체 삭제 후 cleaned_recipe_data.json을 재파싱해 재삽입한다.
+     * - 없는 재료명은 생성(create-if-absent), 기존 재료는 재사용. 멱등(반복 실행 가능).
+     * - 파서 로직을 바꾼 뒤 기존 DB를 교정할 때 사용한다.
+     *   (빈 DB는 syncAllDataFromApi()만으로 올바르게 적재되므로 이 메서드가 필요 없다.)
+     */
+    @Transactional
+    public void rebuildMenuIngredients() {
+        try {
+            JsonNode recipeArray = loadRecipeArray();
+
+            Map<String, Menu> menuCache = menuRepository.findAll().stream()
+                    .collect(Collectors.toMap(Menu::getFoodCode, m -> m));
+            Map<String, Ingredient> ingredientCache = ingredientRepository.findAll().stream()
+                    .collect(Collectors.toMap(Ingredient::getName, i -> i));
+
+            long before = menuIngredientRepository.count();
+            menuIngredientRepository.deleteAllInBatch();
+            log.info("[재구축] 기존 menu_ingredients {}건 삭제", before);
+
+            List<MenuIngredient> toSave = new ArrayList<>();
+            int newIngredientCount = 0;
+            int skippedNoMenu = 0;
+
+            for (JsonNode recipeNode : recipeArray) {
+                if ("후식".equals(recipeNode.path("RCP_PAT2").asText())) continue;
+
+                String foodCode = recipeNode.path("RCP_SEQ").asText();
+                Menu menu = menuCache.get(foodCode);
+                if (menu == null) {
+                    // 메뉴가 아직 적재되지 않음 → syncAllDataFromApi() 선행 필요
+                    skippedNoMenu++;
+                    continue;
+                }
+
+                String recipeName = recipeNode.path("RCP_NM").asText();
+                String partsDetails = recipeNode.path("RCP_PARTS_DTLS").asText();
+
+                for (IngredientDto dto : RecipeDataParser.parseIngredients(partsDetails, recipeName)) {
+                    Ingredient ingredient = ingredientCache.get(dto.getName());
+                    if (ingredient == null) {
+                        ingredient = ingredientRepository.save(Ingredient.builder().name(dto.getName()).build());
+                        ingredientCache.put(dto.getName(), ingredient);
+                        newIngredientCount++;
+                    }
+                    toSave.add(MenuIngredient.builder()
+                            .menu(menu)
+                            .ingredient(ingredient)
+                            .subCategory(dto.getSubCategory())
+                            .requiredWeight(dto.getParsedWeight())
+                            .amountText(dto.getOriginalAmount())
+                            .build());
+                }
+            }
+
+            menuIngredientRepository.saveAll(toSave);
+            log.info("[재구축] 완료 — menu_ingredients {}건 재삽입, 신규 재료 {}건, 메뉴 미적재로 스킵 {}건",
+                    toSave.size(), newIngredientCount, skippedNoMenu);
+        } catch (Exception e) {
+            log.error("[재구축] menu_ingredients 재구축 실패 — 트랜잭션 롤백", e);
+            throw new RuntimeException("menu_ingredients 재구축 실패", e); // 롤백 보장
+        }
+    }
+
+    /**
+     * 어떤 메뉴에도 매핑되지 않고(레시피 미사용) 사용자 즐겨찾기에도 없는 재료를 삭제한다.
+     * - 연결된 가격(ingredient_prices)·KAMIS 매핑도 함께 제거.
+     * - 사용자 즐겨찾기가 참조하는 재료는 보존(사용자 데이터 보호).
+     * - rebuildMenuIngredients() 이후 옛 이름(쇠고기·안심 등) 잔여 행 정리에 사용.
+     *
+     * @return 삭제한 재료 수
+     */
+    @Transactional
+    public int deleteUnusedIngredients() {
+        List<Ingredient> unused = ingredientRepository.findUnusedIngredients();
+        if (unused.isEmpty()) {
+            log.info("[정리] 미사용 재료 없음");
+            return 0;
+        }
+
+        Set<Long> favoredIds = loadFavoredIngredientIds();
+        List<Ingredient> deletable = unused.stream()
+                .filter(i -> !favoredIds.contains(i.getId()))
+                .collect(Collectors.toList());
+
+        if (deletable.isEmpty()) {
+            log.info("[정리] 미사용 재료 {}건 전부 즐겨찾기 참조 → 삭제 대상 없음", unused.size());
+            return 0;
+        }
+
+        List<Long> ids = deletable.stream().map(Ingredient::getId).collect(Collectors.toList());
+        List<String> names = deletable.stream().map(Ingredient::getName).collect(Collectors.toList());
+
+        ingredientPriceRepository.deleteByIngredientIdIn(ids);
+        ingredientKamisMappingRepository.deleteByIngredientIdIn(ids);
+        ingredientRepository.deleteAllByIdInBatch(ids);
+
+        log.info("[정리] 미사용 재료 {}건 삭제 (즐겨찾기 보존 {}건): {}",
+                deletable.size(), unused.size() - deletable.size(), names);
+        return deletable.size();
+    }
+
+    /** 사용자 즐겨찾기가 참조하는 ingredient_id 집합. (batch 모듈엔 엔티티가 없어 네이티브 조회) */
+    private Set<Long> loadFavoredIngredientIds() {
+        try {
+            @SuppressWarnings("unchecked")
+            List<Number> ids = entityManager
+                    .createNativeQuery("SELECT DISTINCT ingredient_id FROM user_favorite_ingredients")
+                    .getResultList();
+            return ids.stream().map(Number::longValue).collect(Collectors.toSet());
+        } catch (Exception e) {
+            // 테이블 미존재 등(백엔드 미기동 환경) → 즐겨찾기 없음으로 간주
+            log.warn("[정리] user_favorite_ingredients 조회 실패 — 즐겨찾기 없음으로 처리: {}", e.getMessage());
+            return java.util.Collections.emptySet();
+        }
+    }
+
+    /** cleaned_recipe_data.json에서 레시피 배열 노드를 로드한다. */
+    private JsonNode loadRecipeArray() throws Exception {
+        ClassPathResource resource = new ClassPathResource("cleaned_recipe_data.json");
+        String rawJson = new String(Files.readAllBytes(Paths.get(resource.getURI())), StandardCharsets.UTF_8);
+        JsonNode rootNode = objectMapper.readTree(rawJson);
+        return rootNode.isArray() ? rootNode : rootNode.path("COOKRCP01").path("row");
     }
 
     /**
