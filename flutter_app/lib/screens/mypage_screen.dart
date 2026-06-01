@@ -3,6 +3,7 @@ import 'package:flutter_app/models/recommendation_models.dart';
 import 'package:flutter_app/models/user_profile_models.dart';
 import 'package:flutter_app/services/recommendation_service.dart';
 import 'package:flutter_app/services/user_profile_service.dart';
+import 'package:flutter_app/screens/recommendation_history_screen.dart';
 import 'package:flutter_app/services/token_storage.dart';
 import 'package:flutter_app/theme.dart';
 
@@ -519,7 +520,56 @@ class _MyPageScreenState extends State<MyPageScreen>
                     fontSize: 14, color: Colors.grey[800], height: 1.5),
               ),
             ),
+            const SizedBox(height: 12),
+            _buildHistoryButton(),
             const SizedBox(height: 32),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHistoryButton() {
+    return GestureDetector(
+      onTap: () async {
+        final jwt = await TokenStorage.getAccessToken();
+        if (!mounted || jwt == null || jwt.isEmpty) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => RecommendationHistoryScreen(jwt: jwt),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            ShaderMask(
+              blendMode: BlendMode.srcIn,
+              shaderCallback: (bounds) =>
+                  AppTheme.aiGradient.createShader(bounds),
+              child: const Icon(Icons.bookmark_rounded, size: 20),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'AI 추천 이력',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            ),
+            const Spacer(),
+            Icon(Icons.chevron_right_rounded,
+                color: Colors.grey[400], size: 20),
           ],
         ),
       ),

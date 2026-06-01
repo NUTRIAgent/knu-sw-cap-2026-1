@@ -32,6 +32,14 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
   bool _aiLoading = false;
   String? _aiError;
 
+  // ── 저장 상태 ──
+  bool _saving = false;
+  bool _saved = false;
+
+  // ── 피드백 상태 ──
+  int _feedbackRating = 0;
+  final TextEditingController _feedbackController = TextEditingController();
+
   bool get _isAiPick => widget.aiResult != null;
 
   @override
@@ -51,6 +59,141 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
     } else {
       setState(() { _loading = false; _error = '상세 정보를 불러오지 못했습니다.'; });
     }
+  }
+
+  @override
+  void dispose() {
+    _feedbackController.dispose();
+    super.dispose();
+  }
+
+  void _showFeedbackBottomSheet(int menuId) {
+    _feedbackRating = 0;
+    _feedbackController.clear();
+    final messenger = ScaffoldMessenger.of(context);
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModal) => Container(
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 28,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 28,
+          ),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text('이번 추천은 어떠셨나요?',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  5,
+                  (i) => IconButton(
+                    icon: Icon(
+                      i < _feedbackRating
+                          ? Icons.star_rounded
+                          : Icons.star_outline_rounded,
+                      size: 44,
+                      color: i < _feedbackRating
+                          ? Colors.amber
+                          : Colors.grey[300],
+                    ),
+                    onPressed: () =>
+                        setModal(() => _feedbackRating = i + 1),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _feedbackController,
+                maxLines: 3,
+                onChanged: (_) => setModal(() {}),
+                decoration: InputDecoration(
+                  hintText: '아쉬운 점이 있다면 알려주세요...',
+                  hintStyle:
+                      TextStyle(color: Colors.grey[400], fontSize: 14),
+                  filled: true,
+                  fillColor: Colors.grey.shade100,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Builder(builder: (_) {
+                final canSubmit = _feedbackRating > 0 &&
+                    _feedbackController.text.trim().isNotEmpty;
+                return SizedBox(
+                  height: 52,
+                  child: ElevatedButton(
+                    onPressed: canSubmit
+                        ? () async {
+                            final rating = _feedbackRating;
+                            final reason = _feedbackController.text;
+                            Navigator.pop(ctx);
+                            await RecommendationService.saveDetailedFeedback(
+                                menuId, rating, reason, widget.jwt);
+                            messenger.showSnackBar(const SnackBar(
+                                content: Text('소중한 피드백 감사합니다!')));
+                          }
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      disabledBackgroundColor: Colors.grey[300],
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('제출',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600)),
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _saveAiResult(RecommendationResult result) async {
+    if (_saving || widget.jwt == null) return;
+    setState(() => _saving = true);
+    final id = await RecommendationService.saveAiResult(result, widget.jwt);
+    if (!mounted) return;
+    setState(() { _saving = false; _saved = id != null; });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(id != null ? '추천 이력에 저장됐습니다' : '저장에 실패했습니다'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   Future<void> _requestAiAnalysis() async {
@@ -76,40 +219,88 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(title,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-            overflow: TextOverflow.ellipsis),
-        centerTitle: true,
+        titleSpacing: 0,
+        title: Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (shownAi != null)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ShaderMask(
+                      blendMode: BlendMode.srcIn,
+                      shaderCallback: (b) =>
+                          AppTheme.aiGradient.createShader(b),
+                      child: const Icon(Icons.auto_awesome, size: 11),
+                    ),
+                    const SizedBox(width: 3),
+                    ShaderMask(
+                      blendMode: BlendMode.srcIn,
+                      shaderCallback: (b) =>
+                          AppTheme.aiGradient.createShader(b),
+                      child: const Text('AI 픽',
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              Text(
+                title,
+                style: const TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.bold),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+        centerTitle: false,
+        toolbarHeight: 64,
         elevation: 0,
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        actions: shownAi != null
+        actions: shownAi != null && widget.jwt != null
             ? [
-                Container(
-                  margin: const EdgeInsets.only(right: 16),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    gradient: AppTheme.aiGradient,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.auto_awesome, color: Colors.white, size: 12),
-                      SizedBox(width: 4),
-                      Text('AI 픽',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold)),
-                    ],
+                TextButton(
+                  onPressed: () =>
+                      _showFeedbackBottomSheet(shownAi.menuId),
+                  child: Text(
+                    '피드백',
+                    style: TextStyle(
+                        fontSize: 13, color: Colors.grey[600]),
                   ),
                 ),
+                TextButton(
+                  onPressed:
+                      _saving ? null : () => _saveAiResult(shownAi),
+                  child: _saving
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppTheme.primaryColor),
+                        )
+                      : Text(
+                          _saved ? '저장됨' : '저장',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: _saved
+                                ? AppTheme.primaryColor
+                                : Colors.grey[600],
+                          ),
+                        ),
+                ),
+                const SizedBox(width: 4),
               ]
             : null,
       ),
       body: shownAi != null
-          ? _AiPickBody(result: shownAi)
+          ? AiPickBody(result: shownAi)
           : _CandidateBody(
               candidate: widget.candidate!,
               detail: _detail,
@@ -126,9 +317,9 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
 }
 
 // ── AI 픽 상세 본문 ──────────────────────────────────────────
-class _AiPickBody extends StatelessWidget {
+class AiPickBody extends StatelessWidget {
   final RecommendationResult result;
-  const _AiPickBody({required this.result});
+  const AiPickBody({super.key, required this.result});
 
   @override
   Widget build(BuildContext context) {
