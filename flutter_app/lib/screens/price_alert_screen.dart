@@ -3,8 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/services/price_alert_service.dart';
 import 'package:flutter_app/theme.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import '../main.dart';
+import 'package:flutter_app/services/local_notification_service.dart';
 
 class PriceAlertScreen extends StatefulWidget {
   final String jwt;
@@ -84,17 +83,9 @@ class _PriceAlertScreenState extends State<PriceAlertScreen> {
       return;
     }
     final name = _alerts.first['kamisItemName'] as String? ?? '양파';
-    await localNotifications.show(
-      0,
+    await LocalNotificationService.show(
       '📊 $name 가격 변동',
       '▲ 5.3% 변동 (1,200원 → 1,264원)',
-      const NotificationDetails(
-        iOS: DarwinNotificationDetails(
-          presentAlert: true,
-          presentBadge: true,
-          presentSound: true,
-        ),
-      ),
     );
   }
 
