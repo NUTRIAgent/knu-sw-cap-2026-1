@@ -87,6 +87,52 @@ cd ai-meal-assistant-batch
 ./gradlew bootRun --args='--batch.seed.steps.enabled=true'
 ```
 
+## 가격 변동 푸시 알림
+
+### 동작 방식
+
+1. `KamisPriceScheduler`가 매일 가격 갱신 후 `PriceAlertNotificationService.dispatchAlerts()` 자동 호출
+2. `originalPrice` 대비 `prevDayPrice` 변동률이 **±3% 이상**인 재료를 감지
+3. 해당 재료를 팔로우 중인 사용자의 FCM 토큰으로 알림 발송
+
+### Firebase 서비스 계정 설정
+
+배치 서버에서 FCM을 발송하려면 Firebase 서비스 계정 키 파일이 필요합니다.
+
+1. Firebase 콘솔 → 프로젝트 설정 → 서비스 계정 → **새 비공개 키 생성** → JSON 다운로드
+2. 파일을 `src/main/resources/firebase-service-account.json`으로 저장 (`.gitignore` 처리 — **커밋 금지**)
+3. 또는 환경변수로 경로 지정:
+
+```bash
+FIREBASE_SERVICE_ACCOUNT_PATH=/절대경로/firebase-service-account.json ./gradlew bootRun
+```
+
+파일이 없으면 FCM 알림은 스킵되고 나머지 배치는 정상 동작합니다.
+
+### FCM 테스트 엔드포인트 (배치 서버 8081포트)
+
+배치 스케줄을 기다리지 않고 즉시 테스트할 수 있습니다.
+
+#### 특정 기기로 테스트 알림 발송
+
+```bash
+curl -X POST "http://localhost:8081/api/admin/fcm/test?token={FCM_토큰}"
+```
+
+FCM 토큰은 앱 로그에서 확인하거나 다음 코드로 출력:
+
+```dart
+FirebaseMessaging.instance.getToken().then((t) => print('FCM TOKEN: $t'));
+```
+
+#### 변동률 알림 수동 트리거
+
+DB에 KAMIS 가격 데이터가 있을 때 즉시 알림 발송:
+
+```bash
+curl -X POST "http://localhost:8081/api/admin/fcm/dispatch-alerts"
+```
+
 ## 멱등성(중복 적재 방지) 가이드
 
 - 권장: 유니크 키 + upsert
