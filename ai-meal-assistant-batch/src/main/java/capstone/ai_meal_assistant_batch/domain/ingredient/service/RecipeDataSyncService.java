@@ -100,7 +100,7 @@ public class RecipeDataSyncService {
                 // 캐시에 없는 새로운 레시피만 골라냅니다.
                 if (!menuCache.containsKey(foodCode)) {
                     String originalImageUrl = recipeNode.path("ATT_FILE_NO_MAIN").asText();
-                    String mainImageUrl = s3ImageUploadService.uploadFromUrl(originalImageUrl);
+                    String mainImageUrl = s3ImageUploadService.uploadFromUrl(originalImageUrl, foodCode);
 
                     Menu newMenu = Menu.builder()
                             .foodCode(foodCode)                                                // 일련번호
@@ -249,7 +249,7 @@ public class RecipeDataSyncService {
                 log.info("S3 마이그레이션 대상 메뉴: {}개", menusToMigrate.size());
                 int successCount = 0;
                 for (Menu menu : menusToMigrate) {
-                    String newUrl = s3ImageUploadService.uploadFromUrl(menu.getMainImageUrl());
+                    String newUrl = s3ImageUploadService.uploadFromUrl(menu.getMainImageUrl(), menu.getFoodCode());
                     if (s3ImageUploadService.isOurStorageUrl(newUrl)) {
                         menu.updateMainImageUrl(newUrl);
                         successCount++;
@@ -406,7 +406,25 @@ public class RecipeDataSyncService {
      * {@link #RECOVERY_SAVE_CHUNK}개 단위로 끊어 각자의 짧은 트랜잭션으로 저장한다.
      */
     public void recoverCorruptedImages() {
-        log.info("[복구] 이미지 URL 점검/복구 시작");
+        // 안전 기본값: 실제 변경 없이 점검만 한다. 실제 적용은 파라미터 버전을 명시 호출.
+        recoverCorruptedImages(true, 0, false);
+    }
+
+    /**
+     * 메뉴 이미지의 S3 key를 foodCode 기반 규칙으로 점검/재정렬(re-key)한다.
+     *
+     * <p>현재 URL이 목표 key({@code images/food/{foodCode}})와 다르면 재키잉한다.
+     * 이미 S3에 사본이 있으면 <b>원본 재다운로드 없이 CopyObject</b>로 옮기고(원본 소스가
+     * 죽어도 안전), 사본이 없을 때만 원본 URL에서 재업로드한다.
+     * old key 객체는 삭제하지 않는다(검증 후 별도 정리 → 롤백 가능).
+     *
+     * @param dryRun     true면 S3/DB를 변경하지 않고 예정 작업만 로그로 남긴다.
+     * @param limit      처리 건수 상한(0이면 무제한).
+     * @param onlyBroken true면 쿼리스트링('?')이 박혀 깨진 URL만 대상으로 한다.
+     */
+    public void recoverCorruptedImages(boolean dryRun, int limit, boolean onlyBroken) {
+        log.info("[복구] 이미지 key 점검/재키잉 시작 (dryRun={}, limit={}, onlyBroken={})",
+                dryRun, limit, onlyBroken);
 
         Map<String, String> codeToOriginalUrl;
         try {
@@ -418,51 +436,74 @@ public class RecipeDataSyncService {
         log.info("[복구] 원본 URL 맵 로드 완료: {}건", codeToOriginalUrl.size());
 
         // 우리 스토리지(S3 직링크 + CloudFront 도메인)에 올라간 메뉴를 모두 검사 대상으로.
-        // amazonaws.com 만 보면 CloudFront 전환 이후 후보가 0개가 되어 재검증이 불가능하다.
         List<Menu> candidates = menuRepository.findAll().stream()
                 .filter(m -> s3ImageUploadService.isOurStorageUrl(m.getMainImageUrl()))
                 .collect(Collectors.toList());
         log.info("[복구] 검사 대상(S3/CloudFront URL) 메뉴: {}개", candidates.size());
 
-        int normalized = 0, corrupt = 0, recovered = 0, missingOrigin = 0, failed = 0;
+        int skipped = 0, rekeyedCopy = 0, rekeyedOrigin = 0, missingOrigin = 0, failed = 0, processed = 0;
         List<Menu> buffer = new ArrayList<>();
         for (Menu menu : candidates) {
-            if (s3ImageUploadService.isS3UrlValid(menu.getMainImageUrl())) {
-                String cfUrl = s3ImageUploadService.toCloudFrontUrl(menu.getMainImageUrl());
-                if (!cfUrl.equals(menu.getMainImageUrl())) {
-                    menu.updateMainImageUrl(cfUrl);
-                    buffer.add(menu);
-                    normalized++;
+            if (limit > 0 && processed >= limit) break;
+
+            String currentUrl = menu.getMainImageUrl();
+            String foodCode = menu.getFoodCode();
+            String originalUrl = codeToOriginalUrl.get(foodCode);
+
+            // 목표 key/URL (foodCode 기반, foodCode 없으면 원본 URL 해시 폴백)
+            String desiredKey = s3ImageUploadService.objectKeyFor(foodCode, originalUrl);
+            String desiredUrl = s3ImageUploadService.urlForKey(desiredKey);
+
+            if (currentUrl.equals(desiredUrl)) {           // 이미 통일됨
+                skipped++;
+                continue;
+            }
+            if (onlyBroken && !currentUrl.contains("?")) { // 깨진 것만 대상으로 한정
+                skipped++;
+                continue;
+            }
+            processed++;
+
+            // 1순위: S3 내부 CopyObject (oldKey 객체가 있으면 원본 재다운로드 불필요)
+            String oldKey = s3ImageUploadService.s3KeyOf(currentUrl);
+            String newUrl = null;
+            String via = null;
+            if (oldKey != null && s3ImageUploadService.existsInS3(oldKey)) {
+                newUrl = dryRun ? desiredUrl : s3ImageUploadService.reKeyWithinS3(oldKey, desiredKey);
+                via = "copy";
+            }
+            // 2순위: 원본에서 재업로드 (S3에 사본이 없을 때만)
+            if (newUrl == null) {
+                if (originalUrl == null || originalUrl.isBlank()) {
+                    log.warn("[복구] 원본 URL 없음 + S3 사본 없음, 스킵: foodCode={}, url={}", foodCode, currentUrl);
+                    missingOrigin++;
+                    continue;
                 }
-                flushIfFull(buffer);
-                continue;
-            }
-            corrupt++;
-
-            String originalUrl = codeToOriginalUrl.get(menu.getFoodCode());
-            if (originalUrl == null || originalUrl.isBlank()) {
-                log.warn("[복구] 원본 URL 없음, 스킵: foodCode={}, name={}", menu.getFoodCode(), menu.getName());
-                missingOrigin++;
-                continue;
+                newUrl = dryRun ? desiredUrl : s3ImageUploadService.uploadFromUrl(originalUrl, foodCode);
+                via = "origin";
             }
 
-            String newUrl = s3ImageUploadService.uploadFromUrl(originalUrl);
-            if (s3ImageUploadService.isOurStorageUrl(newUrl)) {
-                menu.updateMainImageUrl(newUrl);
-                buffer.add(menu);
-                recovered++;
+            if (newUrl != null && newUrl.equals(desiredUrl)) {
+                if (dryRun) {
+                    log.info("[복구][dry-run] 재키잉 예정({}): foodCode={}, {} -> {}",
+                            via, foodCode, currentUrl, desiredUrl);
+                } else {
+                    menu.updateMainImageUrl(newUrl);
+                    buffer.add(menu);
+                }
+                if ("copy".equals(via)) rekeyedCopy++; else rekeyedOrigin++;
             } else {
-                log.warn("[복구] 재업로드 실패: foodCode={}, originalUrl={}", menu.getFoodCode(), originalUrl);
+                log.warn("[복구] 재키잉 실패({}): foodCode={}, url={}", via, foodCode, currentUrl);
                 failed++;
             }
-            flushIfFull(buffer);
+            if (!dryRun) flushIfFull(buffer);
         }
 
-        if (!buffer.isEmpty()) {
+        if (!dryRun && !buffer.isEmpty()) {
             menuRepository.saveAll(buffer);
         }
-        log.info("[복구] 완료 — URL변경={}, 손상={}, 복구성공={}, 원본URL없음={}, 재업로드실패={}",
-                normalized, corrupt, recovered, missingOrigin, failed);
+        log.info("[복구] 완료(dryRun={}) — 처리={}, 스킵={}, 재키잉(copy)={}, 재키잉(origin)={}, 원본없음={}, 실패={}",
+                dryRun, processed, skipped, rekeyedCopy, rekeyedOrigin, missingOrigin, failed);
     }
 
     /** 변경 버퍼가 청크 크기에 도달하면 즉시 저장(각자 짧은 트랜잭션)해 커넥션·메모리 부담을 줄인다. */
