@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -10,6 +11,19 @@ class PriceAlertService {
   static Future<void> registerToken(String? jwt) async {
     if (jwt == null || jwt.isEmpty) return;
     try {
+      // iOS는 APNs 토큰이 준비된 뒤에 FCM 토큰을 얻을 수 있음
+      if (Platform.isIOS) {
+        String? apnsToken;
+        for (int i = 0; i < 5; i++) {
+          apnsToken = await FirebaseMessaging.instance.getAPNSToken();
+          if (apnsToken != null) break;
+          await Future.delayed(const Duration(seconds: 1));
+        }
+        if (apnsToken == null) {
+          debugPrint('APNs 토큰 미준비 — FCM 토큰 등록 스킵');
+          return;
+        }
+      }
       final token = await FirebaseMessaging.instance.getToken();
       if (token == null) return;
       await http.post(
