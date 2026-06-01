@@ -17,6 +17,13 @@ class _CartScreenState extends State<CartScreen> {
   void initState() {
     super.initState();
     _load();
+    CartService.itemCount.addListener(_load);
+  }
+
+  @override
+  void dispose() {
+    CartService.itemCount.removeListener(_load);
+    super.dispose();
   }
 
   Future<void> _load() async {
