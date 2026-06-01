@@ -8,7 +8,6 @@ from langchain_openai import ChatOpenAI
 from langchain_core.output_parsers import JsonOutputParser
 import re
 import asyncio
-from ai_agent_app.GetMarketPrices import GetMarketPrices
 from ai_agent_app.SelectCandidates import SelectCandidates
 from ai_agent_app.Prompts import get_recipe_prompt
 from ai_agent_app import ProcessDynamicInputs
@@ -47,13 +46,11 @@ class GraphState(TypedDict):
 class RecipeGraphBuilder:
     def __init__(
         self,
-        get_market_prices: GetMarketPrices,
         select_candidates: SelectCandidates,
         model: ChatOpenAI,
         recipes: List[Dict] = None,
     ):
         self.recipes = recipes or []
-        self.get_market_prices = get_market_prices
         self.select_candidates = select_candidates
         self.model = model
         self.chain = get_recipe_prompt() | self.model | JsonOutputParser()
@@ -100,44 +97,35 @@ class RecipeGraphBuilder:
         }
 
     # ------------------------------------------------------------------
-    # fetch_price_for: 단일 레시피 가격 조회 (price_node / 단일 분석 공용)
+    # _format_cost_text: 선계산 재료비 내역을 LLM/표시용 텍스트로
     # ------------------------------------------------------------------
-    async def fetch_price_for(self, recipe: Dict, location):
-        """레시피 1개의 가격 정보와 추정 1인분 비용을 조회."""
-        try:
-            p_info = await asyncio.to_thread(
-                self.get_market_prices.get_market_prices,
-                recipe["RCP_PARTS_DTLS"],
-                location,
-            )
-            rough_cost = self.get_market_prices.estimate_serving_cost(
-                recipe["RCP_PARTS_DTLS"], p_info
-            )
-        except Exception:
-            p_info = "가격 데이터 조회 실패"
-            rough_cost = 0
-        return p_info, rough_cost
+    @staticmethod
+    def _format_cost_text(costs: List[Dict]) -> str:
+        lines = [
+            f"- {c['name']}: {c['cost']}원 ({c['requiredWeight']}g)"
+            for c in costs if c.get("priceAvailable")
+        ]
+        return "\n".join(lines) if lines else "가격 데이터 없음"
 
     # ------------------------------------------------------------------
-    # price_node: MENU_ID로 룩업 + 가격 조회 (병렬)
+    # price_node: 백엔드 선계산 재료비 적용 (#155, 네트워크 호출 없음)
     # ------------------------------------------------------------------
     async def price_node(self, state: GraphState) -> GraphState:
-        print("[price_node] 후보 가격 조회 (병렬)")
-        location = state["user_query"].get("location")
-        recipes_by_seq = state["recipes_by_seq"]
-
-        async def fetch_one(seq: str):
-            r = recipes_by_seq[seq]
-            p_info, rough_cost = await self.fetch_price_for(r, location)
-            return seq, r, p_info, rough_cost
-
-        results = await asyncio.gather(*[fetch_one(seq) for seq in state["candidate_ids"]])
-
-        price_cache = {seq: p_info for seq, _, p_info, _ in results}
-        enriched = [
-            ProcessDynamicInputs.format_enriched(seq, r, p_info, rough)
-            for seq, r, p_info, rough in results
-        ]
+        print("[price_node] 백엔드 선계산 재료비 적용")
+        price_cache = {}
+        enriched = []
+        for seq in state["candidate_ids"]:
+            r = state["recipes_by_seq"][seq]
+            costs = r.get("INGREDIENT_COSTS") or []
+            # [DEBUG #155] 백엔드에서 받아온 선계산 값 확인용
+            print(
+                f"[price_node][DEBUG] {r.get('RCP_NM')} | 총액 {r.get('TOTAL_COST')}원 | "
+                f"재료 {len(costs)}개(미상 {r.get('MISSING_COST_CNT')}개) | {costs}"
+            )
+            price_cache[seq] = self._format_cost_text(costs)
+            enriched.append(
+                ProcessDynamicInputs.format_enriched(seq, r, r.get("TOTAL_COST") or 0)
+            )
         return {**state, "enriched": enriched, "price_cache": price_cache}
 
     # ------------------------------------------------------------------
@@ -194,24 +182,34 @@ class RecipeGraphBuilder:
     # ------------------------------------------------------------------
     async def _analyze_one(self, seq: str, state: GraphState):
         recipe = state["recipes_by_seq"][seq]
-        price_info = state["price_cache"].get(seq, "가격 데이터 없음")
-
         static_data = ProcessDynamicInputs.build_static_data(recipe)
 
         try:
-            llm_input = ProcessDynamicInputs.build_llm_input(recipe, price_info, state["user_query"])
+            llm_input = ProcessDynamicInputs.build_llm_input(recipe, state["user_query"])
             llm_data = await self.chain.ainvoke(llm_input)
         except Exception as e:
             llm_data = {"error": str(e)}
 
-        result = {**static_data, **llm_data}
+        # 가격은 LLM이 아니라 백엔드 선계산 값을 그대로 사용 (#155)
+        costs = recipe.get("INGREDIENT_COSTS") or []
+        market_prices = [
+            {
+                "name": c["name"],
+                "recipe_amount": f"{c['requiredWeight']}g",
+                "market_unit": "g당",
+                "market_price": c.get("pricePerGram") or 0,
+                "calculation_reasoning": f"{c['requiredWeight']}g × {c.get('pricePerGram')}원/g",
+                "calculated_cost": c.get("cost") or 0,
+            }
+            for c in costs if c.get("priceAvailable")
+        ]
 
-        if "market_prices" in result and isinstance(result["market_prices"], list):
-            result["total_estimated_cost"] = sum(
-                float(p.get("calculated_cost", 0))
-                for p in result["market_prices"]
-            )
-        return result
+        return {
+            **static_data,
+            **llm_data,
+            "market_prices": market_prices,
+            "total_estimated_cost": recipe.get("TOTAL_COST") or 0,
+        }
 
     async def stream_analyze(self, state: GraphState):
         """Top5 분석 결과를 완료된 순서대로 yield (SSE용)"""
