@@ -54,6 +54,8 @@ dependencies {
 	// Spring Security 의존성 추가
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 
+	// Firebase Admin SDK (FCM 푸시 알림)
+	implementation 'com.google.firebase:firebase-admin:9.3.0'
 
 }
 

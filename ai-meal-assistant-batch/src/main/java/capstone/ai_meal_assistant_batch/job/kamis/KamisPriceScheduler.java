@@ -9,6 +9,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import capstone.ai_meal_assistant_batch.global.log.BatchLog;
+import capstone.ai_meal_assistant_batch.job.alert.PriceAlertNotificationService;
 import capstone.ai_meal_assistant_batch.job.naver.NaverShoppingPriceResult;
 import capstone.ai_meal_assistant_batch.job.naver.NaverShoppingPriceService;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ public class KamisPriceScheduler {
 
 	private final KamisPriceUpdateService service;
 	private final NaverShoppingPriceService naverShoppingPriceService;
+	private final PriceAlertNotificationService priceAlertNotificationService;
 
 	@EventListener(ApplicationReadyEvent.class)
 	public void runOnStartup() {
@@ -46,6 +48,15 @@ public class KamisPriceScheduler {
 			throw e;
 		}
 		fetchNaverShoppingPrices();
+		dispatchPriceAlerts();
+	}
+
+	private void dispatchPriceAlerts() {
+		try {
+			priceAlertNotificationService.dispatchAlerts();
+		} catch (Exception e) {
+			BatchLog.fail("priceAlertNotification", Instant.now(), e);
+		}
 	}
 
 	private void fetchNaverShoppingPrices() {

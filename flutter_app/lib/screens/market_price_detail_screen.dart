@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/models/market_price_models.dart';
+import 'package:flutter_app/services/price_alert_service.dart';
+import 'package:flutter_app/services/token_storage.dart';
 import 'package:flutter_app/theme.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -22,11 +24,45 @@ class MarketPriceDetailScreen extends StatefulWidget {
 
 class _MarketPriceDetailScreenState extends State<MarketPriceDetailScreen> {
   late bool _isFavorite;
+  bool _isFollowing = false;
+  bool _followLoading = true;
+
+  // KAMIS 항목 판별: dayChangeRate가 있으면 KAMIS
+  bool get _isKamis => widget.price.dayChangeRate != null;
 
   @override
   void initState() {
     super.initState();
     _isFavorite = widget.isFavorite;
+    if (_isKamis && widget.price.ingredientId != null) {
+      _loadFollowStatus();
+    } else {
+      _followLoading = false;
+    }
+  }
+
+  Future<void> _loadFollowStatus() async {
+    final jwt = await TokenStorage.getAccessToken();
+    final following = await PriceAlertService.isFollowing(
+        widget.price.ingredientId!, jwt);
+    if (mounted) setState(() { _isFollowing = following; _followLoading = false; });
+  }
+
+  Future<void> _toggleFollow() async {
+    if (widget.price.ingredientId == null) return;
+    setState(() => _followLoading = true);
+    final jwt = await TokenStorage.getAccessToken();
+    final success = _isFollowing
+        ? await PriceAlertService.unfollow(widget.price.ingredientId!, jwt)
+        : await PriceAlertService.follow(widget.price.ingredientId!, jwt);
+    if (!mounted) return;
+    if (success) setState(() => _isFollowing = !_isFollowing);
+    setState(() => _followLoading = false);
+    if (!success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('처리 중 오류가 발생했습니다')),
+      );
+    }
   }
 
   void _handleFavoriteToggle() {
@@ -63,6 +99,10 @@ class _MarketPriceDetailScreenState extends State<MarketPriceDetailScreen> {
                     _buildPriceHeroCard(),
                     const SizedBox(height: 12),
                     _buildNaverShoppingButton(),
+                    if (_isKamis) ...[
+                      const SizedBox(height: 12),
+                      _buildFollowButton(),
+                    ],
                     const SizedBox(height: 16),
                     _buildChangeRatesCard(),
                   ],
@@ -179,6 +219,47 @@ class _MarketPriceDetailScreenState extends State<MarketPriceDetailScreen> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFollowButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: _followLoading ? null : _toggleFollow,
+        icon: _followLoading
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: AppTheme.primaryColor),
+              )
+            : Icon(
+                _isFollowing
+                    ? Icons.notifications_active_rounded
+                    : Icons.notifications_none_rounded,
+                size: 18,
+                color: _isFollowing ? AppTheme.primaryColor : Colors.grey[600],
+              ),
+        label: Text(
+          _isFollowing ? '변동률 알림 설정됨' : '변동률 팔로우',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: _isFollowing ? AppTheme.primaryColor : Colors.grey[600],
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          side: BorderSide(
+            color: _isFollowing
+                ? AppTheme.primaryColor
+                : Colors.grey.shade300,
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16)),
         ),
       ),
     );
