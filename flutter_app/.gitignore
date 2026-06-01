@@ -11,6 +11,10 @@ secrets.yaml
 config.yml
 config.yaml
 
+# Firebase 설정 파일 (API 키 포함 — 절대 커밋 금지)
+ios/Runner/GoogleService-Info.plist
+android/app/google-services.json
+
 # Android 서명 키 및 설정 (매우 중요)
 *.keystore
 *.jks
