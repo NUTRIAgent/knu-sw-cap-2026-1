@@ -60,9 +60,31 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
+  /// 재료 문자열에서 수량·단위를 제거하고 이름만 반환
+  static String _nameOnly(String item) {
+    return item
+        // "300g", "1개", "2큰술", "1/2컵" 등 후행 수량+단위 제거
+        .replaceAll(
+          RegExp(
+            r'\s+\d[\d./]*\s*'
+            r'(g|kg|ml|l|L|개|컵|큰술|작은술|줌|봉|팩|캔|병|조각|인분|장|쪽|대|단|포|cc|꼬집|움큼)?'
+            r'\s*$',
+            caseSensitive: false,
+          ),
+          '',
+        )
+        // "약간", "적당량" 등 후행 모호 수량 제거
+        .replaceAll(
+          RegExp(r'\s+(약간|조금|적당량|소량|한꼬집|취향껏|필요량|기호에따라)\s*$'),
+          '',
+        )
+        .trim();
+  }
+
   Future<void> _openNaver(String item) async {
+    final query = _nameOnly(item);
     final uri = Uri.parse(
-        'https://search.shopping.naver.com/search/all?query=${Uri.encodeComponent(item)}');
+        'https://search.shopping.naver.com/search/all?query=${Uri.encodeComponent(query)}');
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
