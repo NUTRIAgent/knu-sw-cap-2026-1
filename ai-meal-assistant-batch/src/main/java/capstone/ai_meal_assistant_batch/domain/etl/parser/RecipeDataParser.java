@@ -80,7 +80,27 @@ public class RecipeDataParser {
             String amount = "";
             boolean isAbsolute = false;
 
-            String[] absoluteBases = {"물녹말", "녹말물", "흰살 생선", "채소 육수", "다시마 육수", "멸치 육수", "닭 육수", "고기 육수", "사골 육수", "육수"};
+            String[] absoluteBases = {
+                    // 달걀 부위 (specialBases의 "달걀" 오분리 방지)
+                    "달걀 흰자", "달걀 노른자",
+                    // 소고기 부위 (specialBases의 "소고기"/"쇠고기" 오분리 방지)
+                    "소고기 살치살", "소고기 등심", "소고기 안심", "소고기 갈비", "소고기 목살",
+                    "소고기 양지", "소고기 사태", "소고기 우둔살", "소고기 우둔", "소고기 채끝",
+                    "소고기 불고기", "소고기 다짐육", "소고기 치맛살", "소고기 살코기",
+                    "쇠고기 살치살", "쇠고기 등심", "쇠고기 안심", "쇠고기 갈비", "쇠고기 목살",
+                    "쇠고기 양지", "쇠고기 사태", "쇠고기 우둔살", "쇠고기 우둔", "쇠고기 채끝",
+                    "쇠고기 불고기", "쇠고기 살코기", "쇠고기 구이용",
+                    // 돼지고기 부위
+                    "돼지고기 목살", "돼지고기 목심", "돼지고기 삼겹살", "돼지고기 등심",
+                    "돼지고기 안심", "돼지고기 앞다리", "돼지고기 뒷다리", "돼지고기 갈비",
+                    "돼지고기 사태", "돼지고기 살코기",
+                    // 닭고기 부위
+                    "닭고기 가슴살", "닭고기 안심", "닭고기 다리살", "닭고기 다리", "닭고기 날개",
+                    // 양고기 부위
+                    "양고기 부채살",
+                    // 육수
+                    "물녹말", "녹말물", "흰살 생선", "채소 육수", "다시마 육수", "멸치 육수", "닭 육수", "고기 육수", "사골 육수", "육수"
+            };
             for (String base : absoluteBases) {
                 if (part.equals(base) || part.startsWith(base + " ") || part.startsWith(base + "(")) {
                     name = base;
@@ -151,21 +171,24 @@ public class RecipeDataParser {
                 }
             }
 
-            String[] specialBases = {"두 가지 묵", "두가지 묵", "달걀지단", "달걀", "오리고기", "돼지고기", "닭고기", "소고기", "쇠고기", "양고기", "파프리카", "피망", "식용 꽃", "대파", "당근", "연어", "메밀면", "연두부"};
-            for (String base : specialBases) {
-                if (name.contains(base) && !name.contains("가루")) {
-                    int idx = name.indexOf(base);
-                    String prefix = name.substring(0, idx).trim();
-                    String tail = name.substring(idx + base.length()).trim();
+            // absoluteBases로 이미 확정된 복합 재료명은 specialBases가 덮어쓰지 않도록 가드
+            if (!isAbsolute) {
+                String[] specialBases = {"두 가지 묵", "두가지 묵", "달걀지단", "달걀", "오리고기", "돼지고기", "닭고기", "소고기", "쇠고기", "양고기", "파프리카", "피망", "식용 꽃", "대파", "당근", "연어", "메밀면", "연두부"};
+                for (String base : specialBases) {
+                    if (name.contains(base) && !name.contains("가루")) {
+                        int idx = name.indexOf(base);
+                        String prefix = name.substring(0, idx).trim();
+                        String tail = name.substring(idx + base.length()).trim();
 
-                    prefix = prefix.replaceAll("^[.,(]+", "").replaceAll("[.,)]+$", "").trim();
-                    tail = tail.replaceAll("^[.,(]+", "").replaceAll("[.,)]+$", "").trim();
+                        prefix = prefix.replaceAll("^[.,(]+", "").replaceAll("[.,)]+$", "").trim();
+                        tail = tail.replaceAll("^[.,(]+", "").replaceAll("[.,)]+$", "").trim();
 
-                    if (!prefix.isEmpty()) extracted.append(prefix).append(" ");
-                    if (!tail.isEmpty()) extracted.append(tail).append(" ");
+                        if (!prefix.isEmpty()) extracted.append(prefix).append(" ");
+                        if (!tail.isEmpty()) extracted.append(tail).append(" ");
 
-                    name = base;
-                    break;
+                        name = base;
+                        break;
+                    }
                 }
             }
 

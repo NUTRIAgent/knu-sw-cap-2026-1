@@ -3,9 +3,12 @@ package capstone.ai_meal_assistant_batch.domain.menu.repository;
 import capstone.ai_meal_assistant_batch.domain.menu.entity.MenuIngredient;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Set;
 
 // 메뉴의 레시피 정보
 public interface MenuIngredientRepository extends JpaRepository<MenuIngredient, Long> {
@@ -14,7 +17,11 @@ public interface MenuIngredientRepository extends JpaRepository<MenuIngredient, 
     @EntityGraph(attributePaths = {"ingredient"})
     List<MenuIngredient> findAllByMenuId(Long menuId);
 
-    // STEP 4 용: 전체 menu_ingredients를 menu·ingredient 포함해서 한 번에 조회 (N+1 방지)
+    // STEP 5 용: 전체 menu_ingredients를 menu·ingredient 포함해서 한 번에 조회 (N+1 방지)
     @Query("SELECT mi FROM MenuIngredient mi JOIN FETCH mi.menu JOIN FETCH mi.ingredient")
     List<MenuIngredient> findAllWithMenuAndIngredient();
+
+    @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM MenuIngredient mi WHERE mi.menu.id IN :menuIds")
+    void deleteAllByMenuIds(@Param("menuIds") Set<Long> menuIds);
 }
