@@ -89,6 +89,7 @@ public class UserProfileService {
                     .fitnessGoal(request.getFitnessGoal() != null ? request.getFitnessGoal() : FitnessGoal.GENERAL)
                     .foodPreferences(request.getFoodPreferences() != null ? request.getFoodPreferences() : new java.util.ArrayList<>())
                     .healthConditions(request.getHealthConditions() != null ? request.getHealthConditions() : new java.util.ArrayList<>())
+                    .customNote(request.getCustomNote())
                     .build();
             preferenceRepository.save(preference);
         } else {
@@ -100,7 +101,8 @@ public class UserProfileService {
                     request.getProteinLevel(),
                     request.getFitnessGoal(),
                     request.getFoodPreferences(),
-                    request.getHealthConditions()
+                    request.getHealthConditions(),
+                    request.getCustomNote()
             );
         }
 
@@ -171,6 +173,7 @@ public class UserProfileService {
                 .foodPreferences(preference != null ? preference.getFoodPreferences() : List.of())
                 .allergies(allergies)
                 .healthConditions(preference != null ? preference.getHealthConditions() : List.of())
+                .customNote(preference != null ? preference.getCustomNote() : null)
                 .build();
     }
 }

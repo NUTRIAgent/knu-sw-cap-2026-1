@@ -26,6 +26,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   // 2. 식습관 및 예산 컨트롤러
   final TextEditingController _budgetController = TextEditingController();
+  final TextEditingController _customNoteController = TextEditingController();
   String _selectedVegType = 'NONE';
   double _spicyLevel = 3;
   String _selectedFitnessGoal = 'GENERAL';
@@ -66,6 +67,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     _bmrController.dispose();
     _inbodyScoreController.dispose();
     _budgetController.dispose();
+    _customNoteController.dispose();
     super.dispose();
   }
 
@@ -98,6 +100,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         foodPreferences: _selectedFoodPreferences.toList(),
         allergies: _selectedAllergies.toList(),
         healthConditions: _selectedHealthConditions.toList(),
+        customNote: _customNoteController.text.trim().isEmpty ? null : _customNoteController.text.trim(),
       );
 
       final result = await UserProfileService.saveProfile(request: request);
@@ -240,6 +243,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       },
                     );
                   }).toList(),
+                ),
+                const SizedBox(height: 16),
+                const Text('추가 선호사항 (선택)', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _customNoteController,
+                  maxLength: 200,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: '예: 제육볶음 같은 고기 요리가 좋아요. 국물 요리는 별로예요.',
+                    hintStyle: const TextStyle(color: Colors.grey),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    contentPadding: const EdgeInsets.all(12),
+                  ),
                 ),
                 const SizedBox(height: 32),
 

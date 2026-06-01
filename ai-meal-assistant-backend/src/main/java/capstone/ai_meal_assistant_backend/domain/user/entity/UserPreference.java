@@ -50,10 +50,13 @@ public class UserPreference extends BaseEntity {
     @Builder.Default
     private List<String> healthConditions = new ArrayList<>();
 
+    @Column(name = "custom_note", length = 500)
+    private String customNote;
+
     public void updatePreference(Integer mealBudget, VegetarianType vegetarianType,
                                  Integer spicyPreference, ProteinLevel proteinLevel,
                                  FitnessGoal fitnessGoal, List<String> foodPreferences,
-                                 List<String> healthConditions) {
+                                 List<String> healthConditions, String customNote) {
         this.mealBudget = mealBudget;
         this.vegetarianType = vegetarianType;
         this.spicyPreference = spicyPreference;
@@ -67,5 +70,6 @@ public class UserPreference extends BaseEntity {
             this.healthConditions.clear();
             this.healthConditions.addAll(healthConditions);
         }
+        if (customNote != null) this.customNote = customNote;
     }
 }

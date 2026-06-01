@@ -40,6 +40,7 @@ class _MyPageScreenState extends State<MyPageScreen>
       TextEditingController(text: "80");
   final TextEditingController _budgetController =
       TextEditingController(text: "8000");
+  final TextEditingController _customNoteController = TextEditingController();
 
   String _selectedVegType = 'NONE';
   double _spicyLevel = 3;
@@ -58,6 +59,7 @@ class _MyPageScreenState extends State<MyPageScreen>
   late Set<String> _bkFoodPreferences;
   late Set<String> _bkAllergies;
   late Set<String> _bkHealthConditions;
+  late String _bkCustomNote;
 
   // ── 피드백 탭 상태 ──────────────────────────────
   List<FeedbackHistoryItem> _feedbackItems = [];
@@ -114,6 +116,7 @@ class _MyPageScreenState extends State<MyPageScreen>
     _bmrController.dispose();
     _inbodyScoreController.dispose();
     _budgetController.dispose();
+    _customNoteController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -190,6 +193,7 @@ class _MyPageScreenState extends State<MyPageScreen>
     _selectedFoodPreferences = data.foodPreferences.toSet();
     _selectedAllergies = data.allergies.toSet();
     _selectedHealthConditions = data.healthConditions.toSet();
+    _customNoteController.text = data.customNote ?? '';
   }
 
   void _enableEditMode() {
@@ -208,6 +212,7 @@ class _MyPageScreenState extends State<MyPageScreen>
     _bkFoodPreferences = Set.from(_selectedFoodPreferences);
     _bkAllergies = Set.from(_selectedAllergies);
     _bkHealthConditions = Set.from(_selectedHealthConditions);
+    _bkCustomNote = _customNoteController.text;
     setState(() => _isEditMode = true);
   }
 
@@ -227,6 +232,7 @@ class _MyPageScreenState extends State<MyPageScreen>
     _selectedFoodPreferences = Set.from(_bkFoodPreferences);
     _selectedAllergies = Set.from(_bkAllergies);
     _selectedHealthConditions = Set.from(_bkHealthConditions);
+    _customNoteController.text = _bkCustomNote;
     setState(() => _isEditMode = false);
     ScaffoldMessenger.of(context)
         .showSnackBar(const SnackBar(content: Text('수정이 취소되었습니다.')));
@@ -255,6 +261,7 @@ class _MyPageScreenState extends State<MyPageScreen>
         foodPreferences: _selectedFoodPreferences.toList(),
         allergies: _selectedAllergies.toList(),
         healthConditions: _selectedHealthConditions.toList(),
+        customNote: _customNoteController.text.trim().isEmpty ? null : _customNoteController.text.trim(),
       );
       final result = await UserProfileService.updateProfile(request: request);
       if (!mounted) return;
@@ -302,7 +309,8 @@ class _MyPageScreenState extends State<MyPageScreen>
         _selectedAllergies.length != _bkAllergies.length ||
         !_selectedAllergies.containsAll(_bkAllergies) ||
         _selectedHealthConditions.length != _bkHealthConditions.length ||
-        !_selectedHealthConditions.containsAll(_bkHealthConditions);
+        !_selectedHealthConditions.containsAll(_bkHealthConditions) ||
+        _customNoteController.text != _bkCustomNote;
   }
 
   // ── 피드백 탭 로직 ────────────────────────────────
@@ -498,6 +506,17 @@ class _MyPageScreenState extends State<MyPageScreen>
                 borderColor: Colors.blue.shade200,
                 textColor: Colors.blue.shade800,
                 emptyText: '설정된 건강 상태 없음',
+              ),
+            ),
+            const SizedBox(height: 12),
+            _buildViewCard(
+              '추가 선호사항',
+              Text(
+                _customNoteController.text.trim().isEmpty
+                    ? '입력된 내용 없음'
+                    : _customNoteController.text.trim(),
+                style: TextStyle(
+                    fontSize: 14, color: Colors.grey[800], height: 1.5),
               ),
             ),
             const SizedBox(height: 32),
@@ -801,6 +820,22 @@ class _MyPageScreenState extends State<MyPageScreen>
                         : _selectedFoodPreferences.remove(pref)),
                   );
                 }).toList(),
+              ),
+              const SizedBox(height: 16),
+              const Text('추가 선호사항 (선택)', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _customNoteController,
+                maxLength: 200,
+                maxLines: 3,
+                enabled: _isEditMode,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  hintText: '예: 제육볶음 같은 고기 요리가 좋아요. 국물 요리는 별로예요.',
+                  hintStyle: const TextStyle(color: Colors.grey),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  contentPadding: const EdgeInsets.all(12),
+                ),
               ),
               const SizedBox(height: 32),
 
