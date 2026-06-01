@@ -165,12 +165,39 @@ class _CartScreenState extends State<CartScreen> {
                       fontSize: 14, fontWeight: FontWeight.w500),
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.storefront_outlined, size: 20),
-                color: AppTheme.primaryColor,
-                tooltip: '네이버 쇼핑 검색',
-                onPressed: () => _openNaver(item),
+              GestureDetector(
+                onTap: () => _openNaver(item),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF03C75A),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'N',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      SizedBox(width: 4),
+                      Text(
+                        '쇼핑',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
+              const SizedBox(width: 4),
               IconButton(
                 icon: Icon(Icons.close, size: 18, color: Colors.grey[400]),
                 tooltip: '삭제',
