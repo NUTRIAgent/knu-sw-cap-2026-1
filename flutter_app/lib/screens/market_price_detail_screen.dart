@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/models/market_price_models.dart';
 import 'package:flutter_app/theme.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class MarketPriceDetailScreen extends StatefulWidget {
   final IngredientPriceModel price;
@@ -15,7 +16,8 @@ class MarketPriceDetailScreen extends StatefulWidget {
   });
 
   @override
-  State<MarketPriceDetailScreen> createState() => _MarketPriceDetailScreenState();
+  State<MarketPriceDetailScreen> createState() =>
+      _MarketPriceDetailScreenState();
 }
 
 class _MarketPriceDetailScreenState extends State<MarketPriceDetailScreen> {
@@ -30,6 +32,18 @@ class _MarketPriceDetailScreenState extends State<MarketPriceDetailScreen> {
   void _handleFavoriteToggle() {
     setState(() => _isFavorite = !_isFavorite);
     widget.onFavoriteToggle?.call();
+  }
+
+  Future<void> _openNaverShopping() async {
+    final url = Uri.https('search.shopping.naver.com', '/search/all', {
+      'query': widget.price.ingredientName,
+    });
+    final launched = await launchUrl(url, mode: LaunchMode.externalApplication);
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('브라우저를 열 수 없습니다.')));
+    }
   }
 
   @override
@@ -47,6 +61,8 @@ class _MarketPriceDetailScreenState extends State<MarketPriceDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildPriceHeroCard(),
+                    const SizedBox(height: 12),
+                    _buildNaverShoppingButton(),
                     const SizedBox(height: 16),
                     _buildChangeRatesCard(),
                   ],
@@ -125,8 +141,11 @@ class _MarketPriceDetailScreenState extends State<MarketPriceDetailScreen> {
           const SizedBox(height: 12),
           Row(
             children: [
-              Icon(Icons.verified_outlined,
-                  size: 12, color: Colors.white.withValues(alpha: 0.6)),
+              Icon(
+                Icons.verified_outlined,
+                size: 12,
+                color: Colors.white.withValues(alpha: 0.6),
+              ),
               const SizedBox(width: 4),
               Text(
                 'KAMIS 한국농수산식품유통공사 제공',
@@ -142,9 +161,35 @@ class _MarketPriceDetailScreenState extends State<MarketPriceDetailScreen> {
     );
   }
 
+  Widget _buildNaverShoppingButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: _openNaverShopping,
+        icon: const Icon(Icons.open_in_new_rounded, size: 18),
+        label: const Text(
+          '네이버 쇼핑에서 가격 비교',
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF03C75A), // 네이버 브랜드 그린
+          foregroundColor: Colors.white,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildChangeRatesCard() {
     final p = widget.price;
-    final hasAny = p.dayChangeRate != null || p.weekChangeRate != null || p.monthChangeRate != null;
+    final hasAny =
+        p.dayChangeRate != null ||
+        p.weekChangeRate != null ||
+        p.monthChangeRate != null;
     if (!hasAny) return const SizedBox.shrink();
 
     return Container(
@@ -165,7 +210,11 @@ class _MarketPriceDetailScreenState extends State<MarketPriceDetailScreen> {
         children: [
           const Text(
             '가격 변동률',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.black87),
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: Colors.black87,
+            ),
           ),
           const SizedBox(height: 16),
           if (p.dayChangeRate != null) _buildRateBar('전일 대비', p.dayChangeRate!),
@@ -196,10 +245,19 @@ class _MarketPriceDetailScreenState extends State<MarketPriceDetailScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label, style: const TextStyle(fontSize: 12, color: Colors.black54)),
             Text(
-              isZero ? '변동 없음' : '${isPositive ? '+' : ''}${rate.toStringAsFixed(1)}%',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: color),
+              label,
+              style: const TextStyle(fontSize: 12, color: Colors.black54),
+            ),
+            Text(
+              isZero
+                  ? '변동 없음'
+                  : '${isPositive ? '+' : ''}${rate.toStringAsFixed(1)}%',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
             ),
           ],
         ),
@@ -216,5 +274,4 @@ class _MarketPriceDetailScreenState extends State<MarketPriceDetailScreen> {
       ],
     );
   }
-
 }
