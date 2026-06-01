@@ -26,8 +26,8 @@ class _RecommendationHistoryScreenState
     _load();
   }
 
-  Future<void> _load() async {
-    setState(() => _loading = true);
+  Future<void> _load({bool silent = false}) async {
+    if (!silent) setState(() => _loading = true);
     final items = await RecommendationService.fetchMyAiPicks(widget.jwt);
     if (mounted) setState(() { _items = items; _loading = false; });
   }
@@ -102,7 +102,7 @@ class _RecommendationHistoryScreenState
             ),
           ),
         );
-        _load();
+        await _load(silent: true);
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
