@@ -74,13 +74,9 @@ class _PriceAlertScreenState extends State<PriceAlertScreen> {
   }
 
   Future<void> _sendDemoNotification() async {
-    if (_alerts.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('팔로우한 재료가 없습니다')),
-      );
-      return;
-    }
-    final name = _alerts.first['kamisItemName'] as String? ?? '양파';
+    final name = _alerts.isNotEmpty
+        ? (_alerts.first['kamisItemName'] as String? ?? '양파')
+        : '양파';
     await LocalNotificationService.show(
       '📊 $name 가격 변동',
       '▲ 5.3% 변동 (1,200원 → 1,264원)',
