@@ -144,7 +144,7 @@ class _CartScreenState extends State<CartScreen> {
         final item = _items[index];
         return Container(
           margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          padding: const EdgeInsets.only(left: 8, right: 16, top: 4, bottom: 4),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(14),
@@ -161,8 +161,11 @@ class _CartScreenState extends State<CartScreen> {
               IconButton(
                 icon: Icon(Icons.close, size: 18, color: Colors.grey[400]),
                 tooltip: '삭제',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
                 onPressed: () => _remove(item),
               ),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   item,
