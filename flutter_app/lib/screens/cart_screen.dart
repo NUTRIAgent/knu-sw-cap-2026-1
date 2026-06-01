@@ -12,6 +12,7 @@ class CartScreen extends StatefulWidget {
 
 class _CartScreenState extends State<CartScreen> {
   List<CartItem> _items = [];
+  final Set<String> _collapsed = {};
 
   @override
   void initState() {
@@ -175,40 +176,61 @@ class _CartScreenState extends State<CartScreen> {
       itemBuilder: (context, groupIndex) {
         final menuName = menuNames[groupIndex];
         final items = grouped[menuName]!;
+        final isCollapsed = _collapsed.contains(menuName);
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (groupIndex > 0) const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Row(
-                children: [
-                  Container(
-                    width: 3,
-                    height: 14,
-                    decoration: BoxDecoration(
-                      gradient: AppTheme.aiGradient,
-                      borderRadius: BorderRadius.circular(2),
+            GestureDetector(
+              onTap: () => setState(() {
+                if (isCollapsed) {
+                  _collapsed.remove(menuName);
+                } else {
+                  _collapsed.add(menuName);
+                }
+              }),
+              child: Container(
+                color: Colors.transparent,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 3,
+                      height: 14,
+                      decoration: BoxDecoration(
+                        gradient: AppTheme.aiGradient,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    menuName,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black87,
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        menuName,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black87,
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '${items.length}개',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-                  ),
-                ],
+                    Text(
+                      '${items.length}개',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      isCollapsed
+                          ? Icons.keyboard_arrow_down_rounded
+                          : Icons.keyboard_arrow_up_rounded,
+                      size: 20,
+                      color: Colors.grey[400],
+                    ),
+                  ],
+                ),
               ),
             ),
-            ...items.map((item) => _buildItemCard(item)),
+            if (!isCollapsed) ...items.map((item) => _buildItemCard(item)),
           ],
         );
       },
