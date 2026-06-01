@@ -1,6 +1,5 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_app/models/market_price_models.dart';
 import 'package:flutter_app/screens/market_price_detail_screen.dart';
 import 'package:flutter_app/services/favorite_ingredient_service.dart';
@@ -35,10 +34,8 @@ class _MarketPriceScreenState extends State<MarketPriceScreen>
 
   bool get _isNaverTab => _tabController.index == 1;
 
-  List<IngredientPriceModel> get _currentFiltered {
-    final base = _isNaverTab ? _naverFiltered : _kamisFiltered;
-    return _applySort(base);
-  }
+  List<IngredientPriceModel> get _currentFiltered =>
+      _isNaverTab ? _naverFiltered : _kamisFiltered;
 
   @override
   void initState() {
@@ -73,8 +70,7 @@ class _MarketPriceScreenState extends State<MarketPriceScreen>
         _kamisPrices = kamisPrices;
         _naverPrices = naverPrices;
         _favoriteIds = favIds;
-        _kamisFiltered = _applyFilter(_kamisPrices);
-        _naverFiltered = _applyFilter(_naverPrices, applyFav: true);
+        _updateDisplayLists();
         _isLoading = false;
       });
     } catch (e) {
@@ -102,9 +98,12 @@ class _MarketPriceScreenState extends State<MarketPriceScreen>
     return list;
   }
 
-  List<IngredientPriceModel> _applySort(List<IngredientPriceModel> list) {
+  List<IngredientPriceModel> _applySort(
+    List<IngredientPriceModel> list, {
+    bool naver = false,
+  }) {
     final sorted = List<IngredientPriceModel>.from(list);
-    if (_isNaverTab) {
+    if (naver) {
       switch (_naverSort) {
         case _NaverSort.cheapest:
           sorted.sort((a, b) => a.pricePerGram.compareTo(b.pricePerGram));
@@ -134,10 +133,15 @@ class _MarketPriceScreenState extends State<MarketPriceScreen>
     return sorted;
   }
 
+  void _updateDisplayLists() {
+    _kamisFiltered = _applySort(_applyFilter(_kamisPrices));
+    _naverFiltered =
+        _applySort(_applyFilter(_naverPrices, applyFav: true), naver: true);
+  }
+
   void _onSearch(String query) {
     setState(() {
-      _kamisFiltered = _applyFilter(_kamisPrices);
-      _naverFiltered = _applyFilter(_naverPrices, applyFav: true);
+      _updateDisplayLists();
     });
   }
 
@@ -151,7 +155,7 @@ class _MarketPriceScreenState extends State<MarketPriceScreen>
       } else {
         _favoriteIds = Set.from(_favoriteIds)..add(id);
       }
-      _naverFiltered = _applyFilter(_naverPrices, applyFav: true);
+      _updateDisplayLists();
     });
     try {
       if (isFav) {
@@ -166,7 +170,7 @@ class _MarketPriceScreenState extends State<MarketPriceScreen>
         } else {
           _favoriteIds = Set.from(_favoriteIds)..remove(id);
         }
-        _naverFiltered = _applyFilter(_naverPrices, applyFav: true);
+        _updateDisplayLists();
       });
     }
   }
@@ -332,7 +336,6 @@ class _MarketPriceScreenState extends State<MarketPriceScreen>
             switch (value) {
               case 'fav':
                 _showFavoritesOnly = !_showFavoritesOnly;
-                _naverFiltered = _applyFilter(_naverPrices, applyFav: true);
               case 'naver_none':
                 _naverSort = _NaverSort.none;
               case 'cheapest':
@@ -350,6 +353,7 @@ class _MarketPriceScreenState extends State<MarketPriceScreen>
                 _kamisSort = _KamisSort.fallingFirst;
             }
           }
+          _updateDisplayLists();
         });
       },
       itemBuilder: (context) {
@@ -778,9 +782,11 @@ class _MarqueeStrip extends StatefulWidget {
   State<_MarqueeStrip> createState() => _MarqueeStripState();
 }
 
-class _MarqueeStripState extends State<_MarqueeStrip> {
+class _MarqueeStripState extends State<_MarqueeStrip>
+    with SingleTickerProviderStateMixin {
   final ScrollController _controller = ScrollController();
-  Timer? _timer;
+  Ticker? _ticker;
+  Duration _lastElapsed = Duration.zero;
 
   static const int _repeatCount = 4;
   static const double _pixelsPerMs = 0.04; // 40px/s
@@ -795,30 +801,36 @@ class _MarqueeStripState extends State<_MarqueeStrip> {
   void didUpdateWidget(_MarqueeStrip oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.items != widget.items) {
-      _timer?.cancel();
+      _ticker?.stop();
       if (_controller.hasClients) _controller.jumpTo(0);
+      _lastElapsed = Duration.zero;
       WidgetsBinding.instance.addPostFrameCallback((_) => _startScroll());
     }
   }
 
   void _startScroll() {
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(milliseconds: 16), (_) {
+    _ticker?.dispose();
+    _lastElapsed = Duration.zero;
+    _ticker = createTicker((elapsed) {
       if (!_controller.hasClients) return;
       final pos = _controller.position;
       final max = pos.maxScrollExtent;
       if (max <= 0) return;
 
+      final deltaMs = (elapsed - _lastElapsed).inMicroseconds / 1000.0;
+      _lastElapsed = elapsed;
+
       // 전체 콘텐츠 너비의 1/_repeatCount 지점에서 처음으로 점프 (seamless loop)
       final singleWidth = (max + pos.viewportDimension) / _repeatCount;
-      final next = pos.pixels + (_pixelsPerMs * 16);
+      final next = pos.pixels + (_pixelsPerMs * deltaMs);
       _controller.jumpTo(next >= singleWidth ? next - singleWidth : next);
     });
+    _ticker!.start();
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _ticker?.dispose();
     _controller.dispose();
     super.dispose();
   }
