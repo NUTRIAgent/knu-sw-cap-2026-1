@@ -34,9 +34,9 @@ public record IngredientPriceResponse(
         );
     }
 
-    public static IngredientPriceResponse fromKamis(IngredientKamisPrice price) {
+    public static IngredientPriceResponse fromKamis(IngredientKamisPrice price, Long ingredientId) {
         return new IngredientPriceResponse(
-                null,
+                ingredientId,
                 price.getKamisItemName(),
                 price.getPricePerGram(),
                 price.getOriginalPrice(),

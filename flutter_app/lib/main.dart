@@ -29,6 +29,7 @@ Future<void> main() async {
     badge: true,
     sound: true,
   );
+  FirebaseMessaging.instance.getToken().then((t) => print('🔔 FCM TOKEN: $t'));
   runApp(const NutriAgentApp());
 }
 

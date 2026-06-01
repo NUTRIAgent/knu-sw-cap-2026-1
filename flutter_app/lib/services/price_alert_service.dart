@@ -55,6 +55,22 @@ class PriceAlertService {
     }
   }
 
+  static Future<List<Map<String, dynamic>>> getMyAlerts(String? jwt) async {
+    if (jwt == null || jwt.isEmpty) return [];
+    try {
+      final res = await http.get(
+        Uri.parse('${ApiConfig.baseUrl}/api/notifications/alerts'),
+        headers: {'Authorization': 'Bearer $jwt'},
+      ).timeout(const Duration(seconds: 10));
+      final body = jsonDecode(utf8.decode(res.bodyBytes));
+      if (body['success'] != true || body['data'] == null) return [];
+      return List<Map<String, dynamic>>.from(body['data']);
+    } catch (e) {
+      debugPrint('알림 목록 조회 실패: $e');
+      return [];
+    }
+  }
+
   static Future<bool> isFollowing(int ingredientId, String? jwt) async {
     if (jwt == null || jwt.isEmpty) return false;
     try {
