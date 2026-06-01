@@ -36,7 +36,7 @@ class CartService {
   static Future<List<CartItem>> getItems() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getStringList(_key) ?? [];
-    final items = raw.map(CartItem.fromStorageString).toList();
+    final items = raw.map((s) => CartItem.fromStorageString(s)).toList();
     itemCount.value = items.length;
     return items;
   }
