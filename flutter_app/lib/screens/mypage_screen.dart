@@ -508,6 +508,17 @@ class _MyPageScreenState extends State<MyPageScreen>
                 emptyText: '설정된 건강 상태 없음',
               ),
             ),
+            const SizedBox(height: 12),
+            _buildViewCard(
+              '추가 선호사항',
+              Text(
+                _customNoteController.text.trim().isEmpty
+                    ? '입력된 내용 없음'
+                    : _customNoteController.text.trim(),
+                style: TextStyle(
+                    fontSize: 14, color: Colors.grey[800], height: 1.5),
+              ),
+            ),
             const SizedBox(height: 32),
           ],
         ),
