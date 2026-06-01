@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class LocalNotificationService {
@@ -5,27 +6,37 @@ class LocalNotificationService {
 
   static Future<void> init() async {
     const iosInit = DarwinInitializationSettings(
-      requestAlertPermission: false,
-      requestBadgePermission: false,
-      requestSoundPermission: false,
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
     );
     await _plugin.initialize(
       const InitializationSettings(iOS: iosInit),
     );
+
+    // iOS 알림 권한 명시 요청
+    await _plugin
+        .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin>()
+        ?.requestPermissions(alert: true, badge: true, sound: true);
   }
 
   static Future<void> show(String title, String body) async {
-    await _plugin.show(
-      0,
-      title,
-      body,
-      const NotificationDetails(
-        iOS: DarwinNotificationDetails(
-          presentAlert: true,
-          presentBadge: true,
-          presentSound: true,
+    try {
+      await _plugin.show(
+        0,
+        title,
+        body,
+        const NotificationDetails(
+          iOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
         ),
-      ),
-    );
+      );
+    } catch (e) {
+      debugPrint('로컬 알림 발송 실패: $e');
+    }
   }
 }
