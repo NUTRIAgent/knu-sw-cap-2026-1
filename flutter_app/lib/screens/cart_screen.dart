@@ -34,7 +34,7 @@ class _CartScreenState extends State<CartScreen> {
 
   Future<void> _remove(CartItem item) async {
     await CartService.removeItem(item);
-    _load();
+    await _load();
   }
 
   Future<void> _clearAll() async {
@@ -57,7 +57,7 @@ class _CartScreenState extends State<CartScreen> {
     );
     if (confirmed == true) {
       await CartService.clear();
-      _load();
+      await _load();
     }
   }
 
