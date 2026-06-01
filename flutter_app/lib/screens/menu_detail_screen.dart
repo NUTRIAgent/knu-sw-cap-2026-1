@@ -168,7 +168,10 @@ class _AiPickBody extends StatelessWidget {
                 ],
                 if (result.marketPrices.isNotEmpty) ...[
                   const SizedBox(height: 16),
-                  _AiIngredientsCart(prices: result.marketPrices),
+                  _AiIngredientsCart(
+                    prices: result.marketPrices,
+                    menuName: result.menuName,
+                  ),
                   const SizedBox(height: 16),
                   _MarketPricesTable(
                     prices: result.marketPrices,
@@ -249,7 +252,10 @@ class _CandidateBody extends StatelessWidget {
                   _DetailNutrition(detail: detail!),
                   if ((detail!.ingredientsText ?? '').isNotEmpty) ...[
                     const SizedBox(height: 16),
-                    _Ingredients(text: detail!.ingredientsText!),
+                    _Ingredients(
+                      text: detail!.ingredientsText!,
+                      menuName: candidate.name,
+                    ),
                   ],
                   if ((detail!.healthTip ?? '').isNotEmpty) ...[
                     const SizedBox(height: 16),
@@ -688,7 +694,8 @@ class _MarketPricesTable extends StatelessWidget {
 // ── AI 픽 재료 장바구니 선택 ──────────────────────────────────
 class _AiIngredientsCart extends StatefulWidget {
   final List<MarketPriceItem> prices;
-  const _AiIngredientsCart({required this.prices});
+  final String menuName;
+  const _AiIngredientsCart({required this.prices, required this.menuName});
 
   @override
   State<_AiIngredientsCart> createState() => _AiIngredientsCartState();
@@ -721,7 +728,7 @@ class _AiIngredientsCartState extends State<_AiIngredientsCart> {
 
   Future<void> _addToCart() async {
     final toAdd = _selected.map((i) => _items[i]).toList();
-    await CartService.addItems(toAdd);
+    await CartService.addItems(toAdd, menuName: widget.menuName);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -812,7 +819,8 @@ class _AiIngredientsCartState extends State<_AiIngredientsCart> {
 
 class _Ingredients extends StatefulWidget {
   final String text;
-  const _Ingredients({required this.text});
+  final String menuName;
+  const _Ingredients({required this.text, required this.menuName});
 
   @override
   State<_Ingredients> createState() => _IngredientsState();
@@ -846,7 +854,7 @@ class _IngredientsState extends State<_Ingredients> {
 
   Future<void> _addToCart() async {
     final toAdd = _selected.map((i) => _items[i]).toList();
-    await CartService.addItems(toAdd);
+    await CartService.addItems(toAdd, menuName: widget.menuName);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

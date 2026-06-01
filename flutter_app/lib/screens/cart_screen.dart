@@ -11,7 +11,7 @@ class CartScreen extends StatefulWidget {
 }
 
 class _CartScreenState extends State<CartScreen> {
-  List<String> _items = [];
+  List<CartItem> _items = [];
 
   @override
   void initState() {
@@ -31,7 +31,7 @@ class _CartScreenState extends State<CartScreen> {
     if (mounted) setState(() => _items = items);
   }
 
-  Future<void> _remove(String item) async {
+  Future<void> _remove(CartItem item) async {
     await CartService.removeItem(item);
     _load();
   }
@@ -60,10 +60,8 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
-  /// 재료 문자열에서 수량·단위를 제거하고 이름만 반환
-  static String _nameOnly(String item) {
-    return item
-        // "300g", "1개", "2큰술", "1/2컵" 등 후행 수량+단위 제거
+  static String _nameOnly(String ingredient) {
+    return ingredient
         .replaceAll(
           RegExp(
             r'\s+\d[\d./]*\s*'
@@ -73,7 +71,6 @@ class _CartScreenState extends State<CartScreen> {
           ),
           '',
         )
-        // "약간", "적당량" 등 후행 모호 수량 제거
         .replaceAll(
           RegExp(r'\s+(약간|조금|적당량|소량|한꼬집|취향껏|필요량|기호에따라)\s*$'),
           '',
@@ -81,8 +78,8 @@ class _CartScreenState extends State<CartScreen> {
         .trim();
   }
 
-  Future<void> _openNaver(String item) async {
-    final query = _nameOnly(item);
+  Future<void> _openNaver(String ingredient) async {
+    final query = _nameOnly(ingredient);
     final uri = Uri.parse(
         'https://search.shopping.naver.com/search/all?query=${Uri.encodeComponent(query)}');
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
@@ -92,6 +89,16 @@ class _CartScreenState extends State<CartScreen> {
         );
       }
     }
+  }
+
+  /// menuName 기준으로 그룹핑
+  Map<String, List<CartItem>> get _grouped {
+    final map = <String, List<CartItem>>{};
+    for (final item in _items) {
+      final key = item.menuName.isEmpty ? '기타' : item.menuName;
+      map.putIfAbsent(key, () => []).add(item);
+    }
+    return map;
   }
 
   @override
@@ -159,78 +166,122 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Widget _buildList() {
+    final grouped = _grouped;
+    final menuNames = grouped.keys.toList();
+
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(24, 4, 24, 24),
-      itemCount: _items.length,
-      itemBuilder: (context, index) {
-        final item = _items[index];
-        return Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.only(left: 8, right: 16, top: 4, bottom: 4),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              IconButton(
-                icon: Icon(Icons.close, size: 18, color: Colors.grey[400]),
-                tooltip: '삭제',
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                onPressed: () => _remove(item),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  item,
-                  style: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.w500),
-                ),
-              ),
-              GestureDetector(
-                onTap: () => _openNaver(item),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF03C75A),
-                    borderRadius: BorderRadius.circular(8),
+      itemCount: menuNames.length,
+      itemBuilder: (context, groupIndex) {
+        final menuName = menuNames[groupIndex];
+        final items = grouped[menuName]!;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (groupIndex > 0) const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                children: [
+                  Container(
+                    width: 3,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.aiGradient,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'N',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      SizedBox(width: 4),
-                      Text(
-                        '쇼핑',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
+                  const SizedBox(width: 8),
+                  Text(
+                    menuName,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black87,
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${items.length}개',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+            ...items.map((item) => _buildItemCard(item)),
+          ],
         );
       },
+    );
+  }
+
+  Widget _buildItemCard(CartItem item) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(left: 8, right: 16, top: 4, bottom: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            icon: Icon(Icons.close, size: 18, color: Colors.grey[400]),
+            tooltip: '삭제',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            onPressed: () => _remove(item),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              item.ingredient,
+              style: const TextStyle(
+                  fontSize: 14, fontWeight: FontWeight.w500),
+            ),
+          ),
+          GestureDetector(
+            onTap: () => _openNaver(item.ingredient),
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: const Color(0xFF03C75A),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'N',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  SizedBox(width: 4),
+                  Text(
+                    '쇼핑',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
