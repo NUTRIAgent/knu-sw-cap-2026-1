@@ -16,7 +16,8 @@ public class RecommendationLogResponse {
     private Integer feedbackScore;
     private Integer starRating;
     private String feedbackReason;
+    private String aiResultJson;
 
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
 }

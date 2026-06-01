@@ -32,6 +32,10 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
   bool _aiLoading = false;
   String? _aiError;
 
+  // ── 저장 상태 ──
+  bool _saving = false;
+  bool _saved = false;
+
   bool get _isAiPick => widget.aiResult != null;
 
   @override
@@ -51,6 +55,20 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
     } else {
       setState(() { _loading = false; _error = '상세 정보를 불러오지 못했습니다.'; });
     }
+  }
+
+  Future<void> _saveAiResult(RecommendationResult result) async {
+    if (_saving || widget.jwt == null) return;
+    setState(() => _saving = true);
+    final id = await RecommendationService.saveAiResult(result, widget.jwt);
+    if (!mounted) return;
+    setState(() { _saving = false; _saved = id != null; });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(id != null ? '추천 이력에 저장됐습니다' : '저장에 실패했습니다'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   Future<void> _requestAiAnalysis() async {
@@ -84,6 +102,27 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         actions: shownAi != null
             ? [
+                if (widget.jwt != null)
+                  IconButton(
+                    icon: _saving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: AppTheme.primaryColor),
+                          )
+                        : Icon(
+                            _saved
+                                ? Icons.bookmark_rounded
+                                : Icons.bookmark_border_rounded,
+                            color: _saved
+                                ? AppTheme.primaryColor
+                                : Colors.grey[600],
+                          ),
+                    onPressed: _saving
+                        ? null
+                        : () => _saveAiResult(shownAi),
+                  ),
                 Container(
                   margin: const EdgeInsets.only(right: 16),
                   padding:
@@ -109,7 +148,7 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
             : null,
       ),
       body: shownAi != null
-          ? _AiPickBody(result: shownAi)
+          ? AiPickBody(result: shownAi)
           : _CandidateBody(
               candidate: widget.candidate!,
               detail: _detail,
@@ -126,9 +165,9 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
 }
 
 // ── AI 픽 상세 본문 ──────────────────────────────────────────
-class _AiPickBody extends StatelessWidget {
+class AiPickBody extends StatelessWidget {
   final RecommendationResult result;
-  const _AiPickBody({required this.result});
+  const AiPickBody({required this.result});
 
   @override
   Widget build(BuildContext context) {

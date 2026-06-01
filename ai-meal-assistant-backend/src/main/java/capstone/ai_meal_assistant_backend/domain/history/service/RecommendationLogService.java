@@ -30,10 +30,48 @@ public class RecommendationLogService {
         Menu menu = menuRepository.findById(menuId)
                 .orElseThrow(() -> new IllegalArgumentException("메뉴를 찾을 수 없습니다."));
 
-        RecommendationLog log = new RecommendationLog();
-        log.setUser(user);
-        log.setSelectedMenu(menu);
+        RecommendationLog log = recommendationLogRepository
+                .findByUserAndSelectedMenu(user, menu)
+                .orElseGet(() -> {
+                    RecommendationLog newLog = new RecommendationLog();
+                    newLog.setUser(user);
+                    newLog.setSelectedMenu(menu);
+                    return newLog;
+                });
         log.setFeedbackScore(feedbackScore);
+        log.setStarRating(starRating);
+        log.setFeedbackReason(feedbackReason);
+        recommendationLogRepository.save(log);
+    }
+
+    @Transactional
+    public Long saveAiResult(String email, Long menuId, String aiResultJson) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        Menu menu = menuRepository.findById(menuId)
+                .orElseThrow(() -> new IllegalArgumentException("메뉴를 찾을 수 없습니다."));
+
+        RecommendationLog log = recommendationLogRepository
+                .findByUserAndSelectedMenu(user, menu)
+                .orElseGet(() -> {
+                    RecommendationLog newLog = new RecommendationLog();
+                    newLog.setUser(user);
+                    newLog.setSelectedMenu(menu);
+                    return newLog;
+                });
+        log.setAiResultJson(aiResultJson);
+        return recommendationLogRepository.save(log).getId();
+    }
+
+    @Transactional
+    public void updateFeedback(String email, Long logId, Integer starRating, String feedbackReason) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        RecommendationLog log = recommendationLogRepository.findById(logId)
+                .orElseThrow(() -> new IllegalArgumentException("이력을 찾을 수 없습니다."));
+        if (!log.getUser().getId().equals(user.getId())) {
+            throw new SecurityException("권한이 없습니다.");
+        }
         log.setStarRating(starRating);
         log.setFeedbackReason(feedbackReason);
         recommendationLogRepository.save(log);
@@ -72,6 +110,7 @@ public class RecommendationLogService {
                         .menuImageUrl(log.getSelectedMenu().getMainImageUrl())
                         .starRating(log.getStarRating())
                         .feedbackReason(log.getFeedbackReason())
+                        .aiResultJson(log.getAiResultJson())
                         .createdAt(log.getCreatedAt())
                         .build())
                 .collect(Collectors.toList());

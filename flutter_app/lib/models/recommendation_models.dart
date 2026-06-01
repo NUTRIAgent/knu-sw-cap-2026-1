@@ -184,6 +184,14 @@ class NutritionInfo {
     carbs: json['carbs'] ?? '-',
     sodium: json['sodium'] ?? '-',
   );
+
+  Map<String, dynamic> toJson() => {
+    'energy': energy,
+    'protein': protein,
+    'fat': fat,
+    'carbs': carbs,
+    'sodium': sodium,
+  };
 }
 
 class RecipeStep {
@@ -202,6 +210,12 @@ class RecipeStep {
     content: json['content'] ?? '',
     image: json['image'] ?? '',
   );
+
+  Map<String, dynamic> toJson() => {
+    'step_no': stepNo,
+    'content': content,
+    'image': image,
+  };
 }
 
 class MarketPriceItem {
@@ -230,6 +244,15 @@ class MarketPriceItem {
         calculationReasoning: json['calculation_reasoning'] ?? '',
         calculatedCost: json['calculated_cost'] ?? 0,
       );
+
+  Map<String, dynamic> toJson() => {
+    'name': name,
+    'recipe_amount': recipeAmount,
+    'market_unit': marketUnit,
+    'market_price': marketPrice,
+    'calculation_reasoning': calculationReasoning,
+    'calculated_cost': calculatedCost,
+  };
 }
 
 class RecommendationResult {
@@ -274,6 +297,19 @@ class RecommendationResult {
             .map((e) => MarketPriceItem.fromJson(e))
             .toList(),
       );
+
+  Map<String, dynamic> toJson() => {
+    'menu_id': menuId,
+    'menu_name': menuName,
+    'main_img': mainImg,
+    'nutrition_info': nutritionInfo.toJson(),
+    'recipe_steps': recipeSteps.map((s) => s.toJson()).toList(),
+    'na_tip': naTip,
+    'selection_reason': selectionReason,
+    'personalized_recipe_tip': personalizedRecipeTip,
+    'total_estimated_cost': totalEstimatedCost,
+    'market_prices': marketPrices.map((p) => p.toJson()).toList(),
+  };
 }
 
 class FeedbackHistoryItem {
@@ -311,6 +347,7 @@ class AiPickItem {
   final String? menuImageUrl;
   final int? starRating;
   final String? feedbackReason;
+  final String? aiResultJson;
   final String? createdAt;
 
   const AiPickItem({
@@ -320,6 +357,7 @@ class AiPickItem {
     this.menuImageUrl,
     this.starRating,
     this.feedbackReason,
+    this.aiResultJson,
     this.createdAt,
   });
 
@@ -330,6 +368,7 @@ class AiPickItem {
         menuImageUrl: json['menuImageUrl'],
         starRating: (json['starRating'] as num?)?.toInt(),
         feedbackReason: json['feedbackReason'],
+        aiResultJson: json['aiResultJson'],
         createdAt: json['createdAt'],
       );
 }

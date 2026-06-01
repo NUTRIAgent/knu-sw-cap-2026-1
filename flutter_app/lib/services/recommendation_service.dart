@@ -186,6 +186,62 @@ class RecommendationService {
     }
   }
 
+  static Future<int?> saveAiResult(
+      RecommendationResult result, String? jwt) async {
+    if (jwt == null || jwt.isEmpty) return null;
+    final uri =
+        Uri.parse('${ApiConfig.baseUrl}/api/recommendation-logs/save');
+    try {
+      final response = await http
+          .post(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $jwt',
+            },
+            body: jsonEncode({
+              'menuId': result.menuId,
+              'aiResultJson': jsonEncode(result.toJson()),
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
+      if (response.statusCode != 200) return null;
+      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      if (json['success'] != true) return null;
+      return (json['id'] as num?)?.toInt();
+    } catch (e) {
+      debugPrint('AI 결과 저장 실패: $e');
+      return null;
+    }
+  }
+
+  static Future<bool> updateFeedback(
+      int logId, int starRating, String feedbackReason, String? jwt) async {
+    if (jwt == null || jwt.isEmpty) return false;
+    final uri = Uri.parse(
+        '${ApiConfig.baseUrl}/api/recommendation-logs/$logId/feedback');
+    try {
+      final response = await http
+          .patch(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $jwt',
+            },
+            body: jsonEncode({
+              'starRating': starRating,
+              'feedbackReason': feedbackReason,
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
+      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      return json['success'] == true;
+    } catch (e) {
+      debugPrint('피드백 업데이트 실패: $e');
+      return false;
+    }
+  }
+
   static Future<MenuDetail?> fetchMenuDetail(int id, String? jwt) async {
     final uri = Uri.parse('${ApiConfig.baseUrl}/api/menus/$id');
     final headers = <String, String>{};

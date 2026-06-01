@@ -15,7 +15,8 @@ import java.util.List;
 @Entity
 @Table(
     name = "recommendation_logs",
-    indexes = @Index(name = "idx_rec_log_user_score", columnList = "user_id, feedback_score")
+    indexes = @Index(name = "idx_rec_log_user_score", columnList = "user_id, feedback_score"),
+    uniqueConstraints = @UniqueConstraint(name = "uq_rec_log_user_menu", columnNames = {"user_id", "selected_menu_id"})
 )
 @Getter
 @Setter
@@ -46,4 +47,8 @@ public class RecommendationLog extends BaseEntity {
 
     @Column(columnDefinition = "TEXT")
     private String feedbackReason;
+
+    // AI 추천 결과 전체 JSON (저장 버튼 누를 때 저장, 이력 화면 재현용)
+    @Column(columnDefinition = "TEXT")
+    private String aiResultJson;
 }
