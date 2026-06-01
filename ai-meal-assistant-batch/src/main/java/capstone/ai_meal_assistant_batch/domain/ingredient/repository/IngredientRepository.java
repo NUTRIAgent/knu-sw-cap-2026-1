@@ -15,4 +15,8 @@ public interface IngredientRepository extends JpaRepository<Ingredient, Long> {
 
     @Query("SELECT i FROM Ingredient i WHERE i.id NOT IN (SELECT DISTINCT ip.ingredient.id FROM IngredientPrice ip)")
     List<Ingredient> findIngredientsWithoutAnyPrice();
+
+    // 어떤 메뉴에도 매핑되지 않은(레시피 미사용) 재료. 미사용 재료 정리에 사용.
+    @Query("SELECT i FROM Ingredient i WHERE i.id NOT IN (SELECT DISTINCT mi.ingredient.id FROM MenuIngredient mi)")
+    List<Ingredient> findUnusedIngredients();
 }

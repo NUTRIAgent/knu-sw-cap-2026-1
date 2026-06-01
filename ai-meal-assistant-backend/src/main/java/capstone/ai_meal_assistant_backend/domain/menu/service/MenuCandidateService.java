@@ -4,9 +4,11 @@ import capstone.ai_meal_assistant_backend.domain.history.repository.Recommendati
 import capstone.ai_meal_assistant_backend.domain.menu.dto.MenuCandidateDto;
 import capstone.ai_meal_assistant_backend.domain.menu.entity.Allergy;
 import capstone.ai_meal_assistant_backend.domain.menu.entity.Menu;
+import capstone.ai_meal_assistant_backend.domain.menu.entity.MenuStep;
 import capstone.ai_meal_assistant_backend.domain.menu.entity.UserAllergy;
 import capstone.ai_meal_assistant_backend.domain.menu.repository.MenuAllergyRepository;
 import capstone.ai_meal_assistant_backend.domain.menu.repository.MenuRepository;
+import capstone.ai_meal_assistant_backend.domain.menu.repository.MenuStepRepository;
 import capstone.ai_meal_assistant_backend.domain.menu.repository.UserAllergyRepository;
 import capstone.ai_meal_assistant_backend.domain.user.entity.ProteinLevel;
 import capstone.ai_meal_assistant_backend.domain.user.entity.User;
@@ -34,6 +36,7 @@ public class MenuCandidateService {
     private final UserAllergyRepository userAllergyRepository;
     private final MenuAllergyRepository menuAllergyRepository;
     private final MenuRepository menuRepository;
+    private final MenuStepRepository menuStepRepository;
     private final RecommendationLogRepository recommendationLogRepository;
 
     public List<MenuCandidateDto> getCandidates(String email) {
@@ -74,7 +77,11 @@ public class MenuCandidateService {
                 .orElseThrow(() -> new IllegalArgumentException("메뉴를 찾을 수 없습니다. id=" + id));
         List<Object[]> rows = menuRepository.findIngredientsTextByMenuIds(List.of(id));
         String ingredientsText = rows.isEmpty() ? "" : (String) rows.get(0)[1];
-        return MenuCandidateDto.from(menu, ingredientsText, Collections.emptyList());
+        List<MenuCandidateDto.StepDto> steps = menuStepRepository.findByMenuIdOrderByStepOrder(id)
+                .stream()
+                .map(s -> new MenuCandidateDto.StepDto(s.getStepOrder(), s.getDescription(), s.getImageUrl()))
+                .collect(Collectors.toList());
+        return MenuCandidateDto.from(menu, ingredientsText, steps);
     }
 
     private List<MenuCandidateDto> buildDtos(List<Menu> menus) {
@@ -88,11 +95,17 @@ public class MenuCandidateService {
             ingredientsMap.put(menuId, (String) row[1]);
         }
 
+        Map<Long, List<MenuCandidateDto.StepDto>> stepsMap = new HashMap<>();
+        for (MenuStep step : menuStepRepository.findByMenuIdInOrderByStepOrder(menuIds)) {
+            stepsMap.computeIfAbsent(step.getMenu().getId(), k -> new ArrayList<>())
+                    .add(new MenuCandidateDto.StepDto(step.getStepOrder(), step.getDescription(), step.getImageUrl()));
+        }
+
         return menus.stream()
                 .map(m -> MenuCandidateDto.from(
                         m,
                         ingredientsMap.getOrDefault(m.getId(), ""),
-                        Collections.emptyList()
+                        stepsMap.getOrDefault(m.getId(), Collections.emptyList())
                 ))
                 .collect(Collectors.toList());
     }

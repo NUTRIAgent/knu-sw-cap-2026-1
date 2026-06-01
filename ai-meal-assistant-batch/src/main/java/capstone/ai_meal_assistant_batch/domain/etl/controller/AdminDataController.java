@@ -28,6 +28,26 @@ public class AdminDataController {
         return ResponseEntity.ok("메뉴-알레르기 매핑이 성공적으로 완료되었습니다!");
     }
 
+    /**
+     * 이미 적재된 메뉴 기준으로 menu_ingredients를 현재 파서로 재구축.
+     * 파서 변경 후 기존 DB를 교정할 때 사용 (menus/이미지/기존 가격 무영향).
+     */
+    @PostMapping("/rebuild-ingredients")
+    public ResponseEntity<String> rebuildIngredients(){
+        syncService.rebuildMenuIngredients();
+        return ResponseEntity.ok("menu_ingredients 재구축이 완료되었습니다. (자세한 내역은 서버 로그)");
+    }
+
+    /**
+     * 레시피 미사용 + 즐겨찾기 미참조 재료를 정리(가격·KAMIS 매핑 포함 삭제).
+     * 보통 rebuild-ingredients 직후 옛 이름 잔여 행 정리에 사용.
+     */
+    @PostMapping("/cleanup-unused-ingredients")
+    public ResponseEntity<String> cleanupUnusedIngredients(){
+        int deleted = syncService.deleteUnusedIngredients();
+        return ResponseEntity.ok("미사용 재료 " + deleted + "건을 정리했습니다.");
+    }
+
     @PostMapping("/recover-images")
     public ResponseEntity<String> recoverImages(){
         boolean started = imageRecoveryAsyncRunner.tryStart();

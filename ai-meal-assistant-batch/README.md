@@ -60,6 +60,33 @@ cd ai-meal-assistant-batch
 ./gradlew bootRun --args='--batch.mfds.enabled=true'
 ```
 
+### 메뉴 + 재료 전체 적재 (단발성)
+
+식약처 JSON(`cleaned_recipe_data.json`)을 읽어 `menus`, `ingredients`, `menu_ingredients`, `menu_steps`, `menu_allergies` 테이블을 채웁니다. S3 이미지 업로드 포함.
+
+```bash
+cd ai-meal-assistant-batch
+./gradlew bootRun --args='--batch.seed.ingredients.enabled=true'
+```
+
+### 재료만 재적재 (단발성)
+
+`menu_ingredients` 테이블을 재파싱해 재적재합니다. 파싱 로직 수정 후 기존 데이터를 교정할 때 사용합니다. 기존 데이터를 삭제하고 재삽입합니다.
+
+```bash
+cd ai-meal-assistant-batch
+./gradlew bootRun --args='--batch.seed.recipe-ingredients.enabled=true'
+```
+
+### 조리단계만 재적재 (단발성)
+
+`menu_steps` 테이블이 비어있거나 잘못된 경우 steps만 빠르게 재적재합니다. S3 업로드 없이 수 초 내 완료됩니다.
+
+```bash
+cd ai-meal-assistant-batch
+./gradlew bootRun --args='--batch.seed.steps.enabled=true'
+```
+
 ## 멱등성(중복 적재 방지) 가이드
 
 - 권장: 유니크 키 + upsert
