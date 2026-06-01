@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/models/recommendation_models.dart';
+import 'package:flutter_app/services/cart_service.dart';
 import 'package:flutter_app/services/recommendation_service.dart';
 import 'package:flutter_app/theme.dart';
 
@@ -167,6 +168,11 @@ class _AiPickBody extends StatelessWidget {
                 ],
                 if (result.marketPrices.isNotEmpty) ...[
                   const SizedBox(height: 16),
+                  _AiIngredientsCart(
+                    prices: result.marketPrices,
+                    menuName: result.menuName,
+                  ),
+                  const SizedBox(height: 16),
                   _MarketPricesTable(
                     prices: result.marketPrices,
                     total: result.totalEstimatedCost,
@@ -246,7 +252,10 @@ class _CandidateBody extends StatelessWidget {
                   _DetailNutrition(detail: detail!),
                   if ((detail!.ingredientsText ?? '').isNotEmpty) ...[
                     const SizedBox(height: 16),
-                    _Ingredients(text: detail!.ingredientsText!),
+                    _Ingredients(
+                      text: detail!.ingredientsText!,
+                      menuName: candidate.name,
+                    ),
                   ],
                   if ((detail!.healthTip ?? '').isNotEmpty) ...[
                     const SizedBox(height: 16),
@@ -682,21 +691,149 @@ class _MarketPricesTable extends StatelessWidget {
   }
 }
 
+// ── AI 픽 재료 → 얇은 래퍼 ───────────────────────────────────
+class _AiIngredientsCart extends StatelessWidget {
+  final List<MarketPriceItem> prices;
+  final String menuName;
+  const _AiIngredientsCart({required this.prices, required this.menuName});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = prices
+        .map((p) => '${p.name} ${p.recipeAmount}'.trim())
+        .toList();
+    return _CartSelector(items: items, menuName: menuName);
+  }
+}
+
+// ── 후보 재료 → 얇은 래퍼 ────────────────────────────────────
 class _Ingredients extends StatelessWidget {
   final String text;
-  const _Ingredients({required this.text});
+  final String menuName;
+  const _Ingredients({required this.text, required this.menuName});
+
+  @override
+  Widget build(BuildContext context) {
+    final items = text
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+    return _CartSelector(items: items, menuName: menuName);
+  }
+}
+
+// ── 공통 재료 선택 + 장바구니 담기 위젯 ─────────────────────
+class _CartSelector extends StatefulWidget {
+  final List<String> items;
+  final String menuName;
+  const _CartSelector({required this.items, required this.menuName});
+
+  @override
+  State<_CartSelector> createState() => _CartSelectorState();
+}
+
+class _CartSelectorState extends State<_CartSelector> {
+  final Set<int> _selected = {};
+
+  bool get _allSelected => _selected.length == widget.items.length;
+
+  void _toggleAll() {
+    setState(() {
+      if (_allSelected) {
+        _selected.clear();
+      } else {
+        _selected.addAll(Iterable.generate(widget.items.length));
+      }
+    });
+  }
+
+  Future<void> _addToCart() async {
+    final toAdd = _selected.map((i) => widget.items[i]).toList();
+    await CartService.addItems(toAdd, menuName: widget.menuName);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${toAdd.length}개 재료를 장바구니에 담았습니다'),
+        action: SnackBarAction(label: '확인', onPressed: () {}),
+      ),
+    );
+    setState(() => _selected.clear());
+  }
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('재료',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-        const SizedBox(height: 8),
-        Text(text,
-            style:
-                TextStyle(fontSize: 13, color: Colors.grey[700], height: 1.5)),
+        Row(
+          children: [
+            const Text('재료',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+            const Spacer(),
+            TextButton(
+              onPressed: _toggleAll,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: Text(
+                _allSelected ? '전체 해제' : '전체 선택',
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        ...widget.items.asMap().entries.map((entry) {
+          final i = entry.key;
+          final item = entry.value;
+          return CheckboxListTile(
+            value: _selected.contains(i),
+            onChanged: (v) => setState(() {
+              if (v == true) {
+                _selected.add(i);
+              } else {
+                _selected.remove(i);
+              }
+            }),
+            title: Text(
+              item,
+              style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+            ),
+            controlAffinity: ListTileControlAffinity.leading,
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            activeColor: AppTheme.primaryColor,
+          );
+        }),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: AnimatedOpacity(
+            opacity: _selected.isEmpty ? 0.4 : 1.0,
+            duration: const Duration(milliseconds: 150),
+            child: ElevatedButton.icon(
+              onPressed: _selected.isEmpty ? null : _addToCart,
+              icon: const Icon(Icons.shopping_cart_outlined, size: 18),
+              label: Text(
+                _selected.isEmpty
+                    ? '재료를 선택하세요'
+                    : '${_selected.length}개 장바구니에 담기',
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryColor,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: Colors.grey[300],
+                disabledForegroundColor: Colors.grey[500],
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
