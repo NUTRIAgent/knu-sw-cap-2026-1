@@ -195,7 +195,7 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
                             return _CandidateCard(
                               candidate: c,
                               isAiPick: isAiPick,
-                              showFeedback: !_aiLoading && !isAiPick,
+                              showFeedback: !_aiLoading,
                               feedbackGiven: feedbackGiven,
                               onFeedback: (isPos) => _onFeedback(c.id, isPos),
                               onTap: () => Navigator.push(
@@ -627,13 +627,37 @@ class _CandidateCard extends StatelessWidget {
               ),
             ),
             if (isAiPick)
-              _aiBadge()
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _aiBadge(),
+                  if (showFeedback) ...[
+                    const SizedBox(width: 6),
+                    _aiPickDislikeWidget(),
+                  ],
+                ],
+              )
             else if (showFeedback)
               _feedbackWidget(),
           ],
         ),
       ),
       ),
+    );
+  }
+
+  Widget _aiPickDislikeWidget() {
+    if (feedbackGiven == false) {
+      return const Icon(Icons.thumb_down_rounded,
+          size: 18, color: Colors.redAccent);
+    }
+    return IconButton(
+      onPressed: () => onFeedback?.call(false),
+      icon: const Icon(Icons.thumb_down_outlined, size: 18),
+      color: Colors.grey,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+      tooltip: '다시 추천받지 않기',
     );
   }
 
