@@ -4,10 +4,13 @@ import capstone.ai_meal_assistant_backend.domain.user.dto.UserProfileRequest;
 import capstone.ai_meal_assistant_backend.domain.user.dto.UserProfileResponse;
 import capstone.ai_meal_assistant_backend.domain.user.service.UserProfileService;
 import capstone.ai_meal_assistant_backend.global.security.JwtUtil;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -43,7 +46,7 @@ public class UserProfileController {
     @PostMapping("/profile")
     public ResponseEntity<ApiResponse<UserProfileResponse>> saveProfile(
             @RequestHeader("Authorization") String authHeader,
-            @RequestBody UserProfileRequest request) {
+            @Valid @RequestBody UserProfileRequest request) {
 
         String email = extractEmailFromToken(authHeader);
         UserProfileResponse response = userProfileService.saveOrUpdateProfile(email, request);
@@ -56,7 +59,7 @@ public class UserProfileController {
     @PutMapping("/profile")
     public ResponseEntity<ApiResponse<UserProfileResponse>> updateProfile(
             @RequestHeader("Authorization") String authHeader,
-            @RequestBody UserProfileRequest request) {
+            @Valid @RequestBody UserProfileRequest request) {
 
         String email = extractEmailFromToken(authHeader);
         UserProfileResponse response = userProfileService.saveOrUpdateProfile(email, request);
@@ -73,6 +76,18 @@ public class UserProfileController {
         String email = extractEmailFromToken(authHeader);
         UserProfileResponse response = userProfileService.getProfile(email);
         return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
+    /**
+     * @Valid 검증 실패 시 이 컨트롤러의 ApiResponse 포맷으로 400 응답
+     */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiResponse<Void>> handleValidationException(MethodArgumentNotValidException e) {
+        String errorMessage = e.getBindingResult().getFieldErrors().stream()
+                .findFirst()
+                .map(FieldError::getDefaultMessage)
+                .orElse("입력값이 올바르지 않습니다");
+        return ResponseEntity.badRequest().body(ApiResponse.fail(errorMessage));
     }
 
     /**
