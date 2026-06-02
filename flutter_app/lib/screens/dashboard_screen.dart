@@ -66,9 +66,10 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // if (state == AppLifecycleState.resumed) {
-    //   _loadWeather();
-    // }
+    if (state == AppLifecycleState.resumed) {
+      _loadPriceDrops();
+      _loadAiPicks();
+    }
   }
 
   Future<void> _loadWeather() async {
