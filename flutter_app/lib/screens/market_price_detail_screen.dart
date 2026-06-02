@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/models/market_price_models.dart';
+import 'package:flutter_app/services/price_alert_service.dart';
+import 'package:flutter_app/services/token_storage.dart';
 import 'package:flutter_app/theme.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class MarketPriceDetailScreen extends StatefulWidget {
   final IngredientPriceModel price;
+  final bool isKamis;
   final bool isFavorite;
   final VoidCallback? onFavoriteToggle;
 
   const MarketPriceDetailScreen({
     super.key,
     required this.price,
+    this.isKamis = false,
     this.isFavorite = false,
     this.onFavoriteToggle,
   });
@@ -22,11 +26,44 @@ class MarketPriceDetailScreen extends StatefulWidget {
 
 class _MarketPriceDetailScreenState extends State<MarketPriceDetailScreen> {
   late bool _isFavorite;
+  bool _isFollowing = false;
+  bool _followLoading = false;
 
   @override
   void initState() {
     super.initState();
     _isFavorite = widget.isFavorite;
+    if (widget.isKamis && widget.price.kamisItemCode != null) {
+      _followLoading = true;
+      _loadFollowStatus();
+    }
+  }
+
+  Future<void> _loadFollowStatus() async {
+    final jwt = await TokenStorage.getAccessToken();
+    final following = await PriceAlertService.isFollowing(
+        widget.price.kamisItemCode!, jwt);
+    if (mounted) setState(() { _isFollowing = following; _followLoading = false; });
+  }
+
+  Future<void> _toggleFollow() async {
+    if (widget.price.kamisItemCode == null) return;
+    setState(() => _followLoading = true);
+    final jwt = await TokenStorage.getAccessToken();
+    final success = _isFollowing
+        ? await PriceAlertService.unfollow(widget.price.kamisItemCode!, jwt)
+        : await PriceAlertService.follow(
+            widget.price.kamisItemCode!,
+            widget.price.ingredientName,
+            jwt);
+    if (!mounted) return;
+    if (success) setState(() => _isFollowing = !_isFollowing);
+    setState(() => _followLoading = false);
+    if (!success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('처리 중 오류가 발생했습니다')),
+      );
+    }
   }
 
   void _handleFavoriteToggle() {
@@ -63,6 +100,10 @@ class _MarketPriceDetailScreenState extends State<MarketPriceDetailScreen> {
                     _buildPriceHeroCard(),
                     const SizedBox(height: 12),
                     _buildNaverShoppingButton(),
+                    if (widget.isKamis) ...[
+                      const SizedBox(height: 12),
+                      _buildFollowButton(),
+                    ],
                     const SizedBox(height: 16),
                     _buildChangeRatesCard(),
                   ],
@@ -179,6 +220,49 @@ class _MarketPriceDetailScreenState extends State<MarketPriceDetailScreen> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFollowButton() {
+    if (widget.price.kamisItemCode == null) return const SizedBox.shrink();
+
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: _followLoading ? null : _toggleFollow,
+        icon: _followLoading
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: AppTheme.primaryColor),
+              )
+            : Icon(
+                _isFollowing
+                    ? Icons.notifications_active_rounded
+                    : Icons.notifications_none_rounded,
+                size: 18,
+                color: _isFollowing ? AppTheme.primaryColor : Colors.grey[600],
+              ),
+        label: Text(
+          _isFollowing ? '변동률 알림 설정됨' : '변동률 팔로우',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: _isFollowing ? AppTheme.primaryColor : Colors.grey[600],
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          side: BorderSide(
+            color: _isFollowing
+                ? AppTheme.primaryColor
+                : Colors.grey.shade300,
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16)),
         ),
       ),
     );

@@ -10,4 +10,6 @@ public interface IngredientKamisMappingRepository extends JpaRepository<Ingredie
     List<IngredientKamisMapping> findAllByConfirmedFalse();
 
     List<IngredientKamisMapping> findAllByIngredientIdAndConfirmedFalseAndIdNot(Long ingredientId, Long excludeId);
+
+    List<IngredientKamisMapping> findAllByKamisItemCodeIn(List<String> kamisItemCodes);
 }

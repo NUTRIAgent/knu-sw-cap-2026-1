@@ -9,6 +9,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import capstone.ai_meal_assistant_batch.global.log.BatchLog;
+import capstone.ai_meal_assistant_batch.job.alert.PriceAlertNotificationService;
 import capstone.ai_meal_assistant_batch.job.naver.NaverShoppingPriceResult;
 import capstone.ai_meal_assistant_batch.job.naver.NaverShoppingPriceService;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ public class KamisPriceScheduler {
 
 	private final KamisPriceUpdateService service;
 	private final NaverShoppingPriceService naverShoppingPriceService;
+	private final PriceAlertNotificationService priceAlertNotificationService;
 
 	@EventListener(ApplicationReadyEvent.class)
 	public void runOnStartup() {
@@ -33,6 +35,8 @@ public class KamisPriceScheduler {
 			BatchLog.fail(JOB_NAME + ".startup", start, e);
 		}
 		fetchNaverShoppingPrices();
+		// 서버 시작 시에는 가격 변동 알림을 발송하지 않는다.
+		// 실제 사용자가 기대하는 알림은 매일 정해진 시간(cron)에 갱신된 뒤 run()에서 발송된다.
 	}
 
 	@Scheduled(cron = "${batch.kamis.cron}")
@@ -46,6 +50,15 @@ public class KamisPriceScheduler {
 			throw e;
 		}
 		fetchNaverShoppingPrices();
+		dispatchPriceAlerts();
+	}
+
+	private void dispatchPriceAlerts() {
+		try {
+			priceAlertNotificationService.dispatchAlerts();
+		} catch (Exception e) {
+			BatchLog.fail("priceAlertNotification", Instant.now(), e);
+		}
 	}
 
 	private void fetchNaverShoppingPrices() {

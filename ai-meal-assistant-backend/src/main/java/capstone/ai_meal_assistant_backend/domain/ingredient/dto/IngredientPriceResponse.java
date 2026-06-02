@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 public record IngredientPriceResponse(
         Long ingredientId,
         String ingredientName,
+        String kamisItemCode,
         Double pricePerGram,
         Integer originalPrice,
         String originalUnit,
@@ -22,6 +23,7 @@ public record IngredientPriceResponse(
         return new IngredientPriceResponse(
                 price.getIngredient().getId(),
                 price.getIngredient().getName(),
+                null,
                 price.getPricePerGram(),
                 price.getOriginalPrice(),
                 price.getOriginalUnit(),
@@ -34,10 +36,11 @@ public record IngredientPriceResponse(
         );
     }
 
-    public static IngredientPriceResponse fromKamis(IngredientKamisPrice price) {
+    public static IngredientPriceResponse fromKamis(IngredientKamisPrice price, Long ingredientId) {
         return new IngredientPriceResponse(
-                null,
+                ingredientId,
                 price.getKamisItemName(),
+                price.getKamisItemCode(),
                 price.getPricePerGram(),
                 price.getOriginalPrice(),
                 price.getOriginalUnit(),

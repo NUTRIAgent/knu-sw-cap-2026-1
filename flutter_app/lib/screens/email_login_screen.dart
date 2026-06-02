@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/services/auth_service.dart';
+import 'package:flutter_app/services/price_alert_service.dart';
+import 'package:flutter_app/services/token_storage.dart';
 import 'main_screen.dart';
 import 'package:flutter_app/theme.dart';
 import 'package:flutter_app/services/user_profile_service.dart';
@@ -34,6 +36,10 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
       if (!mounted) return;
 
       if (response.success) {
+        // FCM 토큰 백엔드 등록 (실패해도 로그인 흐름에 영향 없음)
+        final jwt = await TokenStorage.getAccessToken();
+        PriceAlertService.registerToken(jwt);
+
         // 💡 2. 토큰이 저장되었으니, 프로필 정보를 찔러서 온보딩 필요 여부 확인
         final profileResponse = await UserProfileService.getProfile();
         

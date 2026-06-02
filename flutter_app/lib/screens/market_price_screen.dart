@@ -758,6 +758,7 @@ class _MarketPriceScreenState extends State<MarketPriceScreen>
       MaterialPageRoute(
         builder: (_) => MarketPriceDetailScreen(
           price: price,
+          isKamis: !_isNaverTab,
           isFavorite: price.ingredientId != null &&
               _favoriteIds.contains(price.ingredientId),
           onFavoriteToggle: price.ingredientId != null

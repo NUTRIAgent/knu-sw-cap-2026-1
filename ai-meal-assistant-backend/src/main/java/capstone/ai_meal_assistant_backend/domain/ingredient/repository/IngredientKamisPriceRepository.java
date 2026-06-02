@@ -17,4 +17,5 @@ public interface IngredientKamisPriceRepository extends JpaRepository<Ingredient
             ORDER BY kp.kamisItemName ASC
             """)
     List<IngredientKamisPrice> findAllLatest();
+
 }

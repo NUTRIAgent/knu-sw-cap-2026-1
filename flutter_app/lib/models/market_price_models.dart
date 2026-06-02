@@ -1,6 +1,7 @@
 class IngredientPriceModel {
   final int? ingredientId;
   final String ingredientName;
+  final String? kamisItemCode;
   final double pricePerGram;
   final int? originalPrice;
   final String? originalUnit;
@@ -14,6 +15,7 @@ class IngredientPriceModel {
   const IngredientPriceModel({
     this.ingredientId,
     required this.ingredientName,
+    this.kamisItemCode,
     required this.pricePerGram,
     this.originalPrice,
     this.originalUnit,
@@ -29,6 +31,7 @@ class IngredientPriceModel {
     return IngredientPriceModel(
       ingredientId: json['ingredientId'] as int?,
       ingredientName: json['ingredientName'] as String,
+      kamisItemCode: json['kamisItemCode'] as String?,
       pricePerGram: (json['pricePerGram'] as num).toDouble(),
       originalPrice: json['originalPrice'] as int?,
       originalUnit: json['originalUnit'] as String?,

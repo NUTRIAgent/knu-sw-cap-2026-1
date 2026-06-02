@@ -18,6 +18,8 @@ public interface IngredientPriceRepository extends JpaRepository<IngredientPrice
 
     Optional<IngredientPrice> findTopByIngredientIdAndSourceApi(Long ingredientId, String sourceApi);
 
+    List<IngredientPrice> findAllBySourceApi(String sourceApi);
+
     // 미사용 재료 정리 시 연결된 가격 일괄 삭제
     @Modifying
     @Query("DELETE FROM IngredientPrice p WHERE p.ingredient.id IN :ids")
