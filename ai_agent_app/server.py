@@ -136,9 +136,6 @@ class HistoryRequest(BaseModel):
     preferences: List[str] = Field(default_factory=list, description="당시 선호")
 
 
-class DeleteHistoryRequest(BaseModel):
-    log_id: int = Field(..., description="삭제할 recommendation_logs PK")
-
 class WeatherBriefingRequest(BaseModel):
     temperature: float = Field(..., example=31.5, description="현재 기온(°C)")
     condition: str = Field(default="", example="맑음", description="날씨 상태")
@@ -288,11 +285,11 @@ async def save_history(req: HistoryRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.delete("/history")
-async def delete_history(req: DeleteHistoryRequest):
+@app.delete("/history/{log_id}")
+async def delete_history(log_id: int):
     """피드백 삭제 시 RAG에서도 해당 항목 제거"""
     try:
-        user_history_manager.delete(req.log_id)
+        user_history_manager.delete(log_id)
         return {"status": "deleted"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
