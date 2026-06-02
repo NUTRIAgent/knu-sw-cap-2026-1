@@ -186,16 +186,16 @@ class _RecommendationHistoryScreenState
   Future<void> _confirmDelete(AiPickItem item) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         title: const Text('이력 삭제'),
         content: Text('"${item.menuName}" 추천 이력을 삭제할까요?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(dialogCtx, false),
             child: const Text('취소'),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogCtx, true),
             child: const Text('삭제', style: TextStyle(color: Colors.red)),
           ),
         ],

@@ -38,9 +38,9 @@ public class RecommendationLogService {
                     newLog.setSelectedMenu(menu);
                     return newLog;
                 });
-        log.setFeedbackScore(feedbackScore);
-        log.setStarRating(starRating);
-        log.setFeedbackReason(feedbackReason);
+        if (feedbackScore != null) log.setFeedbackScore(feedbackScore);
+        if (starRating != null) log.setStarRating(starRating);
+        if (feedbackReason != null) log.setFeedbackReason(feedbackReason);
         recommendationLogRepository.save(log);
     }
 
