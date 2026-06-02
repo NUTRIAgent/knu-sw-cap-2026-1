@@ -41,4 +41,34 @@ public interface MenuRepository extends JpaRepository<Menu, Long> {
             GROUP BY mi.menu_id
             """, nativeQuery = true)
     List<Object[]> findIngredientsTextByMenuIds(@Param("menuIds") Collection<Long> menuIds);
+
+    /**
+     * 메뉴별 재료 비용 산출용 원본 행 조회.
+     * row = [menu_id, ingredient_name, required_weight(g), price_per_gram(없으면 null)]
+     * 가격 미보유 재료도 포함되도록 LEFT JOIN (NAVER_SHOPPING 소스 기준).
+     * ingredient_prices가 날짜별 이력으로 쌓일 수 있으므로 재료별 최신 1건만 사용
+     * (서브쿼리로 중복 row → totalEstimatedCost 부풀림 방지).
+     */
+    @Query(value = """
+            SELECT mi.menu_id,
+                   i.name,
+                   mi.required_weight,
+                   ip.price_per_gram
+            FROM menu_ingredients mi
+            JOIN ingredients i ON i.id = mi.ingredient_id
+            LEFT JOIN (
+                SELECT ingredient_id, price_per_gram
+                FROM ingredient_prices
+                WHERE source_api = 'NAVER_SHOPPING'
+                  AND (ingredient_id, base_date) IN (
+                        SELECT ingredient_id, MAX(base_date)
+                        FROM ingredient_prices
+                        WHERE source_api = 'NAVER_SHOPPING'
+                        GROUP BY ingredient_id
+                  )
+            ) ip ON ip.ingredient_id = mi.ingredient_id
+            WHERE mi.menu_id IN (:menuIds)
+            ORDER BY mi.menu_id, i.name
+            """, nativeQuery = true)
+    List<Object[]> findIngredientCostRowsByMenuIds(@Param("menuIds") Collection<Long> menuIds);
 }

@@ -81,7 +81,9 @@ public class MenuCandidateService {
                 .stream()
                 .map(s -> new MenuCandidateDto.StepDto(s.getStepOrder(), s.getDescription(), s.getImageUrl()))
                 .collect(Collectors.toList());
-        return MenuCandidateDto.from(menu, ingredientsText, steps);
+        List<MenuCandidateDto.IngredientCost> costs =
+                buildIngredientCostsMap(List.of(id)).getOrDefault(id, Collections.emptyList());
+        return MenuCandidateDto.from(menu, ingredientsText, steps, costs);
     }
 
     private List<MenuCandidateDto> buildDtos(List<Menu> menus) {
@@ -101,13 +103,34 @@ public class MenuCandidateService {
                     .add(new MenuCandidateDto.StepDto(step.getStepOrder(), step.getDescription(), step.getImageUrl()));
         }
 
+        Map<Long, List<MenuCandidateDto.IngredientCost>> costsMap = buildIngredientCostsMap(menuIds);
+
         return menus.stream()
                 .map(m -> MenuCandidateDto.from(
                         m,
                         ingredientsMap.getOrDefault(m.getId(), ""),
-                        stepsMap.getOrDefault(m.getId(), Collections.emptyList())
+                        stepsMap.getOrDefault(m.getId(), Collections.emptyList()),
+                        costsMap.getOrDefault(m.getId(), Collections.emptyList())
                 ))
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 메뉴별 재료 비용 내역 생성 (required_weight × price_per_gram).
+     * 가격 미보유 재료는 cost=null, priceAvailable=false 로 포함.
+     */
+    private Map<Long, List<MenuCandidateDto.IngredientCost>> buildIngredientCostsMap(List<Long> menuIds) {
+        Map<Long, List<MenuCandidateDto.IngredientCost>> costsMap = new HashMap<>();
+        for (Object[] row : menuRepository.findIngredientCostRowsByMenuIds(menuIds)) {
+            Long menuId    = ((Number) row[0]).longValue();
+            String name    = (String) row[1];
+            double weight  = ((Number) row[2]).doubleValue();
+            Double perGram = row[3] != null ? ((Number) row[3]).doubleValue() : null;
+            Integer cost   = perGram != null ? (int) Math.round(weight * perGram) : null;
+            costsMap.computeIfAbsent(menuId, k -> new ArrayList<>())
+                    .add(new MenuCandidateDto.IngredientCost(name, weight, perGram, cost, perGram != null));
+        }
+        return costsMap;
     }
 
     private Set<Long> getExcludeMenuIds(User user) {

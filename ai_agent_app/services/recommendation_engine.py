@@ -113,12 +113,9 @@ class RecommendationEngine:
         if not seq:
             raise ValueError("선택한 메뉴의 MENU_ID가 없습니다.")
 
-        location = user_query.get("location")
-        p_info, _ = await self.graph_builder.fetch_price_for(recipe, location)
-
+        # 가격은 recipe에 백엔드 선계산 값(INGREDIENT_COSTS/TOTAL_COST)이 이미 포함됨 (#155)
         state = {
             "recipes_by_seq": {seq: recipe},
             "user_query": user_query,
-            "price_cache": {seq: p_info},
         }
         return await self.graph_builder._analyze_one(seq, state)

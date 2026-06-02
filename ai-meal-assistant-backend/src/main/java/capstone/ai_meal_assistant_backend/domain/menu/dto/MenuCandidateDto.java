@@ -22,8 +22,12 @@ public class MenuCandidateDto {
     private final String healthTip;
     private final String ingredientsText;
     private final List<StepDto> steps;
+    private final List<IngredientCost> ingredientCosts;
+    private final Integer totalEstimatedCost;
+    private final int missingCount;
 
-    private MenuCandidateDto(Menu menu, String ingredientsText, List<StepDto> steps) {
+    private MenuCandidateDto(Menu menu, String ingredientsText, List<StepDto> steps,
+                             List<IngredientCost> ingredientCosts) {
         this.id              = menu.getId();
         this.name            = menu.getName();
         this.category        = menu.getCategory();
@@ -38,10 +42,20 @@ public class MenuCandidateDto {
         this.healthTip       = menu.getHealthTip();
         this.ingredientsText = ingredientsText;
         this.steps           = steps;
+        this.ingredientCosts = ingredientCosts;
+
+        int total = 0, missing = 0;
+        for (IngredientCost c : ingredientCosts) {
+            if (c.getCost() != null) total += c.getCost();
+            else missing++;
+        }
+        this.totalEstimatedCost = total;
+        this.missingCount       = missing;
     }
 
-    public static MenuCandidateDto from(Menu menu, String ingredientsText, List<StepDto> steps) {
-        return new MenuCandidateDto(menu, ingredientsText, steps);
+    public static MenuCandidateDto from(Menu menu, String ingredientsText, List<StepDto> steps,
+                                        List<IngredientCost> ingredientCosts) {
+        return new MenuCandidateDto(menu, ingredientsText, steps, ingredientCosts);
     }
 
     @Getter
@@ -54,6 +68,24 @@ public class MenuCandidateDto {
             this.stepNo  = stepNo;
             this.content = content;
             this.imageUrl = imageUrl;
+        }
+    }
+
+    @Getter
+    public static class IngredientCost {
+        private final String name;
+        private final double requiredWeight;   // g
+        private final Double pricePerGram;      // 가격 미보유 시 null
+        private final Integer cost;             // requiredWeight × pricePerGram, 미보유 시 null
+        private final boolean priceAvailable;
+
+        public IngredientCost(String name, double requiredWeight,
+                              Double pricePerGram, Integer cost, boolean priceAvailable) {
+            this.name           = name;
+            this.requiredWeight = requiredWeight;
+            this.pricePerGram   = pricePerGram;
+            this.cost           = cost;
+            this.priceAvailable = priceAvailable;
         }
     }
 }
