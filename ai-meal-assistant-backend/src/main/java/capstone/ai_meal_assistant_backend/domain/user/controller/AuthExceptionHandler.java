@@ -1,6 +1,9 @@
 package capstone.ai_meal_assistant_backend.domain.user.controller;
 
 import capstone.ai_meal_assistant_backend.domain.user.dto.AuthResponse;
+import capstone.ai_meal_assistant_backend.domain.user.exception.AccountLockedException;
+import capstone.ai_meal_assistant_backend.domain.user.service.LoginAttemptService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
@@ -29,5 +32,14 @@ public class AuthExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<AuthResponse> handleMessageNotReadable(HttpMessageNotReadableException e) {
         return ResponseEntity.badRequest().body(AuthResponse.failure("요청 형식이 올바르지 않습니다"));
+    }
+
+    // 로그인 연속 실패로 계정이 잠긴 경우 423 Locked + 남은 시간 안내
+    @ExceptionHandler(AccountLockedException.class)
+    public ResponseEntity<AuthResponse> handleAccountLocked(AccountLockedException e) {
+        long remainingMinutes = Math.max(1, (e.getRemainingSeconds() + 59) / 60); // 올림, 최소 1분으로 표기
+        String message = "로그인이 " + LoginAttemptService.MAX_FAILED_ATTEMPTS
+                + "회 실패하여 계정이 잠겼습니다. 약 " + remainingMinutes + "분 후 다시 시도해 주세요";
+        return ResponseEntity.status(HttpStatus.LOCKED).body(AuthResponse.failure(message));
     }
 }
