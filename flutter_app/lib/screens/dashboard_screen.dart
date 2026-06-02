@@ -45,7 +45,6 @@ class _DashboardScreenState extends State<DashboardScreen>
   // ── 카드 3: AI 픽 이력 ────────────────────────────
   List<AiPickItem> _aiPicks = [];
   bool _isAiPickLoading = true;
-  final Set<int> _dislikedAiPickIds = {}; // 세션 내 싫어요 처리된 로그 ID
 
   // ── 카드 4: 프로필 요약 ───────────────────────────
   UserProfileData? _profileData;
@@ -192,23 +191,6 @@ class _DashboardScreenState extends State<DashboardScreen>
       }
     } catch (_) {
       if (mounted) setState(() => _isAiPickLoading = false);
-    }
-  }
-
-  Future<void> _dislikeAiPick(AiPickItem item) async {
-    final jwt = await TokenStorage.getAccessToken();
-    if (jwt == null || !mounted) return;
-    final success = await RecommendationService.updateAiPickFeedbackScore(
-        item.id, -1, jwt);
-    if (!mounted) return;
-    if (success) {
-      setState(() => _dislikedAiPickIds.add(item.id));
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('다음 추천에서 제외됩니다'),
-          duration: Duration(seconds: 2),
-        ),
-      );
     }
   }
 
@@ -531,8 +513,6 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget _buildAiPickRow(AiPickItem item) {
-    final isDisliked =
-        item.isDisliked || _dislikedAiPickIds.contains(item.id);
     return Row(
       children: [
         ClipRRect(
@@ -554,36 +534,26 @@ class _DashboardScreenState extends State<DashboardScreen>
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w500,
-              color: isDisliked ? Colors.grey.shade400 : null,
-              decoration:
-                  isDisliked ? TextDecoration.lineThrough : null,
+              color: item.isDisliked ? Colors.grey.shade400 : null,
+              decoration: item.isDisliked ? TextDecoration.lineThrough : null,
             ),
             overflow: TextOverflow.ellipsis,
           ),
         ),
-        if (isDisliked)
+        if (item.isDisliked)
           Icon(Icons.block_rounded, size: 14, color: Colors.grey.shade400)
-        else ...[
-          if (item.starRating != null)
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.star_rounded, size: 13, color: Colors.amber),
-                const SizedBox(width: 2),
-                Text(
-                  '${item.starRating}',
-                  style: const TextStyle(
-                      fontSize: 12, fontWeight: FontWeight.w600),
-                ),
-              ],
-            ),
-          const SizedBox(width: 4),
-          GestureDetector(
-            onTap: () => _dislikeAiPick(item),
-            child: Icon(Icons.close_rounded,
-                size: 16, color: Colors.grey.shade400),
+        else if (item.starRating != null)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.star_rounded, size: 13, color: Colors.amber),
+              const SizedBox(width: 2),
+              Text(
+                '${item.starRating}',
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+              ),
+            ],
           ),
-        ],
       ],
     );
   }
