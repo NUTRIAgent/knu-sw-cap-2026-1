@@ -104,8 +104,8 @@ class TokenStorage {
     await prefs.remove(_refreshTokenKey);
     await prefs.remove(_userEmailKey);
     await prefs.remove(_userNicknameKey);
-  await prefs.remove(_userGenderKey);
-  await prefs.remove(_userIdKey);
+    await prefs.remove(_userGenderKey);
+    await prefs.remove(_userIdKey);
     await prefs.remove(_autoLoginKey);
   }
 

@@ -44,12 +44,9 @@ class _SplashScreenState extends State<SplashScreen> {
     final jwt = await TokenStorage.getAccessToken();
     PriceAlertService.registerToken(jwt);
 
-    // 4. 프로필 확인 후 온보딩 필요 여부 분기 (email_login_screen과 동일 기준)
+    // 4. 프로필 확인 후 온보딩 필요 여부 분기 — 판정 기준은 UserProfileService.needsOnboarding 참고
     final profileResponse = await UserProfileService.getProfile();
-    bool needsOnboarding = profileResponse.data == null ||
-        profileResponse.data?.height == null ||
-        profileResponse.data?.height == 999 ||
-        profileResponse.data?.height == 999.0;
+    final needsOnboarding = UserProfileService.needsOnboarding(profileResponse);
 
     _goTo(needsOnboarding ? const OnboardingScreen() : const MainScreen());
   }

@@ -57,14 +57,8 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
           context,
         ).showSnackBar(const SnackBar(content: Text('로그인 성공!')));
 
-        // 💡 3. 필수 데이터(예: 키, 몸무게)가 없으면 온보딩 대상으로 간주
-        // 백엔드에서 아직 프로필이 안 만들어졌거나, height가 null인 경우
-        // 💡 키 값이 null이거나, 백엔드 초기값인 999(또는 999.0)인 경우 온보딩으로 보냅니다
-        bool needsOnboarding =
-            profileResponse.data == null ||
-            profileResponse.data?.height == null ||
-            profileResponse.data?.height == 999 ||
-            profileResponse.data?.height == 999.0;
+        // 💡 3. 필수 프로필(키 등)이 없으면 온보딩 대상 — 판정 기준은 UserProfileService.needsOnboarding 참고
+        final needsOnboarding = UserProfileService.needsOnboarding(profileResponse);
 
         if (needsOnboarding) {
           // 첫 로그인 유저 -> 온보딩 화면으로 이동 (뒤로 가기 방지)

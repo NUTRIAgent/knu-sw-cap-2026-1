@@ -99,6 +99,15 @@ class AuthService {
           accessToken: authResponse.data!.accessToken!,
           refreshToken: authResponse.data?.refreshToken,
         );
+        // 유저 정보도 갱신 저장 (자동 로그인 시 마이페이지 성별 등이 비지 않도록)
+        if (authResponse.data?.user != null) {
+          await TokenStorage.saveUserInfo(
+            email: authResponse.data!.user!.email,
+            nickname: authResponse.data!.user!.nickname,
+            gender: authResponse.data!.user!.gender,
+            userId: authResponse.data!.user!.id,
+          );
+        }
         return true;
       }
 

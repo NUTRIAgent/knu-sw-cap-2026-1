@@ -139,12 +139,16 @@ public class AuthService {
                 return AuthResponse.failure("존재하지 않는 사용자입니다");
             }
 
-            // 새 토큰 발급 (리프레시 토큰도 함께 갱신하여 만료 시점 연장)
+            // 새 토큰 발급
+            // ⚠️ 한계: JWT는 stateless라 기존 refreshToken을 서버에서 무효화(revoke)할 수 없음.
+            //    새 토큰을 발급해도 구 토큰은 만료(7일) 전까지 계속 유효하다.
+            //    진짜 회전(rotation)은 서버 측 토큰 저장소 도입 시 가능 — Redis 도입(#176)에서 처리 예정.
             String accessToken = jwtUtil.generateAccessToken(user.getEmail());
             String newRefreshToken = jwtUtil.generateRefreshToken(user.getEmail());
 
             // UserInfo 생성
-            UserInfo userInfo = new UserInfo(user.getEmail(), user.getNickname());
+            UserInfo userInfo = new UserInfo(user.getEmail(), user.getNickname(),
+                    user.getGender() != null ? user.getGender().name() : null);
 
             // AuthData 생성
             AuthData authData = new AuthData(accessToken, newRefreshToken, userInfo);
