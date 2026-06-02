@@ -68,7 +68,8 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
     super.dispose();
   }
 
-  void _showFeedbackBottomSheet(int menuId) {
+  void _showFeedbackBottomSheet(RecommendationResult result) {
+    final menuId = result.menuId;
     _feedbackRating = 0;
     _feedbackController.clear();
     final messenger = ScaffoldMessenger.of(context);
@@ -146,7 +147,8 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
               ),
               const SizedBox(height: 20),
               Builder(builder: (_) {
-                final canSubmit = _feedbackRating > 0;
+                final canSubmit = _feedbackRating > 0 &&
+                    _feedbackController.text.trim().isNotEmpty;
                 return SizedBox(
                   height: 52,
                   child: ElevatedButton(
@@ -155,6 +157,13 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
                             final rating = _feedbackRating;
                             final reason = _feedbackController.text;
                             Navigator.pop(ctx);
+                            // 미저장 상태면 AI 결과 먼저 저장 — mypage AI픽 탭 조회 조건(aiResultJson IS NOT NULL) 충족
+                            if (!_saved) {
+                              final id = await RecommendationService.saveAiResult(result, widget.jwt);
+                              if (mounted && id != null) {
+                                setState(() { _saved = true; _savedLogId = id; });
+                              }
+                            }
                             await RecommendationService.saveDetailedFeedback(
                                 menuId, rating, reason, widget.jwt);
                             messenger.showSnackBar(const SnackBar(
@@ -273,7 +282,7 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
         actions: shownAi != null && widget.jwt != null
             ? [
                 IconButton(
-                  onPressed: () => _showFeedbackBottomSheet(shownAi.menuId),
+                  onPressed: () => _showFeedbackBottomSheet(shownAi),
                   tooltip: 'AI 픽 별점',
                   icon: const Icon(Icons.star_outline_rounded),
                   color: Colors.grey[600],
