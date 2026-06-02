@@ -25,14 +25,14 @@ public class ImageRecoveryAsyncRunner {
     /**
      * @return 새 작업이 시작되었으면 true, 이미 진행 중이라 거부됐으면 false.
      */
-    public boolean tryStart() {
+    public boolean tryStart(boolean dryRun, int limit, boolean onlyBroken) {
         if (!running.compareAndSet(false, true)) {
             log.info("[복구] 이미 진행 중 — 새 요청 거부");
             return false;
         }
         try {
             // 다른 빈의 public @Async 메서드 → 프록시 경유 → 백그라운드 스레드에서 실행.
-            imageRecoveryTask.run(running);
+            imageRecoveryTask.run(running, dryRun, limit, onlyBroken);
         } catch (Throwable t) {
             // 디스패치 실패(스레드 풀 거부, OOM 등 Error 포함) 시 플래그가 영구히 잠기지 않도록 해제.
             running.set(false);

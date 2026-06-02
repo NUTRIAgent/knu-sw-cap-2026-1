@@ -28,10 +28,10 @@ public class ImageRecoveryTask {
      * @param running 호출자가 소유한 진행 상태 플래그. 작업 종료 시 false 로 되돌린다.
      */
     @Async
-    public void run(AtomicBoolean running) {
+    public void run(AtomicBoolean running, boolean dryRun, int limit, boolean onlyBroken) {
         try {
-            log.info("[복구] 비동기 작업 시작");
-            recipeDataSyncService.recoverCorruptedImages();
+            log.info("[복구] 비동기 작업 시작 (dryRun={}, limit={}, onlyBroken={})", dryRun, limit, onlyBroken);
+            recipeDataSyncService.recoverCorruptedImages(dryRun, limit, onlyBroken);
         } catch (Exception e) {
             log.error("[복구] 비동기 실행 중 오류", e);
         } finally {
