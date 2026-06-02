@@ -119,6 +119,8 @@ public class RecommendationLogController {
         try {
             recommendationLogService.clearAiPickFeedback(email, id);
             return ResponseEntity.ok(Map.of("success", true));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "error", e.getMessage()));
         } catch (SecurityException e) {
             return ResponseEntity.status(403).body(Map.of("success", false, "error", e.getMessage()));
         }
