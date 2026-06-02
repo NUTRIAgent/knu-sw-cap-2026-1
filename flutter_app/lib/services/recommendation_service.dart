@@ -168,6 +168,22 @@ class RecommendationService {
     }
   }
 
+  static Future<bool> unsaveAiResult(int logId, String? jwt) async {
+    if (jwt == null || jwt.isEmpty) return false;
+    final uri = Uri.parse(
+        '${ApiConfig.baseUrl}/api/recommendation-logs/$logId/unsave');
+    try {
+      final response = await http
+          .patch(uri, headers: {'Authorization': 'Bearer $jwt'})
+          .timeout(const Duration(seconds: 10));
+      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      return json['success'] == true;
+    } catch (e) {
+      debugPrint('저장 취소 실패: $e');
+      return false;
+    }
+  }
+
   static Future<bool> deleteFeedback(int logId, String? jwt) async {
     if (jwt == null || jwt.isEmpty) return false;
     final uri =

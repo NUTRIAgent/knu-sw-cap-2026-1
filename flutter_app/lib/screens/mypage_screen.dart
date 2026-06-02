@@ -1360,7 +1360,7 @@ class _MyPageScreenState extends State<MyPageScreen>
     return ListTile(
       contentPadding:
           const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      onTap: () => _showAiPickEditSheet(item),
+      onTap: item.isDisliked ? null : () => _showAiPickEditSheet(item),
       leading: ClipRRect(
         borderRadius: BorderRadius.circular(8),
         child: item.menuImageUrl != null && item.menuImageUrl!.isNotEmpty

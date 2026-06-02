@@ -195,7 +195,7 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
     if (_saving || widget.jwt == null) return;
     setState(() => _saving = true);
     if (_saved && _savedLogId != null) {
-      final ok = await RecommendationService.deleteFeedback(_savedLogId!, widget.jwt);
+      final ok = await RecommendationService.unsaveAiResult(_savedLogId!, widget.jwt);
       if (!mounted) return;
       setState(() { _saving = false; if (ok) { _saved = false; _savedLogId = null; } });
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
