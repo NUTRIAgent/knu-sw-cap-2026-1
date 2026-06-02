@@ -45,6 +45,13 @@ public class RecommendationLogService {
         if (starRating != null) log.setStarRating(starRating);
         if (feedbackReason != null) log.setFeedbackReason(feedbackReason);
         recommendationLogRepository.save(log);
+
+        // 별점+코멘트 피드백만 RAG(벡터DB) 적재 (커밋 후 비동기)
+        if (starRating != null) {
+            eventPublisher.publishEvent(new RagHistoryEvents.Save(
+                    email, log.getId(), menu.getId(), menu.getName(),
+                    log.getFeedbackReason(), starRating));
+        }
     }
 
     @Transactional
@@ -56,10 +63,16 @@ public class RecommendationLogService {
         if (!log.getUser().getId().equals(user.getId())) {
             throw new SecurityException("권한이 없습니다.");
         }
+        boolean hadStar = log.getStarRating() != null;
         log.setStarRating(null);
         log.setFeedbackReason(null);
         log.setFeedbackScore(null);
         recommendationLogRepository.save(log);
+
+        // 별점 피드백이 있었으면 RAG에서도 제거 (유령 데이터 방지)
+        if (hadStar) {
+            eventPublisher.publishEvent(new RagHistoryEvents.Delete(logId));
+        }
     }
 
     @Transactional
@@ -73,12 +86,6 @@ public class RecommendationLogService {
         }
         log.setAiResultJson(null);
         recommendationLogRepository.save(log);
-
-        // 별점+코멘트 피드백만 RAG(벡터DB) 적재 (커밋 후 비동기)
-        if (starRating != null) {
-            eventPublisher.publishEvent(new RagHistoryEvents.Save(
-                    email, log.getId(), menu.getId(), menu.getName(), feedbackReason, starRating));
-        }
     }
 
     @Transactional
@@ -118,7 +125,7 @@ public class RecommendationLogService {
         if (starRating != null) {
             eventPublisher.publishEvent(new RagHistoryEvents.Save(
                     email, log.getId(), log.getSelectedMenu().getId(),
-                    log.getSelectedMenu().getName(), feedbackReason, starRating));
+                    log.getSelectedMenu().getName(), log.getFeedbackReason(), starRating));
         }
     }
 
