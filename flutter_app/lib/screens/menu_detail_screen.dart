@@ -268,7 +268,7 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
                   onPressed: () =>
                       _showFeedbackBottomSheet(shownAi.menuId),
                   child: Text(
-                    '피드백',
+                    'AI 픽 별점',
                     style: TextStyle(
                         fontSize: 13, color: Colors.grey[600]),
                   ),
@@ -285,7 +285,7 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
                               color: AppTheme.primaryColor),
                         )
                       : Text(
-                          _saved ? '저장됨' : '저장',
+                          _saved ? '저장됨' : '추천 결과 저장',
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
