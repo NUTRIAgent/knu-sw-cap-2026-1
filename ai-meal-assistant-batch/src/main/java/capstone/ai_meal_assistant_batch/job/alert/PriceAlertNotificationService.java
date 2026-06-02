@@ -28,15 +28,30 @@ public class PriceAlertNotificationService {
 
     /**
      * KAMIS 가격 갱신 후 호출.
-     * ingredient_kamis_prices 테이블을 직접 조회해 변동률 감지 → FCM 발송.
+     * 트랜잭션 안에서 DB 조회만 완료한 뒤, 트랜잭션 밖에서 FCM 발송.
+     * (외부 네트워크 I/O 동안 DB 커넥션 점유 방지)
      */
-    @Transactional(readOnly = true)
     public void dispatchAlerts() {
         log.info("[알림] 가격 변동 알림 발송 시작 (임계값: {}%)", thresholdPercent);
 
-        List<IngredientKamisPrice> kamisPrices = findLatestKamisPrices();
+        List<AlertTarget> targets = collectAlertTargets();
+        if (targets.isEmpty()) {
+            log.info("[알림] 발송 대상 없음");
+            return;
+        }
 
-        int dispatched = 0;
+        for (AlertTarget target : targets) {
+            fcmPushService.sendToTokens(target.tokens(), target.title(), target.body());
+        }
+        log.info("[알림] 발송 완료 — {}개 재료 알림 처리", targets.size());
+    }
+
+    /** DB 조회 전용 — 트랜잭션 내에서 알림 대상 리스트를 모두 수집해 반환. */
+    @Transactional(readOnly = true)
+    public List<AlertTarget> collectAlertTargets() {
+        List<IngredientKamisPrice> kamisPrices = findLatestKamisPrices();
+        List<AlertTarget> targets = new java.util.ArrayList<>();
+
         for (IngredientKamisPrice price : kamisPrices) {
             if (price.getOriginalPrice() == null || price.getPrevDayPrice() == null
                     || price.getPrevDayPrice() == 0) continue;
@@ -55,11 +70,12 @@ public class PriceAlertNotificationService {
                     direction, Math.abs(changeRate),
                     price.getPrevDayPrice(), price.getOriginalPrice());
 
-            fcmPushService.sendToTokens(tokens, title, body);
-            dispatched++;
+            targets.add(new AlertTarget(tokens, title, body));
         }
-        log.info("[알림] 발송 완료 — {}개 재료 알림 처리", dispatched);
+        return targets;
     }
+
+    public record AlertTarget(List<String> tokens, String title, String body) {}
 
     @SuppressWarnings("unchecked")
     private List<IngredientKamisPrice> findLatestKamisPrices() {
