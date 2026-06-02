@@ -42,6 +42,9 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   void _onItemTapped(int index) {
+    if (index == 0 && _selectedIndex != 0) {
+      DashboardScreen.profileRefreshNotifier.value++;
+    }
     setState(() {
       _selectedIndex = index;
     });

@@ -16,6 +16,9 @@ import 'package:flutter_app/theme.dart';
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
+  // MainScreen이 탭 전환 시 호출해 프로필 새로고침을 트리거
+  static final profileRefreshNotifier = ValueNotifier<int>(0);
+
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
@@ -51,6 +54,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    DashboardScreen.profileRefreshNotifier.addListener(_loadDashboardProfile);
     _loadWeather();
     _loadPriceDrops();
     _loadAiPicks();
@@ -60,6 +64,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    DashboardScreen.profileRefreshNotifier.removeListener(_loadDashboardProfile);
     _infoCardController.dispose();
     super.dispose();
   }
