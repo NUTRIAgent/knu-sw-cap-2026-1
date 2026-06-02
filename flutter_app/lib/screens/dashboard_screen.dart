@@ -370,7 +370,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -419,41 +419,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                 )
               : Column(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: _priceDrops.map(_buildPriceDropRow).toList(),
+                  children: _priceDrops
+                      .map((p) => _buildPriceRow(p, color: Colors.green.shade600))
+                      .toList(),
                 ),
-    );
-  }
-
-  Widget _buildPriceDropRow(IngredientPriceModel p) {
-    final rate = p.dayChangeRate!;
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            p.ingredientName,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          p.displayPrice,
-          style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
-        ),
-        const SizedBox(width: 8),
-        SizedBox(
-          width: 48,
-          child: Text(
-            '${rate.toStringAsFixed(1)}%',
-            textAlign: TextAlign.right,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: Colors.green.shade600,
-            ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -475,12 +444,14 @@ class _DashboardScreenState extends State<DashboardScreen>
                 )
               : Column(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: _priceRises.map(_buildPriceRiseRow).toList(),
+                  children: _priceRises
+                      .map((p) => _buildPriceRow(p, color: Colors.red.shade500, prefix: '+'))
+                      .toList(),
                 ),
     );
   }
 
-  Widget _buildPriceRiseRow(IngredientPriceModel p) {
+  Widget _buildPriceRow(IngredientPriceModel p, {required Color color, String prefix = ''}) {
     final rate = p.dayChangeRate!;
     return Row(
       children: [
@@ -500,12 +471,12 @@ class _DashboardScreenState extends State<DashboardScreen>
         SizedBox(
           width: 48,
           child: Text(
-            '+${rate.toStringAsFixed(1)}%',
+            '$prefix${rate.toStringAsFixed(1)}%',
             textAlign: TextAlign.right,
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.bold,
-              color: Colors.red.shade500,
+              color: color,
             ),
           ),
         ),
@@ -748,9 +719,15 @@ class _DashboardScreenState extends State<DashboardScreen>
                     _buildProfileTagRow(
                       '음식 취향',
                       _profileData!.foodPreferences,
-                      color: Colors.indigo.shade300,
+                      chipColor: Colors.indigo.shade300,
                     ),
-                    _buildProfileAllergyRow(_profileData!.allergies),
+                    _buildProfileTagRow(
+                      '알레르기',
+                      _profileData!.allergies,
+                      chipColor: Colors.orange.shade800,
+                      chipBgColor: Colors.orange.shade50,
+                      chipBorderColor: Colors.orange.shade200,
+                    ),
                   ],
                 ),
     );
@@ -772,7 +749,15 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  Widget _buildProfileTagRow(String label, List<String> tags, {required Color color}) {
+  Widget _buildProfileTagRow(
+    String label,
+    List<String> tags, {
+    required Color chipColor,
+    Color? chipBgColor,
+    Color? chipBorderColor,
+  }) {
+    final bg = chipBgColor ?? chipColor.withValues(alpha: 0.12);
+    final border = chipBorderColor ?? chipColor.withValues(alpha: 0.4);
     return Row(
       children: [
         Text(label, style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
@@ -787,56 +772,13 @@ class _DashboardScreenState extends State<DashboardScreen>
                       margin: const EdgeInsets.only(left: 4),
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.12),
+                        color: bg,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: color.withValues(alpha: 0.4)),
+                        border: Border.all(color: border),
                       ),
                       child: Text(
                         t,
-                        style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w500),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    )).toList(),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildProfileAllergyRow(List<String> allergies) {
-    return Row(
-      children: [
-        Text(
-          '알레르기',
-          style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: allergies.isEmpty
-                ? [
-                    const Text(
-                      '없음',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                    )
-                  ]
-                : allergies.take(3).map((a) => Container(
-                      constraints: const BoxConstraints(maxWidth: 68),
-                      margin: const EdgeInsets.only(left: 4),
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.orange.shade200),
-                      ),
-                      child: Text(
-                        a,
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.orange.shade800,
-                          fontWeight: FontWeight.w500,
-                        ),
+                        style: TextStyle(fontSize: 10, color: chipColor, fontWeight: FontWeight.w500),
                         overflow: TextOverflow.ellipsis,
                       ),
                     )).toList(),
@@ -880,7 +822,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
+                            color: Colors.black.withValues(alpha: 0.05),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
