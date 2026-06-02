@@ -168,6 +168,22 @@ class RecommendationService {
     }
   }
 
+  static Future<bool> clearAiPickFeedback(int logId, String? jwt) async {
+    if (jwt == null || jwt.isEmpty) return false;
+    final uri = Uri.parse(
+        '${ApiConfig.baseUrl}/api/recommendation-logs/$logId/clear-feedback');
+    try {
+      final response = await http
+          .patch(uri, headers: {'Authorization': 'Bearer $jwt'})
+          .timeout(const Duration(seconds: 10));
+      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      return json['success'] == true;
+    } catch (e) {
+      debugPrint('AI픽 피드백 삭제 실패: $e');
+      return false;
+    }
+  }
+
   static Future<bool> unsaveAiResult(int logId, String? jwt) async {
     if (jwt == null || jwt.isEmpty) return false;
     final uri = Uri.parse(

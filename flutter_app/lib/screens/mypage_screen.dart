@@ -371,12 +371,12 @@ class _MyPageScreenState extends State<MyPageScreen>
     );
     if (confirmed != true || !mounted) return;
     final jwt = await TokenStorage.getAccessToken();
-    final success = await RecommendationService.deleteFeedback(item.id, jwt);
+    final success = await RecommendationService.clearAiPickFeedback(item.id, jwt);
     if (!mounted) return;
     if (success) {
       setState(() => _aiPickFeedbackItems.removeWhere((i) => i.id == item.id));
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('이력이 삭제되었습니다.')));
+          .showSnackBar(const SnackBar(content: Text('AI 피드백이 삭제되었습니다.')));
     } else {
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('삭제에 실패했습니다.')));
