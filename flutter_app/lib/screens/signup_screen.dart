@@ -5,6 +5,12 @@ import 'package:flutter_app/theme.dart';
 
 // 직접 가입 선택 후 회원가입을 진행하는 페이지입니다.
 
+// 서버(SignupRequest) 비밀번호 정책과 동일하게 유지 — 입력 검증과 체크리스트가 공유
+final RegExp _letterRegex = RegExp(r'[A-Za-z]');
+final RegExp _digitRegex = RegExp(r'\d');
+final RegExp _specialCharRegex = RegExp(r'[^A-Za-z0-9\s]');
+final RegExp _whitespaceRegex = RegExp(r'\s');
+
 // 이메일/닉네임 중복확인 상태
 enum _DuplicateCheckStatus { unchecked, checking, available, taken }
 
@@ -37,12 +43,6 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _agreePrivacyPolicy = false;
 
   static final RegExp _emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
-
-  // 서버(SignupRequest) 비밀번호 정책과 동일하게 유지
-  static final RegExp _letterRegex = RegExp(r'[A-Za-z]');
-  static final RegExp _digitRegex = RegExp(r'\d');
-  static final RegExp _specialCharRegex = RegExp(r'[^A-Za-z0-9\s]');
-  static final RegExp _whitespaceRegex = RegExp(r'\s');
 
   bool _isPasswordValid(String value) {
     return value.length >= 8 &&
@@ -720,15 +720,15 @@ class _PasswordRequirementsChecklist extends StatelessWidget {
         ),
         _RequirementRow(
           label: '영문 포함',
-          isMet: password.contains(RegExp(r'[A-Za-z]')),
+          isMet: _letterRegex.hasMatch(password),
         ),
         _RequirementRow(
           label: '숫자 포함',
-          isMet: password.contains(RegExp(r'\d')),
+          isMet: _digitRegex.hasMatch(password),
         ),
         _RequirementRow(
           label: '특수문자 포함',
-          isMet: password.contains(RegExp(r'[^A-Za-z0-9\s]')),
+          isMet: _specialCharRegex.hasMatch(password),
         ),
       ],
     );
