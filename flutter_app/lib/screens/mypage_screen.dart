@@ -326,6 +326,7 @@ class _MyPageScreenState extends State<MyPageScreen>
   // ── 피드백 탭 로직 ────────────────────────────────
 
   Future<void> _loadFeedbacks() async {
+    if (_feedbackLoading) return; // 재진입 방지 — 중복 호출 시 먼저 완료된 결과 유지
     setState(() => _feedbackLoading = true);
     try {
       final jwt = await TokenStorage.getAccessToken();
@@ -557,7 +558,7 @@ class _MyPageScreenState extends State<MyPageScreen>
           MaterialPageRoute(
             builder: (_) => RecommendationHistoryScreen(jwt: jwt),
           ),
-        ).then((_) { if (mounted) _loadFeedbacks(); });
+        );
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -1377,7 +1378,7 @@ class _MyPageScreenState extends State<MyPageScreen>
             children: List.generate(
               5,
               (i) => Icon(
-                i < item.starRating!
+                i < (item.starRating ?? 0)
                     ? Icons.star_rounded
                     : Icons.star_outline_rounded,
                 size: 14,
