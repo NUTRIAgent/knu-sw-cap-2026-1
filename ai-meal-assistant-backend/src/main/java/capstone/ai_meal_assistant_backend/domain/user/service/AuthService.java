@@ -110,4 +110,41 @@ public class AuthService {
             return AuthResponse.failure("로그인 중 알 수 없는 오류가 발생했습니다");
         }
     }
+
+    @Transactional(readOnly = true)
+    public AuthResponse refresh(RefreshRequest request) {
+        try {
+            String refreshToken = request.getRefreshToken();
+
+            // 리프레시 토큰 유효성 검증 (서명/만료)
+            if (!jwtUtil.validateToken(refreshToken)) {
+                return AuthResponse.failure("유효하지 않은 리프레시 토큰입니다");
+            }
+
+            // 토큰에서 이메일 추출 후 사용자 조회
+            String email = jwtUtil.getEmailFromToken(refreshToken);
+            User user = userRepository.findByEmail(email)
+                    .orElse(null);
+
+            if (user == null) {
+                return AuthResponse.failure("존재하지 않는 사용자입니다");
+            }
+
+            // 새 토큰 발급 (리프레시 토큰도 함께 갱신하여 만료 시점 연장)
+            String accessToken = jwtUtil.generateAccessToken(user.getEmail());
+            String newRefreshToken = jwtUtil.generateRefreshToken(user.getEmail());
+
+            // UserInfo 생성
+            UserInfo userInfo = new UserInfo(user.getEmail(), user.getNickname());
+
+            // AuthData 생성
+            AuthData authData = new AuthData(accessToken, newRefreshToken, userInfo);
+
+            return AuthResponse.success(authData);
+
+        } catch (Exception e) {
+            log.error("토큰 갱신 중 오류 발생", e);
+            return AuthResponse.failure("토큰 갱신 중 알 수 없는 오류가 발생했습니다");
+        }
+    }
 }

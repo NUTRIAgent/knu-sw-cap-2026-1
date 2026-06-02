@@ -5,7 +5,7 @@ import 'services/local_notification_service.dart';
 import 'theme.dart';
 // import 'screens/dashboard_screen.dart';
 // import 'screens/main_screen.dart';
-import 'screens/login_screen.dart';
+import 'screens/splash_screen.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -51,7 +51,8 @@ class NutriAgentApp extends StatelessWidget {
       title: 'NUTRI Agent',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: const LoginScreen(),
+      // 💡 앱 시작 시 자동 로그인 여부를 판단하는 스플래시 화면으로 진입
+      home: const SplashScreen(),
       // home: const MainScreen(),
       // home: const LoginScreen(),
     );
