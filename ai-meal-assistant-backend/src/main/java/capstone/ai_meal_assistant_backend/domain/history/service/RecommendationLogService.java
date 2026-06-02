@@ -7,6 +7,7 @@ import capstone.ai_meal_assistant_backend.domain.menu.entity.Menu;
 import capstone.ai_meal_assistant_backend.domain.menu.repository.MenuRepository;
 import capstone.ai_meal_assistant_backend.domain.user.entity.User;
 import capstone.ai_meal_assistant_backend.domain.user.repository.UserRepository;
+import capstone.ai_meal_assistant_backend.global.client.AiHistoryClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +23,7 @@ public class RecommendationLogService {
     private final RecommendationLogRepository recommendationLogRepository;
     private final UserRepository userRepository;
     private final MenuRepository menuRepository;
+    private final AiHistoryClient aiHistoryClient;
 
     @Transactional
     public void saveFeedback(String email, Long menuId, Integer feedbackScore, Integer starRating, String feedbackReason) {
@@ -42,6 +44,15 @@ public class RecommendationLogService {
         log.setStarRating(starRating);
         log.setFeedbackReason(feedbackReason);
         recommendationLogRepository.save(log);
+
+        // 별점+코멘트 피드백만 RAG(벡터DB)에 비동기 적재
+        if (starRating != null) {
+            aiHistoryClient.saveHistory(
+                    email, log.getId(), menu.getId(), menu.getName(),
+                    feedbackReason, starRating,
+                    null, List.of(), List.of()
+            );
+        }
     }
 
     @Transactional
@@ -75,6 +86,13 @@ public class RecommendationLogService {
         log.setStarRating(starRating);
         log.setFeedbackReason(feedbackReason);
         recommendationLogRepository.save(log);
+
+        // AI 픽 별점+코멘트 → RAG 적재 (멱등: 같은 log_id 갱신)
+        aiHistoryClient.saveHistory(
+                email, log.getId(), log.getSelectedMenu().getId(), log.getSelectedMenu().getName(),
+                feedbackReason, starRating,
+                null, List.of(), List.of()
+        );
     }
 
     @Transactional(readOnly = true)
@@ -125,6 +143,12 @@ public class RecommendationLogService {
         if (!log.getUser().getId().equals(user.getId())) {
             throw new SecurityException("권한이 없습니다.");
         }
+        boolean wasStarFeedback = log.getStarRating() != null;
         recommendationLogRepository.delete(log);
+
+        // 별점+코멘트 피드백이었으면 RAG에서도 비동기 제거
+        if (wasStarFeedback) {
+            aiHistoryClient.deleteHistory(logId);
+        }
     }
 }

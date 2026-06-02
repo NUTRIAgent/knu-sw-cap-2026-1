@@ -24,8 +24,11 @@ class UserHistoryManager:
         recipe_name: str,
         comment: str,
         rating: float,
+        log_id: int,
         context: Optional[Dict] = None,
     ):
+        # 같은 log_id 재저장(피드백 수정) 시 중복 방지: 먼저 제거 후 추가 (멱등)
+        self.delete(log_id)
         text = self._format_text(recipe_name, comment, rating, context)
         doc = Document(
             page_content=text,
@@ -33,9 +36,17 @@ class UserHistoryManager:
                 "user_id": user_id,
                 "recipe_id": str(recipe_id),
                 "rating": float(rating),
+                "log_id": int(log_id),  # recommendation_logs PK (정확 삭제 키)
             },
         )
         self.vectorstore.add_documents([doc])
+
+    def delete(self, log_id: int):
+        """피드백 삭제 시 해당 RAG 문서 제거 (log_id 정확 매칭)."""
+        try:
+            self.vectorstore._collection.delete(where={"log_id": int(log_id)})
+        except Exception as e:
+            print(f"[UserHistoryManager] 삭제 실패 log_id={log_id}: {e}")
 
     @staticmethod
     def _format_text(
@@ -93,4 +104,10 @@ class UserHistoryManager:
         except Exception as e:
             print(f"[UserHistoryManager] 검색 실패: {e}")
             return []
+
+        # [DEBUG] 벡터DB에서 가져온 값 확인
+        print(f"[RAG][DEBUG] user_id={user_id} | query='{query}' | 검색결과 {len(results)}건")
+        for doc, score in results:
+            print(f"[RAG][DEBUG]   score={score:.4f} | meta={doc.metadata} | text='{doc.page_content}'")
+
         return [doc.page_content for doc, _ in results]

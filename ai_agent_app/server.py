@@ -124,6 +124,8 @@ class SelectMenuRequest(BaseModel):
 
 class HistoryRequest(BaseModel):
     jwt_token: Optional[str] = Field(default=None, description="Spring 백엔드 JWT")
+    user_id: Optional[str] = Field(default=None, description="스프링이 직접 전달하는 user_id(이메일)")
+    log_id: int = Field(..., description="recommendation_logs PK (정확 삭제 키)")
     recipe_id: str = Field(..., description="먹은 레시피 MENU_ID")
     recipe_name: str = Field(..., description="먹은 메뉴 이름")
     comment: str = Field(default="", description="코멘트")
@@ -132,6 +134,10 @@ class HistoryRequest(BaseModel):
     fitness_goal: Optional[str] = Field(default=None, description="당시 운동 목표")
     health_conditions: List[str] = Field(default_factory=list, description="당시 건강 상태")
     preferences: List[str] = Field(default_factory=list, description="당시 선호")
+
+
+class DeleteHistoryRequest(BaseModel):
+    log_id: int = Field(..., description="삭제할 recommendation_logs PK")
 
 class WeatherBriefingRequest(BaseModel):
     temperature: float = Field(..., example=31.5, description="현재 기온(°C)")
@@ -261,15 +267,16 @@ async def analyze_selected_menu(req: SelectMenuRequest):
 
 @app.post("/history")
 async def save_history(req: HistoryRequest):
-    """사용자가 먹은 메뉴 + 코멘트 + 별점 저장"""
+    """사용자가 먹은 메뉴 + 코멘트 + 별점 저장 (RAG 적재)"""
     try:
-        user_id = _user_id_from_jwt(req.jwt_token)
+        user_id = req.user_id or _user_id_from_jwt(req.jwt_token)
         user_history_manager.save(
             user_id=user_id,
             recipe_id=req.recipe_id,
             recipe_name=req.recipe_name,
             comment=req.comment,
             rating=req.rating,
+            log_id=req.log_id,
             context={
                 "fitness_goal": req.fitness_goal,
                 "health_conditions": req.health_conditions,
@@ -277,6 +284,16 @@ async def save_history(req: HistoryRequest):
             },
         )
         return {"status": "saved"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/history")
+async def delete_history(req: DeleteHistoryRequest):
+    """피드백 삭제 시 RAG에서도 해당 항목 제거"""
+    try:
+        user_history_manager.delete(req.log_id)
+        return {"status": "deleted"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

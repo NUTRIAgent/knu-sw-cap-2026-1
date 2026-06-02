@@ -42,11 +42,14 @@ def build_static_data(recipe: Dict) -> Dict:
     }
 
 
-def build_llm_input(recipe: Dict, user_query: Dict) -> Dict:
+def build_llm_input(recipe: Dict, user_query: Dict, history_texts: List[str] = None) -> Dict:
     """LLM chain에 넘길 입력 딕셔너리 조립 (가격 계산은 백엔드가 하므로 price_info 제외)"""
+    history_texts = history_texts or []
+    past_history = "\n".join(f"- {h}" for h in history_texts) if history_texts else "없음"
     return {
         "menu_name": recipe["RCP_NM"],
         "ingredients": recipe["RCP_PARTS_DTLS"],
+        "past_history": past_history,
         "user_profile": (
             f"키 {user_query.get('height_cm')}cm, "
             f"체중 {user_query.get('weight_kg')}kg, "
