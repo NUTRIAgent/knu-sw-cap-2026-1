@@ -757,7 +757,7 @@ class _FeedbackGuideSheet extends StatelessWidget {
             icon: Icons.thumb_down_outlined,
             iconColor: Colors.redAccent,
             label: '싫어요',
-            description: '다음 추천부터 이 메뉴가 후보에서 제외됩니다. AI 픽 메뉴에 싫어요를 누르면 AI 픽에서도 제외됩니다.',
+            description: '다음 추천부터 일반 후보와 AI 픽 모두에서 이 메뉴가 제외됩니다.',
           ),
           _GuideRow(
             icon: Icons.thumb_up_outlined,
@@ -775,7 +775,7 @@ class _FeedbackGuideSheet extends StatelessWidget {
             icon: Icons.star_outline_rounded,
             iconColor: Colors.amber,
             label: 'AI 픽 별점',
-            description: '저장된 AI 추천에 대한 만족도를 기록합니다.',
+            description: '저장된 AI 추천에 대한 만족도를 기록합니다. 별점과 코멘트는 다음 AI 픽 추천에 반영됩니다.',
           ),
         ],
       ),
