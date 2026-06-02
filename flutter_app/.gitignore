@@ -71,6 +71,19 @@ app.*.map.json
 **/ios/Runner/GeneratedPluginRegistrant.*
 *.xcworkspace/xcuserdata/
 *.xcodeproj/xcuserdata/
+# CocoaPods lock (팟 버전 고정 불필요 시 무시)
+ios/Podfile.lock
+macos/Podfile.lock
+
+# =======================================================
+# 7. Desktop (Linux / Windows) — 자동 생성 파일
+# =======================================================
+linux/flutter/generated_plugin_registrant.cc
+linux/flutter/generated_plugin_registrant.h
+linux/flutter/generated_plugins.cmake
+windows/flutter/generated_plugin_registrant.cc
+windows/flutter/generated_plugin_registrant.h
+windows/flutter/generated_plugins.cmake
 
 # =======================================================
 # 5. IDE & Editors (VS Code, IntelliJ, Android Studio)

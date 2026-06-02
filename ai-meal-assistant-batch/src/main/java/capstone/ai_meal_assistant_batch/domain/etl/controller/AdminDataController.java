@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -48,14 +49,27 @@ public class AdminDataController {
         return ResponseEntity.ok("미사용 재료 " + deleted + "건을 정리했습니다.");
     }
 
+    /**
+     * 메뉴 이미지 key 점검/재키잉을 백그라운드로 시작한다.
+     * 안전을 위해 기본은 dry-run(실변경 없음). 실제 적용하려면 dryRun=false 명시.
+     *
+     * @param dryRun     true(기본)면 변경 없이 로그만 남긴다.
+     * @param limit      처리 건수 상한(0=무제한, 기본 0).
+     * @param onlyBroken true(기본)면 쿼리스트링('?')이 박혀 깨진 URL만 대상.
+     */
     @PostMapping("/recover-images")
-    public ResponseEntity<String> recoverImages(){
-        boolean started = imageRecoveryAsyncRunner.tryStart();
+    public ResponseEntity<String> recoverImages(
+            @RequestParam(defaultValue = "true") boolean dryRun,
+            @RequestParam(defaultValue = "0") int limit,
+            @RequestParam(defaultValue = "true") boolean onlyBroken){
+        boolean started = imageRecoveryAsyncRunner.tryStart(dryRun, limit, onlyBroken);
         if (!started) {
             return ResponseEntity.status(409)
                     .body("손상 이미지 복구 작업이 이미 진행 중입니다. 서버 로그를 확인하세요.");
         }
         return ResponseEntity.accepted()
-                .body("손상 이미지 복구 작업을 백그라운드에서 시작했습니다. 진행 상황은 서버 로그를 확인하세요.");
+                .body(String.format(
+                        "이미지 재키잉 작업을 백그라운드에서 시작했습니다 (dryRun=%s, limit=%d, onlyBroken=%s). 진행 상황은 서버 로그를 확인하세요.",
+                        dryRun, limit, onlyBroken));
     }
 }

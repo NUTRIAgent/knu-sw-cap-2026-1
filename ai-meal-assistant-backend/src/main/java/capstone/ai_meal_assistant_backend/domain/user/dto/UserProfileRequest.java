@@ -4,6 +4,7 @@ import capstone.ai_meal_assistant_backend.domain.user.entity.FitnessGoal;
 import capstone.ai_meal_assistant_backend.domain.user.entity.Gender;
 import capstone.ai_meal_assistant_backend.domain.user.entity.ProteinLevel;
 import capstone.ai_meal_assistant_backend.domain.user.entity.VegetarianType;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -18,6 +19,8 @@ import java.util.List;
 @AllArgsConstructor
 public class UserProfileRequest {
     // 온보딩에서는 보내지 않고 마이페이지에서 수정할 때만 보내야됩니다
+    // null이면 검증을 통과하고(닉네임 미변경), 값이 있으면 2~20자여야 합니다
+    @Size(min = 2, max = 20, message = "닉네임은 2자 이상 20자 이하여야 합니다")
     private String nickname;
     private Gender gender;
 

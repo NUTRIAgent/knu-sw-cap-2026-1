@@ -2,11 +2,11 @@ from typing import List, Dict
 from ai_agent_app.GoalGuidelines import format_guideline
 
 
-def format_enriched(cid, recipe: Dict, price_info: str, rough_cost: int = 0) -> str:
-    """enriched 문자열 포맷 (rank_node 프롬프트용)"""
-    cost_str = f"{rough_cost}원" if rough_cost > 0 else "추정불가"
+def format_enriched(cid, recipe: Dict, total_cost: int = 0) -> str:
+    """enriched 문자열 포맷 (rank_node 프롬프트용). 비용은 백엔드 선계산 총액 사용."""
+    cost_str = f"{total_cost}원" if total_cost > 0 else "추정불가"
     return (
-        f"ID:{cid} | 메뉴:{recipe['RCP_NM']} | 추정조리비:{cost_str} | "
+        f"ID:{cid} | 메뉴:{recipe['RCP_NM']} | 추정재료비:{cost_str} | "
         f"열량:{recipe['INFO_ENG']}kcal 단백질:{recipe['INFO_PRO']}g "
         f"지방:{recipe['INFO_FAT']}g 탄수화물:{recipe['INFO_CAR']}g 나트륨:{recipe['INFO_NA']}mg"
     )
@@ -42,12 +42,11 @@ def build_static_data(recipe: Dict) -> Dict:
     }
 
 
-def build_llm_input(recipe: Dict, price_info: str, user_query: Dict) -> Dict:
-    """LLM chain에 넘길 입력 딕셔너리 조립"""
+def build_llm_input(recipe: Dict, user_query: Dict) -> Dict:
+    """LLM chain에 넘길 입력 딕셔너리 조립 (가격 계산은 백엔드가 하므로 price_info 제외)"""
     return {
         "menu_name": recipe["RCP_NM"],
         "ingredients": recipe["RCP_PARTS_DTLS"],
-        "price_info": price_info,
         "user_profile": (
             f"키 {user_query.get('height_cm')}cm, "
             f"체중 {user_query.get('weight_kg')}kg, "

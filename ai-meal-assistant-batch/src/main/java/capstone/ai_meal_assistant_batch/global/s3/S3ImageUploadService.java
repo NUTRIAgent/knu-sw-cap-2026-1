@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
@@ -15,6 +16,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 @Slf4j
 @Service
@@ -45,6 +48,14 @@ public class S3ImageUploadService {
      * 다운로드/업로드 실패 시 원본 URL을 반환한다.
      */
     public String uploadFromUrl(String originalUrl) {
+        return uploadFromUrl(originalUrl, null);
+    }
+
+    /**
+     * {@link #uploadFromUrl(String)}와 동일하되, S3 key를 foodCode 기반으로 생성한다.
+     * foodCode가 비어 있으면 원본 URL 해시로 폴백한다. ({@link #buildObjectKey})
+     */
+    public String uploadFromUrl(String originalUrl, String foodCode) {
         if (originalUrl == null || originalUrl.isBlank()) {
             return originalUrl;
         }
@@ -52,8 +63,7 @@ public class S3ImageUploadService {
             return originalUrl;
         }
 
-        String fileName = originalUrl.substring(originalUrl.lastIndexOf('/') + 1);
-        String key = "images/food/" + fileName;
+        String key = buildObjectKey(foodCode, originalUrl);
 
         if (existsValidInS3(key)) {
             log.debug("S3 이미 존재(정상), 스킵: {}", key);
@@ -244,6 +254,83 @@ public class S3ImageUploadService {
             return "https://" + cloudfrontDomain + "/" + key;
         }
         return "https://" + bucket + ".s3." + region + ".amazonaws.com/" + key;
+    }
+
+    /**
+     * S3 객체 key를 생성한다.
+     * <p>업무 식별자인 foodCode 기반(예: {@code images/food/10_00028})을 우선 사용한다.
+     * URL-safe(특수문자 없음)하고 메뉴당 유일하므로 쿼리스트링이 key에 섞여 들어가
+     * URL이 깨지는 문제를 원천 차단한다. foodCode가 없으면 원본 URL 해시로 폴백한다.
+     * <p>확장자는 붙이지 않는다 — 렌더링은 업로드 시 저장한 Content-Type 메타데이터로 결정된다.
+     */
+    private String buildObjectKey(String foodCode, String originalUrl) {
+        if (foodCode != null && !foodCode.isBlank()) {
+            return "images/food/" + foodCode;
+        }
+        return "images/food/" + sha256Hex(originalUrl);
+    }
+
+    private String sha256Hex(String input) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] digest = md.digest(input.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder(digest.length * 2);
+            for (byte b : digest) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (NoSuchAlgorithmException e) {
+            // SHA-256은 모든 JVM에 존재하므로 사실상 도달 불가.
+            throw new IllegalStateException("SHA-256 알고리즘 사용 불가", e);
+        }
+    }
+
+    /**
+     * 원본 재다운로드 없이 S3 내부에서 oldKey → newKey 로 객체를 복사(재키잉)한다.
+     * 이미 S3에 정상 사본이 있는 경우(예: 쿼리스트링이 박힌 깨진 key) 안전하게 재정렬할 때 사용한다.
+     *
+     * @return 성공 시 newKey의 접근 URL, 실패/불필요 시 처리 결과 URL. 복사 실패 시 null.
+     */
+    public String reKeyWithinS3(String oldKey, String newKey) {
+        if (oldKey == null || oldKey.isBlank() || newKey == null || newKey.isBlank()) {
+            return null;
+        }
+        if (oldKey.equals(newKey)) {
+            return buildS3Url(newKey);
+        }
+        try {
+            s3Client.copyObject(CopyObjectRequest.builder()
+                    .sourceBucket(bucket)
+                    .sourceKey(oldKey)
+                    .destinationBucket(bucket)
+                    .destinationKey(newKey)
+                    .build());
+            log.info("S3 재키잉 성공: {} -> {}", oldKey, newKey);
+            return buildS3Url(newKey);
+        } catch (Exception e) {
+            log.warn("S3 재키잉 실패: {} -> {} | 원인: {}", oldKey, newKey, e.getMessage());
+            return null;
+        }
+    }
+
+    /** foodCode/원본 URL로 생성될 S3 key를 외부에서 조회한다. ({@link #buildObjectKey} 노출) */
+    public String objectKeyFor(String foodCode, String originalUrl) {
+        return buildObjectKey(foodCode, originalUrl);
+    }
+
+    /** S3 key로부터 접근 URL을 만든다. ({@link #buildS3Url} 노출) */
+    public String urlForKey(String key) {
+        return buildS3Url(key);
+    }
+
+    /** URL에서 S3 key를 추출한다. 매칭 안 되면 null. ({@link #extractS3Key} 노출) */
+    public String s3KeyOf(String url) {
+        return extractS3Key(url);
+    }
+
+    /** 주어진 key의 S3 객체가 유효한 이미지로 존재하는지 확인한다. ({@link #existsValidInS3} 노출) */
+    public boolean existsInS3(String key) {
+        return existsValidInS3(key);
     }
 
     /**

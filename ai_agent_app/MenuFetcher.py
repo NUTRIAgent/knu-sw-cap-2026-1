@@ -76,6 +76,10 @@ class MenuFetcher:
             "INFO_NA":         str(dto.get("sodium") or 0),
             "ATT_FILE_NO_MAIN": dto.get("mainImageUrl", ""),
             "RCP_NA_TIP":      dto.get("healthTip", ""),
+            # 백엔드 선계산 재료비 (#155)
+            "INGREDIENT_COSTS": dto.get("ingredientCosts", []),
+            "TOTAL_COST":       dto.get("totalEstimatedCost") or 0,
+            "MISSING_COST_CNT": dto.get("missingCount") or 0,
         }
         # 조리 단계 (steps 테이블 연결 후 채워짐)
         for step in dto.get("steps", []):
