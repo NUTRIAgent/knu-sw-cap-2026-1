@@ -355,8 +355,8 @@ class _MyPageScreenState extends State<MyPageScreen>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogCtx) => AlertDialog(
-        title: const Text('이력 삭제'),
-        content: Text('"${item.menuName}" AI픽 이력을 삭제할까요?'),
+        title: const Text('AI 피드백 삭제'),
+        content: Text('"${item.menuName}" AI 피드백을 삭제할까요?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogCtx, false),
