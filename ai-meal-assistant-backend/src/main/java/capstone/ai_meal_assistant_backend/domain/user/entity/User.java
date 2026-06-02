@@ -20,7 +20,7 @@ public class User extends BaseEntity {
 
     private String password;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String nickname;
 
     // --- 추가된 성별 필드 ---

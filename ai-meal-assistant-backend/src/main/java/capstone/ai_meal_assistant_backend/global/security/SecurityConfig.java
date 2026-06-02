@@ -31,6 +31,7 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // JWT 사용하므로 세션 사용 안 함
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/v1/auth/**").permitAll() // 인증 API는 모두 허용
+                .requestMatchers("/api/v1/users/exists").permitAll() // 회원가입 중복확인은 비로그인 허용
                 .anyRequest().permitAll() // 개발 단계에서는 모두 허용 (나중에 authenticated()로 변경)
             );
         
