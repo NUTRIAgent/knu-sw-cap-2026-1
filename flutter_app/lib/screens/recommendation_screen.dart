@@ -107,6 +107,16 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
   }
 
 
+  void _showFeedbackGuide(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => const _FeedbackGuideSheet(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final aiPickIds = _aiResults.map((r) => r.menuId).toSet();
@@ -117,6 +127,13 @@ class _RecommendationScreenState extends State<RecommendationScreen> {
         centerTitle: true,
         elevation: 0,
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline_rounded),
+            tooltip: '기능 안내',
+            onPressed: () => _showFeedbackGuide(context),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -709,5 +726,102 @@ class _CandidateCard extends StatelessWidget {
         child: const Icon(Icons.restaurant,
             size: 24, color: AppTheme.primaryColor),
       );
+}
+
+class _FeedbackGuideSheet extends StatelessWidget {
+  const _FeedbackGuideSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Text('버튼 기능 안내',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 20),
+          _GuideRow(
+            icon: Icons.thumb_down_outlined,
+            iconColor: Colors.redAccent,
+            label: '싫어요',
+            description: '다음 추천부터 이 메뉴가 후보에서 제외됩니다.',
+          ),
+          _GuideRow(
+            icon: Icons.thumb_up_outlined,
+            iconColor: AppTheme.primaryColor,
+            label: '좋아요',
+            description: '관심 메뉴로 기록됩니다. (현재 추천 순위에는 영향 없음)',
+          ),
+          _GuideRow(
+            icon: Icons.bookmark_add_outlined,
+            iconColor: AppTheme.primaryColor,
+            label: 'AI 추천 결과 저장',
+            description: 'AI가 분석한 레시피·영양 정보를 마이페이지 이력에 보관합니다.',
+          ),
+          _GuideRow(
+            icon: Icons.star_outline_rounded,
+            iconColor: Colors.amber,
+            label: 'AI 픽 별점',
+            description: '저장된 AI 추천에 대한 만족도를 기록합니다.',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GuideRow extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String label;
+  final String description;
+
+  const _GuideRow({
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    required this.description,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: iconColor, size: 22),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 2),
+                Text(description,
+                    style: TextStyle(
+                        fontSize: 13, color: Colors.grey.shade600)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
