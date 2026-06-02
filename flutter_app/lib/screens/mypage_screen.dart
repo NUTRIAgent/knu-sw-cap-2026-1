@@ -351,6 +351,38 @@ class _MyPageScreenState extends State<MyPageScreen>
     }
   }
 
+  Future<void> _confirmDeleteAiPick(AiPickItem item) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('이력 삭제'),
+        content: Text('"${item.menuName}" AI픽 이력을 삭제할까요?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            child: const Text('삭제', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final jwt = await TokenStorage.getAccessToken();
+    final success = await RecommendationService.deleteFeedback(item.id, jwt);
+    if (!mounted) return;
+    if (success) {
+      setState(() => _aiPickFeedbackItems.removeWhere((i) => i.id == item.id));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('이력이 삭제되었습니다.')));
+    } else {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('삭제에 실패했습니다.')));
+    }
+  }
+
   Future<void> _confirmDeleteFeedback(FeedbackHistoryItem item) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -1425,9 +1457,19 @@ class _MyPageScreenState extends State<MyPageScreen>
         ],
       ),
       isThreeLine: true,
-      trailing: item.isDisliked
-          ? null
-          : Icon(Icons.edit_outlined, size: 16, color: Colors.grey.shade400),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (!item.isDisliked)
+            Icon(Icons.edit_outlined, size: 16, color: Colors.grey.shade400),
+          if (!item.isDisliked) const SizedBox(width: 8),
+          GestureDetector(
+            onTap: () => _confirmDeleteAiPick(item),
+            child: Icon(Icons.delete_outline_rounded,
+                size: 16, color: Colors.grey.shade400),
+          ),
+        ],
+      ),
     );
   }
 
