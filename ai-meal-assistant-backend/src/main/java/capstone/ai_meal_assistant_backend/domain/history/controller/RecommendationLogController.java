@@ -99,7 +99,7 @@ public class RecommendationLogController {
 
         String email = jwtUtil.getEmailFromToken(authHeader.substring(7));
         try {
-            recommendationLogService.updateFeedback(email, id, request.getStarRating(), request.getFeedbackReason());
+            recommendationLogService.updateFeedback(email, id, request.getFeedbackScore(), request.getStarRating(), request.getFeedbackReason());
             return ResponseEntity.ok(Map.of("success", true));
         } catch (SecurityException e) {
             return ResponseEntity.status(403).body(Map.of("success", false, "error", e.getMessage()));

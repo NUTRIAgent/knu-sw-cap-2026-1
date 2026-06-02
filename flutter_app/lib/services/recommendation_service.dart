@@ -242,6 +242,30 @@ class RecommendationService {
     }
   }
 
+  static Future<bool> updateAiPickFeedbackScore(
+      int logId, int feedbackScore, String? jwt) async {
+    if (jwt == null || jwt.isEmpty) return false;
+    final uri = Uri.parse(
+        '${ApiConfig.baseUrl}/api/recommendation-logs/$logId/feedback');
+    try {
+      final response = await http
+          .patch(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $jwt',
+            },
+            body: jsonEncode({'feedbackScore': feedbackScore}),
+          )
+          .timeout(const Duration(seconds: 10));
+      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      return json['success'] == true;
+    } catch (e) {
+      debugPrint('AI픽 피드백 업데이트 실패: $e');
+      return false;
+    }
+  }
+
   static Future<MenuDetail?> fetchMenuDetail(int id, String? jwt) async {
     final uri = Uri.parse('${ApiConfig.baseUrl}/api/menus/$id');
     final headers = <String, String>{};

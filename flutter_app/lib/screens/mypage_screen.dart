@@ -343,7 +343,7 @@ class _MyPageScreenState extends State<MyPageScreen>
       setState(() {
         _feedbackItems = feedbacks;
         _aiPickFeedbackItems =
-            aiPicks.where((i) => i.starRating != null).toList();
+            aiPicks.where((i) => i.starRating != null || i.isDisliked).toList();
       });
     } finally {
       if (mounted) setState(() => _feedbackLoading = false);
@@ -1380,19 +1380,32 @@ class _MyPageScreenState extends State<MyPageScreen>
         mainAxisSize: MainAxisSize.min,
         children: [
           const SizedBox(height: 2),
-          Row(
-            children: List.generate(
-              5,
-              (i) => Icon(
-                i < (item.starRating ?? 0)
-                    ? Icons.star_rounded
-                    : Icons.star_outline_rounded,
-                size: 14,
-                color: Colors.amber,
+          if (item.isDisliked)
+            Row(
+              children: [
+                Icon(Icons.block_rounded, size: 13, color: Colors.red.shade300),
+                const SizedBox(width: 4),
+                Text(
+                  '다시 추천 안함',
+                  style: TextStyle(fontSize: 12, color: Colors.red.shade300),
+                ),
+              ],
+            )
+          else
+            Row(
+              children: List.generate(
+                5,
+                (i) => Icon(
+                  i < (item.starRating ?? 0)
+                      ? Icons.star_rounded
+                      : Icons.star_outline_rounded,
+                  size: 14,
+                  color: Colors.amber,
+                ),
               ),
             ),
-          ),
-          if (item.feedbackReason != null &&
+          if (!item.isDisliked &&
+              item.feedbackReason != null &&
               item.feedbackReason!.isNotEmpty) ...[
             const SizedBox(height: 2),
             Text(
@@ -1412,7 +1425,9 @@ class _MyPageScreenState extends State<MyPageScreen>
         ],
       ),
       isThreeLine: true,
-      trailing: Icon(Icons.edit_outlined, size: 16, color: Colors.grey.shade400),
+      trailing: item.isDisliked
+          ? null
+          : Icon(Icons.edit_outlined, size: 16, color: Colors.grey.shade400),
     );
   }
 

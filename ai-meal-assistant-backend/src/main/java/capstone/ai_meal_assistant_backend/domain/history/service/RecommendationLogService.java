@@ -64,7 +64,7 @@ public class RecommendationLogService {
     }
 
     @Transactional
-    public void updateFeedback(String email, Long logId, Integer starRating, String feedbackReason) {
+    public void updateFeedback(String email, Long logId, Integer feedbackScore, Integer starRating, String feedbackReason) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
         RecommendationLog log = recommendationLogRepository.findById(logId)
@@ -72,8 +72,9 @@ public class RecommendationLogService {
         if (!log.getUser().getId().equals(user.getId())) {
             throw new SecurityException("권한이 없습니다.");
         }
-        log.setStarRating(starRating);
-        log.setFeedbackReason(feedbackReason);
+        if (feedbackScore != null) log.setFeedbackScore(feedbackScore);
+        if (starRating != null) log.setStarRating(starRating);
+        if (feedbackReason != null) log.setFeedbackReason(feedbackReason);
         recommendationLogRepository.save(log);
     }
 
@@ -108,6 +109,7 @@ public class RecommendationLogService {
                         .menuId(log.getSelectedMenu().getId())
                         .menuName(log.getSelectedMenu().getName())
                         .menuImageUrl(log.getSelectedMenu().getMainImageUrl())
+                        .feedbackScore(log.getFeedbackScore())
                         .starRating(log.getStarRating())
                         .feedbackReason(log.getFeedbackReason())
                         .aiResultJson(log.getAiResultJson())
