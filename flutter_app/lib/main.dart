@@ -7,23 +7,14 @@ import 'theme.dart';
 // import 'screens/main_screen.dart';
 import 'screens/login_screen.dart';
 
-const _firebaseOptions = FirebaseOptions(
-  apiKey: 'AIzaSyC-ThMJGj1K3Q7XgHfI3YguHZ1fF-DoReg',
-  appId: '1:78580103995:ios:5f707eb913f34eaaf0151e',
-  messagingSenderId: '78580103995',
-  projectId: 'nutria-b5a30',
-  iosBundleId: 'com.nutria.FA',
-  storageBucket: 'nutria-b5a30.firebasestorage.app',
-);
-
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp(options: _firebaseOptions);
+  await Firebase.initializeApp();
 }
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: _firebaseOptions);
+  await Firebase.initializeApp();
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   await LocalNotificationService.init();
   // 알림 권한 요청 및 토큰 출력은 앱 시작을 막지 않도록 비동기로 처리
