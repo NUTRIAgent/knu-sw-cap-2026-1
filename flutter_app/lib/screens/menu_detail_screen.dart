@@ -146,8 +146,7 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
               ),
               const SizedBox(height: 20),
               Builder(builder: (_) {
-                final canSubmit = _feedbackRating > 0 &&
-                    _feedbackController.text.trim().isNotEmpty;
+                final canSubmit = _feedbackRating > 0;
                 return SizedBox(
                   height: 52,
                   child: ElevatedButton(
