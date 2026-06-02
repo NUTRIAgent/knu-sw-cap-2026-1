@@ -10,10 +10,14 @@ import 'package:flutter_app/services/weather_service.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'recommendation_screen.dart';
+import 'recommendation_history_screen.dart';
 import 'package:flutter_app/theme.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  // MainScreen이 탭 전환 시 호출해 프로필 새로고침을 트리거
+  static final profileRefreshNotifier = ValueNotifier<int>(0);
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -26,21 +30,23 @@ class _DashboardScreenState extends State<DashboardScreen>
   bool _isWeatherLoading = true;
   String? _weatherError;
   String _locationName = '현재위치';
-  static String? _aiBriefing;
+  String? _aiBriefing;
 
   // ── 정보 카드 공통 ────────────────────────────────
   final PageController _infoCardController = PageController();
   int _infoCardIndex = 0;
 
-  // ── 카드 1: 저렴한 재료 ───────────────────────────
+  // ── 카드 1: 가격 하락 재료 ────────────────────────
   List<IngredientPriceModel> _priceDrops = [];
+  // ── 카드 2: 가격 상승 재료 ────────────────────────
+  List<IngredientPriceModel> _priceRises = [];
   bool _isPriceLoading = true;
 
-  // ── 카드 2: AI 픽 이력 ────────────────────────────
+  // ── 카드 3: AI 픽 이력 ────────────────────────────
   List<AiPickItem> _aiPicks = [];
   bool _isAiPickLoading = true;
 
-  // ── 카드 3: 프로필 요약 ───────────────────────────
+  // ── 카드 4: 프로필 요약 ───────────────────────────
   UserProfileData? _profileData;
   bool _isProfileLoading = true;
 
@@ -48,6 +54,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    DashboardScreen.profileRefreshNotifier.addListener(_loadDashboardProfile);
     _loadWeather();
     _loadPriceDrops();
     _loadAiPicks();
@@ -57,15 +64,17 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    DashboardScreen.profileRefreshNotifier.removeListener(_loadDashboardProfile);
     _infoCardController.dispose();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // if (state == AppLifecycleState.resumed) {
-    //   _loadWeather();
-    // }
+    if (state == AppLifecycleState.resumed) {
+      _loadPriceDrops();
+      _loadAiPicks();
+    }
   }
 
   Future<void> _loadWeather() async {
@@ -151,12 +160,17 @@ class _DashboardScreenState extends State<DashboardScreen>
     try {
       final prices = await MarketPriceService.getAllPrices();
       final drops = prices
-          .where((p) => p.dayChangeRate != null && p.dayChangeRate! < 0)
+          .where((p) => p.dayChangeRate != null && p.dayChangeRate! <= -0.05)
           .toList()
         ..sort((a, b) => a.dayChangeRate!.compareTo(b.dayChangeRate!));
+      final rises = prices
+          .where((p) => p.dayChangeRate != null && p.dayChangeRate! >= 0.05)
+          .toList()
+        ..sort((a, b) => b.dayChangeRate!.compareTo(a.dayChangeRate!));
       if (mounted) {
         setState(() {
           _priceDrops = drops.take(3).toList();
+          _priceRises = rises.take(3).toList();
           _isPriceLoading = false;
         });
       }
@@ -239,7 +253,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           builder: (_) =>
               RecommendationScreen(candidates: candidates, request: request),
         ),
-      );
+      ).then((_) => _loadAiPicks());
     } catch (e) {
       _showError('추천 중 오류가 발생했습니다.\n$e');
     } finally {
@@ -274,9 +288,9 @@ class _DashboardScreenState extends State<DashboardScreen>
     };
   }
 
-  String _briefingText(WeatherData? w) {
+  String _briefingText() {
     if (_aiBriefing != null) return _aiBriefing!;
-    return 'ai가 날씨를 브리핑 중입니다...';
+    return 'AI가 날씨를 브리핑 중입니다...';
   }
 
   void _showError(String message) {
@@ -302,19 +316,19 @@ class _DashboardScreenState extends State<DashboardScreen>
   Widget _buildInfoCards() {
     return Column(
       children: [
-        // PageView: 저렴한 재료 ↔ AI 픽 이력 (2장)
+        // PageView: 가격 하락 ↔ 가격 상승 (2장)
         SizedBox(
-          height: 175,
+          height: 145,
           child: PageView(
             controller: _infoCardController,
             onPageChanged: (i) => setState(() => _infoCardIndex = i),
             children: [
               _buildPriceDropCard(),
-              _buildAiPickCard(),
+              _buildPriceRiseCard(),
             ],
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(2, (i) {
@@ -331,9 +345,9 @@ class _DashboardScreenState extends State<DashboardScreen>
             );
           }),
         ),
-        const SizedBox(height: 12),
-        // 프로필 카드: 항상 표시 (고정 높이로 Expanded 제약 보장)
-        SizedBox(height: 115, child: _buildProfileCard()),
+        const SizedBox(height: 10),
+        // 프로필 카드
+        SizedBox(height: 120, child: _buildProfileCard()),
       ],
     );
   }
@@ -343,16 +357,20 @@ class _DashboardScreenState extends State<DashboardScreen>
     required Color iconColor,
     required String title,
     required Widget body,
+    VoidCallback? onTap,
+    EdgeInsetsGeometry padding = const EdgeInsets.fromLTRB(16, 14, 16, 14),
   }) {
-    return Container(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
       margin: const EdgeInsets.symmetric(horizontal: 2),
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      padding: padding,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -379,16 +397,17 @@ class _DashboardScreenState extends State<DashboardScreen>
           Expanded(child: body),
         ],
       ),
+    ),
     );
   }
 
-  // ── 카드 1: 저렴한 재료 ───────────────────────────
+  // ── 카드 1: 가격 하락 재료 ────────────────────────
 
   Widget _buildPriceDropCard() {
     return _buildInfoCardShell(
       icon: Icons.trending_down_rounded,
       iconColor: Colors.green.shade600,
-      title: '오늘의 저렴한 재료',
+      title: '곧 가격이 내릴 재료',
       body: _isPriceLoading
           ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
           : _priceDrops.isEmpty
@@ -400,12 +419,39 @@ class _DashboardScreenState extends State<DashboardScreen>
                 )
               : Column(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: _priceDrops.map(_buildPriceDropRow).toList(),
+                  children: _priceDrops
+                      .map((p) => _buildPriceRow(p, color: Colors.green.shade600))
+                      .toList(),
                 ),
     );
   }
 
-  Widget _buildPriceDropRow(IngredientPriceModel p) {
+  // ── 카드 2: 가격 상승 재료 ────────────────────────
+
+  Widget _buildPriceRiseCard() {
+    return _buildInfoCardShell(
+      icon: Icons.trending_up_rounded,
+      iconColor: Colors.red.shade500,
+      title: '곧 가격이 오를 재료',
+      body: _isPriceLoading
+          ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+          : _priceRises.isEmpty
+              ? Center(
+                  child: Text(
+                    '가격 상승 재료 데이터 없음',
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade400),
+                  ),
+                )
+              : Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: _priceRises
+                      .map((p) => _buildPriceRow(p, color: Colors.red.shade500, prefix: '+'))
+                      .toList(),
+                ),
+    );
+  }
+
+  Widget _buildPriceRow(IngredientPriceModel p, {required Color color, String prefix = ''}) {
     final rate = p.dayChangeRate!;
     return Row(
       children: [
@@ -422,39 +468,48 @@ class _DashboardScreenState extends State<DashboardScreen>
           style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
         ),
         const SizedBox(width: 8),
-        Text(
-          '${rate.toStringAsFixed(1)}%',
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.bold,
-            color: Colors.green.shade600,
+        SizedBox(
+          width: 48,
+          child: Text(
+            '$prefix${rate.toStringAsFixed(1)}%',
+            textAlign: TextAlign.right,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
           ),
         ),
       ],
     );
   }
 
-  // ── 카드 2: AI 픽 이력 ────────────────────────────
+  // ── 카드 3: AI 픽 이력 ────────────────────────────
 
-  Widget _buildAiPickCard() {
-    return _buildInfoCardShell(
-      icon: Icons.auto_awesome_rounded,
-      iconColor: AppTheme.primaryColor,
-      title: 'AI 픽 이력',
-      body: _isAiPickLoading
-          ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
-          : _aiPicks.isEmpty
-              ? Center(
-                  child: Text(
-                    '아직 AI 픽 이력이 없어요',
-                    style: TextStyle(fontSize: 13, color: Colors.grey.shade400),
-                  ),
-                )
-              : Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: _aiPicks.map(_buildAiPickRow).toList(),
-                ),
-    );
+  Future<void> _navigateToAiPickHistory() async {
+    try {
+      final jwt = await TokenStorage.getAccessToken();
+      if (!mounted) return;
+      if (jwt == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('로그인이 필요합니다')),
+        );
+        return;
+      }
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => RecommendationHistoryScreen(jwt: jwt),
+        ),
+      );
+      if (mounted) _loadAiPicks();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('이동 중 오류가 발생했습니다: $e')),
+        );
+      }
+    }
   }
 
   Widget _buildAiPickRow(AiPickItem item) {
@@ -506,6 +561,137 @@ class _DashboardScreenState extends State<DashboardScreen>
         child: Icon(Icons.restaurant, color: Colors.grey.shade400, size: 14),
       );
 
+  // ── AI 픽 + 추천 버튼 통합 카드 ──────────────────
+
+  Widget _buildAiPickAndRecommendCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // ── 상단: AI 픽 이력 ──
+          GestureDetector(
+            onTap: () { _navigateToAiPickHistory(); },
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      ShaderMask(
+                        blendMode: BlendMode.srcIn,
+                        shaderCallback: (b) => AppTheme.aiGradient.createShader(b),
+                        child: const Icon(Icons.auto_awesome_rounded, size: 14),
+                      ),
+                      const SizedBox(width: 6),
+                      ShaderMask(
+                        blendMode: BlendMode.srcIn,
+                        shaderCallback: (b) => AppTheme.aiGradient.createShader(b),
+                        child: const Text(
+                          '최근 저장한 AI 추천 메뉴',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      const Spacer(),
+                      Icon(Icons.chevron_right_rounded, size: 16, color: Colors.grey.shade400),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  _isAiPickLoading
+                      ? const Center(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 8),
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        )
+                      : _aiPicks.isEmpty
+                          ? Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: Text(
+                                '아직 저장한 AI 추천 메뉴가 없어요',
+                                style: TextStyle(fontSize: 13, color: Colors.grey.shade400),
+                              ),
+                            )
+                          : Column(
+                              children: _aiPicks
+                                  .map((item) => Padding(
+                                        padding: const EdgeInsets.only(bottom: 8),
+                                        child: _buildAiPickRow(item),
+                                      ))
+                                  .toList(),
+                            ),
+                ],
+              ),
+            ),
+          ),
+          // ── 구분선 ──
+          const Divider(height: 1, thickness: 1, color: Color(0xFFF0F0F0)),
+          // ── 하단: 추천 버튼 ──
+          GestureDetector(
+            onTap: _isLoading ? null : _requestRecommendation,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                gradient: _isLoading ? null : AppTheme.aiGradient,
+                color: _isLoading ? Colors.grey[300] : null,
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(16),
+                  bottomRight: Radius.circular(16),
+                ),
+              ),
+              child: _isLoading
+                  ? const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2),
+                        ),
+                        SizedBox(width: 10),
+                        Text(
+                          'AI가 메뉴를 분석 중...',
+                          style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white),
+                        ),
+                      ],
+                    )
+                  : const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.restaurant_menu, size: 18, color: Colors.white),
+                        SizedBox(width: 10),
+                        Text(
+                          '맞춤 메뉴 추천 받기',
+                          style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white),
+                        ),
+                      ],
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ── 카드 3: 프로필 요약 ───────────────────────────
 
   Widget _buildProfileCard() {
@@ -513,6 +699,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       icon: Icons.person_outline_rounded,
       iconColor: AppTheme.primaryColor,
       title: '내 식단 프로필',
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
       body: _isProfileLoading
           ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
           : _profileData == null
@@ -529,11 +716,18 @@ class _DashboardScreenState extends State<DashboardScreen>
                       '식단 목표',
                       _fitnessGoalMap[_profileData!.fitnessGoal] ?? '일반식단',
                     ),
-                    _buildProfileKVRow(
-                      '매운맛',
-                      '${_profileData!.spicyPreference ?? 3}단계',
+                    _buildProfileTagRow(
+                      '음식 취향',
+                      _profileData!.foodPreferences,
+                      chipColor: Colors.indigo.shade300,
                     ),
-                    _buildProfileAllergyRow(_profileData!.allergies),
+                    _buildProfileTagRow(
+                      '알레르기',
+                      _profileData!.allergies,
+                      chipColor: Colors.orange.shade800,
+                      chipBgColor: Colors.orange.shade50,
+                      chipBorderColor: Colors.orange.shade200,
+                    ),
                   ],
                 ),
     );
@@ -555,39 +749,41 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  Widget _buildProfileAllergyRow(List<String> allergies) {
+  Widget _buildProfileTagRow(
+    String label,
+    List<String> tags, {
+    required Color chipColor,
+    Color? chipBgColor,
+    Color? chipBorderColor,
+  }) {
+    final bg = chipBgColor ?? chipColor.withValues(alpha: 0.12);
+    final border = chipBorderColor ?? chipColor.withValues(alpha: 0.4);
     return Row(
       children: [
-        Text(
-          '알레르기',
-          style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-        ),
-        const Spacer(),
-        if (allergies.isEmpty)
-          const Text(
-            '없음',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-          )
-        else
-          Row(
-            children: allergies.take(3).map((a) => Container(
-              margin: const EdgeInsets.only(left: 4),
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.orange.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.orange.shade200),
-              ),
-              child: Text(
-                a,
-                style: TextStyle(
-                  fontSize: 10,
-                  color: Colors.orange.shade800,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            )).toList(),
+        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: tags.isEmpty
+                ? [const Text('없음', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600))]
+                : tags.take(3).map((t) => Container(
+                      constraints: const BoxConstraints(maxWidth: 68),
+                      margin: const EdgeInsets.only(left: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: bg,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: border),
+                      ),
+                      child: Text(
+                        t,
+                        style: TextStyle(fontSize: 10, color: chipColor, fontWeight: FontWeight.w500),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    )).toList(),
           ),
+        ),
       ],
     );
   }
@@ -598,164 +794,106 @@ class _DashboardScreenState extends State<DashboardScreen>
   Widget build(BuildContext context) {
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            ShaderMask(
-              blendMode: BlendMode.srcIn,
-              shaderCallback: (Rect bounds) =>
-                  AppTheme.aiGradient.createShader(bounds),
-              child: const Text(
-                'NUTRI Agent',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // 날씨 및 브리핑 카드
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        _weatherIcon(_weather),
-                        color: _weatherIconColor(_weather),
-                        size: 28,
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ShaderMask(
+                      blendMode: BlendMode.srcIn,
+                      shaderCallback: (Rect bounds) =>
+                          AppTheme.aiGradient.createShader(bounds),
+                      child: const Text(
+                        'NUTRI Agent',
+                        style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
                       ),
-                      const SizedBox(width: 12),
-                      Text(
-                        _weatherText(
-                          _weather,
-                          _isWeatherLoading,
-                          _weatherError,
-                        ),
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey[800],
-                        ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // 날씨 및 브리핑 카드
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  const Divider(
-                    height: 30,
-                    thickness: 1,
-                    color: Color(0xFFEEEEEE),
-                  ),
-                  Text(
-                    '오늘의 브리핑',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).primaryColor,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _briefingText(_weather),
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: Colors.grey[700],
-                      height: 1.5,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // 정보 카드 (스와이프)
-            _buildInfoCards(),
-
-            const Spacer(),
-
-            // 메뉴 추천 버튼
-            Container(
-              width: double.infinity,
-              height: 56,
-              decoration: BoxDecoration(
-                gradient: _isLoading ? null : AppTheme.aiGradient,
-                color: _isLoading ? Colors.grey[300] : null,
-                borderRadius: BorderRadius.circular(30),
-                boxShadow: _isLoading
-                    ? null
-                    : [
-                        BoxShadow(
-                          color: AppTheme.primaryColor.withOpacity(0.3),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-              ),
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _requestRecommendation,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  shape: const StadiumBorder(),
-                  padding: EdgeInsets.zero,
-                ),
-                child: _isLoading
-                    ? const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          SizedBox(
-                            width: 20,
+                          Row(
+                            children: [
+                              Icon(
+                                _weatherIcon(_weather),
+                                color: _weatherIconColor(_weather),
+                                size: 22,
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                _weatherText(
+                                  _weather,
+                                  _isWeatherLoading,
+                                  _weatherError,
+                                ),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[800],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Divider(
                             height: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2.5,
+                            thickness: 1,
+                            color: Color(0xFFEEEEEE),
+                          ),
+                          Text(
+                            '오늘의 브리핑',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).primaryColor,
                             ),
                           ),
-                          SizedBox(width: 12),
+                          const SizedBox(height: 6),
                           Text(
-                            'AI가 메뉴를 분석 중...',
+                            _briefingText(),
                             style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      )
-                    : const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.restaurant_menu,
-                            size: 24,
-                            color: Colors.white,
-                          ),
-                          SizedBox(width: 12),
-                          Text(
-                            '맞춤 메뉴 추천 받기',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              fontSize: 13,
+                              color: Colors.grey[700],
+                              height: 1.4,
                             ),
                           ),
                         ],
                       ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // 정보 카드 (가격 PageView + 식단 프로필)
+                    _buildInfoCards(),
+
+                    const SizedBox(height: 12),
+
+                    // AI 픽 + 추천 버튼 통합 카드
+                    _buildAiPickAndRecommendCard(),
+
+                    const SizedBox(height: 16),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 20),
           ],
         ),
       ),
