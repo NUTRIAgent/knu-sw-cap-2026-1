@@ -345,6 +345,7 @@ class AiPickItem {
   final int menuId;
   final String menuName;
   final String? menuImageUrl;
+  final int? feedbackScore;
   final int? starRating;
   final String? feedbackReason;
   final String? aiResultJson;
@@ -355,17 +356,21 @@ class AiPickItem {
     required this.menuId,
     required this.menuName,
     this.menuImageUrl,
+    this.feedbackScore,
     this.starRating,
     this.feedbackReason,
     this.aiResultJson,
     this.createdAt,
   });
 
+  bool get isDisliked => feedbackScore != null && feedbackScore! < 0;
+
   factory AiPickItem.fromJson(Map<String, dynamic> json) => AiPickItem(
         id: (json['id'] as num).toInt(),
         menuId: (json['menuId'] as num).toInt(),
         menuName: json['menuName'] ?? '',
         menuImageUrl: json['menuImageUrl'],
+        feedbackScore: (json['feedbackScore'] as num?)?.toInt(),
         starRating: (json['starRating'] as num?)?.toInt(),
         feedbackReason: json['feedbackReason'],
         aiResultJson: json['aiResultJson'],

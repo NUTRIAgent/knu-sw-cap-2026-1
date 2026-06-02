@@ -174,14 +174,44 @@ class _RecommendationHistoryScreenState
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('피드백이 저장됐습니다')),
       );
-      feedbackRefreshNotifier.value++; // MyPageScreen에 변경 알림
+      feedbackRefreshNotifier.value++;
       await _load(silent: true);
     } else if (feedbackResult == false) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('저장에 실패했습니다')),
       );
     }
-    // feedbackResult == null: 사용자가 시트를 그냥 닫음 → 아무 처리 없음
+  }
+
+  Future<void> _confirmDelete(AiPickItem item) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('이력 삭제'),
+        content: Text('"${item.menuName}" 추천 이력을 삭제할까요?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            child: const Text('삭제', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final ok = await RecommendationService.deleteFeedback(item.id, widget.jwt);
+    if (!mounted) return;
+    if (ok) {
+      feedbackRefreshNotifier.value++;
+      await _load(silent: true);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('삭제에 실패했습니다')),
+      );
+    }
   }
 
   // ── 빌드 ──────────────────────────────────────────
@@ -330,40 +360,72 @@ class _RecommendationHistoryScreenState
           ),
           // ── 구분선 ──
           const Divider(height: 1, thickness: 1, color: Color(0xFFF0F0F0)),
-          // ── 하단: 피드백 버튼 ──
+          // ── 하단: 피드백 | 삭제 버튼 ──
           SizedBox(
             height: 40,
-            child: TextButton(
-              onPressed: () => _showFeedbackBottomSheet(item),
-              style: TextButton.styleFrom(
-                foregroundColor: item.starRating != null
-                    ? Colors.grey[500]
-                    : AppTheme.primaryColor,
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(16),
-                    bottomRight: Radius.circular(16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => _showFeedbackBottomSheet(item),
+                    style: TextButton.styleFrom(
+                      foregroundColor: item.starRating != null
+                          ? Colors.grey[500]
+                          : AppTheme.primaryColor,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.only(
+                          bottomLeft: Radius.circular(16),
+                        ),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          item.starRating != null
+                              ? Icons.edit_outlined
+                              : Icons.star_border_rounded,
+                          size: 14,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          item.starRating != null ? '피드백 수정' : '피드백 남기기',
+                          style: const TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    item.starRating != null
-                        ? Icons.edit_outlined
-                        : Icons.star_border_rounded,
-                    size: 14,
+                const SizedBox(
+                    width: 1, height: 24,
+                    child: VerticalDivider(thickness: 1, color: Color(0xFFF0F0F0))),
+                Expanded(
+                  child: TextButton(
+                    onPressed: () => _confirmDelete(item),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.red[300],
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.only(
+                          bottomRight: Radius.circular(16),
+                        ),
+                      ),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.delete_outline_rounded, size: 14),
+                        SizedBox(width: 4),
+                        Text('삭제',
+                            style: TextStyle(
+                                fontSize: 13, fontWeight: FontWeight.w500)),
+                      ],
+                    ),
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    item.starRating != null ? '피드백 수정' : '피드백 남기기',
-                    style: const TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w500),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],

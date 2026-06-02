@@ -343,7 +343,7 @@ class _MyPageScreenState extends State<MyPageScreen>
       setState(() {
         _feedbackItems = feedbacks;
         _aiPickFeedbackItems =
-            aiPicks.where((i) => i.starRating != null).toList();
+            aiPicks.where((i) => i.starRating != null || i.isDisliked).toList();
       });
     } finally {
       if (mounted) setState(() => _feedbackLoading = false);
@@ -351,19 +351,51 @@ class _MyPageScreenState extends State<MyPageScreen>
     }
   }
 
+  Future<void> _confirmDeleteAiPick(AiPickItem item) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('AI 피드백 삭제'),
+        content: Text('"${item.menuName}" AI 피드백을 삭제할까요?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            child: const Text('삭제', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final jwt = await TokenStorage.getAccessToken();
+    final success = await RecommendationService.deleteFeedback(item.id, jwt);
+    if (!mounted) return;
+    if (success) {
+      setState(() => _aiPickFeedbackItems.removeWhere((i) => i.id == item.id));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('이력이 삭제되었습니다.')));
+    } else {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('삭제에 실패했습니다.')));
+    }
+  }
+
   Future<void> _confirmDeleteFeedback(FeedbackHistoryItem item) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         title: const Text('피드백 삭제'),
         content: Text('"${item.menuName}" 피드백을 삭제할까요?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(dialogCtx, false),
             child: const Text('취소'),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogCtx, true),
             child: const Text('삭제', style: TextStyle(color: Colors.red)),
           ),
         ],
@@ -1360,7 +1392,7 @@ class _MyPageScreenState extends State<MyPageScreen>
     return ListTile(
       contentPadding:
           const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      onTap: () => _showAiPickEditSheet(item),
+      onTap: item.isDisliked ? null : () => _showAiPickEditSheet(item),
       leading: ClipRRect(
         borderRadius: BorderRadius.circular(8),
         child: item.menuImageUrl != null && item.menuImageUrl!.isNotEmpty
@@ -1380,19 +1412,32 @@ class _MyPageScreenState extends State<MyPageScreen>
         mainAxisSize: MainAxisSize.min,
         children: [
           const SizedBox(height: 2),
-          Row(
-            children: List.generate(
-              5,
-              (i) => Icon(
-                i < (item.starRating ?? 0)
-                    ? Icons.star_rounded
-                    : Icons.star_outline_rounded,
-                size: 14,
-                color: Colors.amber,
+          if (item.isDisliked)
+            Row(
+              children: [
+                Icon(Icons.block_rounded, size: 13, color: Colors.red.shade300),
+                const SizedBox(width: 4),
+                Text(
+                  '다시 추천 안함',
+                  style: TextStyle(fontSize: 12, color: Colors.red.shade300),
+                ),
+              ],
+            )
+          else
+            Row(
+              children: List.generate(
+                5,
+                (i) => Icon(
+                  i < (item.starRating ?? 0)
+                      ? Icons.star_rounded
+                      : Icons.star_outline_rounded,
+                  size: 14,
+                  color: Colors.amber,
+                ),
               ),
             ),
-          ),
-          if (item.feedbackReason != null &&
+          if (!item.isDisliked &&
+              item.feedbackReason != null &&
               item.feedbackReason!.isNotEmpty) ...[
             const SizedBox(height: 2),
             Text(
@@ -1412,7 +1457,19 @@ class _MyPageScreenState extends State<MyPageScreen>
         ],
       ),
       isThreeLine: true,
-      trailing: Icon(Icons.edit_outlined, size: 16, color: Colors.grey.shade400),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (!item.isDisliked)
+            Icon(Icons.edit_outlined, size: 16, color: Colors.grey.shade400),
+          if (!item.isDisliked) const SizedBox(width: 8),
+          GestureDetector(
+            onTap: () => _confirmDeleteAiPick(item),
+            child: Icon(Icons.delete_outline_rounded,
+                size: 16, color: Colors.grey.shade400),
+          ),
+        ],
+      ),
     );
   }
 
