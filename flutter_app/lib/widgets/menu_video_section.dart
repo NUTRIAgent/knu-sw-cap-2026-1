@@ -53,15 +53,8 @@ class _MenuVideoSectionState extends State<MenuVideoSection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: const [
-              Icon(Icons.smart_display_outlined,
-                  size: 16, color: Colors.redAccent),
-              SizedBox(width: 6),
-              Text('관련 영상',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-            ],
-          ),
+          const Text('관련 영상',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
           const SizedBox(height: 10),
           ClipRRect(
             borderRadius: BorderRadius.circular(12),

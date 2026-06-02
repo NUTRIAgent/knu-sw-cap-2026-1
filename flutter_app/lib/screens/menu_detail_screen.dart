@@ -351,7 +351,6 @@ class AiPickBody extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _HeroImage(url: result.mainImg),
-          MenuVideoSection(videoId: youtubeVideoId ?? result.youtubeVideoId),
           Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -393,10 +392,13 @@ class AiPickBody extends StatelessWidget {
                     total: result.totalEstimatedCost,
                   ),
                 ],
-                const SizedBox(height: 32),
+                const SizedBox(height: 4),
               ],
             ),
           ),
+          // 영상은 본문 마지막(이력 화면에선 피드백 저장 카드 바로 위)에 배치
+          MenuVideoSection(videoId: youtubeVideoId ?? result.youtubeVideoId),
+          const SizedBox(height: 24),
         ],
       ),
     );
