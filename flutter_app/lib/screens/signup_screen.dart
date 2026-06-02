@@ -200,8 +200,8 @@ class _SignupScreenState extends State<SignupScreen> {
       body: SafeArea(
         child: Form(
           key: _formKey,
-          // 입력과 동시에 검증 결과를 보여줌 (비밀번호 확인 실시간 일치 검사 포함)
-          autovalidateMode: AutovalidateMode.onUserInteraction,
+          // 검증은 각 필드의 autovalidateMode(onUserInteraction)에서 개별 수행
+          // (Form 레벨 설정 시 한 필드 입력만으로 모든 필드가 검증되는 문제가 있음)
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
             child: Column(
@@ -315,6 +315,8 @@ class _SignupScreenState extends State<SignupScreen> {
                 const SizedBox(height: 20),
 
                 DropdownButtonFormField<String>(
+                  // 사용자가 직접 선택한 경우에만 실시간 검증
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
                   decoration: InputDecoration(
                     labelText: '성별',
                     hintText: '성별을 선택해 주세요',
@@ -472,6 +474,9 @@ class _SignupScreenState extends State<SignupScreen> {
       obscureText: obscureText,
       keyboardType: keyboardType,
       onChanged: onChanged,
+      // 사용자가 직접 입력한 필드만 실시간 검증
+      // (비밀번호 확인 일치 검사는 비밀번호 onChanged의 setState 리빌드로 함께 갱신됨)
+      autovalidateMode: AutovalidateMode.onUserInteraction,
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
