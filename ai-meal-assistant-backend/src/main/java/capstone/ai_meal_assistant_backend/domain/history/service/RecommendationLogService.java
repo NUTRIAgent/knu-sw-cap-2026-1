@@ -45,6 +45,21 @@ public class RecommendationLogService {
     }
 
     @Transactional
+    public void clearAiPickFeedback(String email, Long logId) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        RecommendationLog log = recommendationLogRepository.findById(logId)
+                .orElseThrow(() -> new IllegalArgumentException("이력을 찾을 수 없습니다."));
+        if (!log.getUser().getId().equals(user.getId())) {
+            throw new SecurityException("권한이 없습니다.");
+        }
+        log.setStarRating(null);
+        log.setFeedbackReason(null);
+        log.setFeedbackScore(null);
+        recommendationLogRepository.save(log);
+    }
+
+    @Transactional
     public void unsaveAiResult(String email, Long logId) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
