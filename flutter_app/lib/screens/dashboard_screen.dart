@@ -745,9 +745,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                       '식단 목표',
                       _fitnessGoalMap[_profileData!.fitnessGoal] ?? '일반식단',
                     ),
-                    _buildProfileKVRow(
-                      '매운맛',
-                      '${_profileData!.spicyPreference ?? 3}단계',
+                    _buildProfileTagRow(
+                      '음식 취향',
+                      _profileData!.foodPreferences,
+                      color: Colors.indigo.shade300,
                     ),
                     _buildProfileAllergyRow(_profileData!.allergies),
                   ],
@@ -766,6 +767,37 @@ class _DashboardScreenState extends State<DashboardScreen>
         Text(
           value,
           style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProfileTagRow(String label, List<String> tags, {required Color color}) {
+    return Row(
+      children: [
+        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: tags.isEmpty
+                ? [const Text('없음', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600))]
+                : tags.take(3).map((t) => Container(
+                      constraints: const BoxConstraints(maxWidth: 68),
+                      margin: const EdgeInsets.only(left: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: color.withValues(alpha: 0.4)),
+                      ),
+                      child: Text(
+                        t,
+                        style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w500),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    )).toList(),
+          ),
         ),
       ],
     );
