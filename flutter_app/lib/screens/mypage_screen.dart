@@ -68,6 +68,7 @@ class _MyPageScreenState extends State<MyPageScreen>
   List<FeedbackHistoryItem> _feedbackItems = [];
   List<AiPickItem> _aiPickFeedbackItems = [];
   bool _feedbackLoading = false;
+  bool _feedbackPending = false;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   int _feedbackTab = 0; // 0=좋아요, 1=싫어요, 2=AI피드백
@@ -326,7 +327,11 @@ class _MyPageScreenState extends State<MyPageScreen>
   // ── 피드백 탭 로직 ────────────────────────────────
 
   Future<void> _loadFeedbacks() async {
-    if (_feedbackLoading) return; // 재진입 방지 — 중복 호출 시 먼저 완료된 결과 유지
+    if (_feedbackLoading) {
+      _feedbackPending = true; // 로딩 중 재요청 — 완료 후 한 번 더 실행
+      return;
+    }
+    _feedbackPending = false;
     setState(() => _feedbackLoading = true);
     try {
       final jwt = await TokenStorage.getAccessToken();
@@ -342,6 +347,7 @@ class _MyPageScreenState extends State<MyPageScreen>
       });
     } finally {
       if (mounted) setState(() => _feedbackLoading = false);
+      if (_feedbackPending) _loadFeedbacks();
     }
   }
 
