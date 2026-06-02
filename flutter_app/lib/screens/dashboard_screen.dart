@@ -784,24 +784,23 @@ class _DashboardScreenState extends State<DashboardScreen>
                       style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                     )
                   ]
-                : allergies.take(3).map((a) => Flexible(
-                      child: Container(
-                        margin: const EdgeInsets.only(left: 4),
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.orange.shade200),
+                : allergies.take(3).map((a) => Container(
+                      constraints: const BoxConstraints(maxWidth: 68),
+                      margin: const EdgeInsets.only(left: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.orange.shade200),
+                      ),
+                      child: Text(
+                        a,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.orange.shade800,
+                          fontWeight: FontWeight.w500,
                         ),
-                        child: Text(
-                          a,
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.orange.shade800,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     )).toList(),
           ),
