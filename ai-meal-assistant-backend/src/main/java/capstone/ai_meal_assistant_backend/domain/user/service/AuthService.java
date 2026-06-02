@@ -23,16 +23,24 @@ public class AuthService {
     @Transactional
     public AuthResponse signup(SignupRequest request) {
         try {
-            // 이메일 중복 체크
-            if (userRepository.existsByEmail(request.getEmail())) {
+            String email = request.getEmail().trim();
+            String nickname = request.getNickname().trim();
+
+            // 이메일 중복 체크 (사전 중복확인과 별개로 가입 시점에 최종 확인)
+            if (userRepository.existsByEmail(email)) {
                 return AuthResponse.failure("이미 사용 중인 이메일입니다");
             }
-            
+
+            // 닉네임 중복 체크
+            if (userRepository.existsByNickname(nickname)) {
+                return AuthResponse.failure("이미 사용 중인 닉네임입니다");
+            }
+
             // User 엔티티 생성
             User user = User.builder()
-                    .email(request.getEmail())
+                    .email(email)
                     .password(passwordEncoder.encode(request.getPassword()))
-                    .nickname(request.getNickname())
+                    .nickname(nickname)
                     .gender(request.getGender())
                     .role(Role.USER) // 기본값 USER
                     .provider("local") // 직접 회원가입
@@ -59,6 +67,16 @@ public class AuthService {
         }
     }
     
+    @Transactional(readOnly = true)
+    public boolean isEmailTaken(String email) {
+        return userRepository.existsByEmail(email.trim());
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isNicknameTaken(String nickname) {
+        return userRepository.existsByNickname(nickname.trim());
+    }
+
     @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest request) {
         try {

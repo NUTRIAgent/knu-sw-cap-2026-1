@@ -38,10 +38,6 @@ class AuthService {
       final jsonResponse = jsonDecode(response.body);
       final authResponse = AuthResponse.fromJson(jsonResponse);
 
-  // 디버깅: 서버 응답에 user.id가 포함되는지 확인
-  // ignore: avoid_print
-  print('[AuthService.login] status=${response.statusCode} body=${response.body}');
-
       // 성공 시 토큰 저장
       if (authResponse.success && authResponse.data?.accessToken != null) {
         await TokenStorage.saveTokens(
@@ -64,6 +60,36 @@ class AuthService {
         success: false,
         error: '로그인 중 오류가 발생했습니다: $e',
       );
+    }
+  }
+
+  // 이메일 중복확인 (true: 이미 사용 중, false: 사용 가능, null: 확인 실패)
+  static Future<bool?> checkEmailExists(String email) {
+    return _checkExists('email', email);
+  }
+
+  // 닉네임 중복확인 (true: 이미 사용 중, false: 사용 가능, null: 확인 실패)
+  static Future<bool?> checkNicknameExists(String nickname) {
+    return _checkExists('nickname', nickname);
+  }
+
+  static Future<bool?> _checkExists(String paramName, String value) async {
+    try {
+      final url = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.apiVersion}/users/exists')
+          .replace(queryParameters: {paramName: value});
+
+      final response = await http.get(url).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw Exception('요청 시간 초과'),
+      );
+
+      final jsonResponse = jsonDecode(response.body);
+      if (jsonResponse['success'] == true) {
+        return jsonResponse['data']?['exists'] == true;
+      }
+      return null;
+    } catch (e) {
+      return null;
     }
   }
 
@@ -98,10 +124,6 @@ class AuthService {
 
       final jsonResponse = jsonDecode(response.body);
       final authResponse = AuthResponse.fromJson(jsonResponse);
-
-  // 디버깅: 서버 응답에 user.id가 포함되는지 확인
-  // ignore: avoid_print
-  print('[AuthService.signup] status=${response.statusCode} body=${response.body}');
 
       // 성공 시 토큰 저장
       if (authResponse.success && authResponse.data?.accessToken != null) {
