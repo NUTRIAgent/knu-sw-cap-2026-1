@@ -29,6 +29,13 @@ public class SignupRequest {
     @Size(min = 2, max = 20, message = "닉네임은 2자 이상 20자 이하여야 합니다")
     private String nickname;
 
+    @NotBlank(message = "휴대폰 번호는 필수입니다")
+    @Pattern(
+            regexp = "^01[016789]\\d{7,8}$",
+            message = "올바른 휴대폰 번호 형식이 아닙니다 (숫자만 입력, 예: 01012345678)"
+    )
+    private String phoneNumber;
+
     @NotNull(message = "성별은 필수입니다")
     private Gender gender;
     

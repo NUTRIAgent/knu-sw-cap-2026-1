@@ -23,6 +23,7 @@ class SignupRequest {
   final String email;
   final String password;
   final String nickname;
+  final String? phoneNumber;
   final String? gender;
   final String role;
   final String? provider;
@@ -32,6 +33,7 @@ class SignupRequest {
     required this.email,
     required this.password,
     required this.nickname,
+    this.phoneNumber,
     this.gender,
     this.role = 'USER',
     this.provider,
@@ -43,12 +45,21 @@ class SignupRequest {
       'email': email,
       'password': password,
       'nickname': nickname,
+      'phoneNumber': phoneNumber,
       'gender': gender,
       'role': role,
       'provider': provider,
       'providerId': providerId,
     };
   }
+}
+
+// 아이디(이메일) 찾기 결과 — 성공 시 마스킹된 이메일, 실패 시 에러 메시지
+class FindEmailResult {
+  final String? maskedEmail;
+  final String? error;
+
+  FindEmailResult({this.maskedEmail, this.error});
 }
 
 // 인증 응답 데이터

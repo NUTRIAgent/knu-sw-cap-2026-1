@@ -46,6 +46,7 @@ class AuthServiceSignupTest {
         ReflectionTestUtils.setField(request, "email", email);
         ReflectionTestUtils.setField(request, "password", "abcd1234!");
         ReflectionTestUtils.setField(request, "nickname", "닉네임");
+        ReflectionTestUtils.setField(request, "phoneNumber", "01012345678");
         ReflectionTestUtils.setField(request, "gender", Gender.MALE);
         return request;
     }
@@ -107,7 +108,7 @@ class AuthServiceSignupTest {
 
         // Then
         assertThat(response.isSuccess()).isFalse();
-        assertThat(response.getError()).isEqualTo("이미 사용 중인 이메일 또는 닉네임입니다");
+        assertThat(response.getError()).isEqualTo("이미 사용 중인 이메일/닉네임/휴대폰 번호입니다");
     }
 
     @Test

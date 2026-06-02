@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_app/services/auth_service.dart';
 import 'package:flutter_app/services/price_alert_service.dart';
 import 'package:flutter_app/services/token_storage.dart';
+import 'find_email_screen.dart';
 import 'main_screen.dart';
 import 'package:flutter_app/theme.dart';
 import 'package:flutter_app/services/user_profile_service.dart';
 import 'onboarding_screen.dart';
+import 'reset_password_screen.dart';
 
 // 직접 로그인을 진행하는 페이지입니다. (소셜로그인X)
 class EmailLoginScreen extends StatefulWidget {
@@ -181,10 +183,43 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
                             ),
                           )
                         : const Text(
-                            '로그인하기', 
+                            '로그인하기',
                             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)
                           ),
                   ),
+                ),
+                const SizedBox(height: 16),
+
+                // 아이디 찾기 / 비밀번호 찾기
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const FindEmailScreen()),
+                        );
+                      },
+                      child: const Text(
+                        '아이디 찾기',
+                        style: TextStyle(color: Colors.grey, fontSize: 14),
+                      ),
+                    ),
+                    Container(width: 1, height: 12, color: Colors.grey.shade300),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const ResetPasswordScreen()),
+                        );
+                      },
+                      child: const Text(
+                        '비밀번호 찾기',
+                        style: TextStyle(color: Colors.grey, fontSize: 14),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

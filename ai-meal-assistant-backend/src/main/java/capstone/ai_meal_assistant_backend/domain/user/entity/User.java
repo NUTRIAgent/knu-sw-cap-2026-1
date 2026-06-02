@@ -35,6 +35,10 @@ public class User extends BaseEntity {
     private String provider;
     private String providerId;
 
+    // 아이디(이메일) 찾기용 휴대폰 번호 — 기존 가입자를 고려해 nullable (숫자만 저장, 예: 01012345678)
+    @Column(unique = true)
+    private String phoneNumber;
+
     @OneToOne(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private UserHealthProfile healthProfile;
 
@@ -44,5 +48,10 @@ public class User extends BaseEntity {
     public void updateNicknameAndGender(String nickname, Gender gender) {
         this.nickname = nickname;
         this.gender = gender;
+    }
+
+    // 비밀번호 재설정 (비밀번호 찾기에서 사용)
+    public void changePassword(String encodedPassword) {
+        this.password = encodedPassword;
     }
 }

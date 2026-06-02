@@ -11,6 +11,9 @@ final RegExp _digitRegex = RegExp(r'\d');
 final RegExp _specialCharRegex = RegExp(r'[^A-Za-z0-9\s]');
 final RegExp _whitespaceRegex = RegExp(r'\s');
 
+// 서버(SignupRequest) 휴대폰 번호 정책과 동일하게 유지 (숫자만)
+final RegExp _phoneRegex = RegExp(r'^01[016789]\d{7,8}$');
+
 // 이메일/닉네임 중복확인 상태
 enum _DuplicateCheckStatus { unchecked, checking, available, taken }
 
@@ -27,6 +30,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _passwordConfirmController = TextEditingController();
   final TextEditingController _nicknameController = TextEditingController();
+  final TextEditingController _phoneNumberController = TextEditingController();
   String? _selectedGender; // 명시적 선택 유도를 위해 기본값 없음
   bool _isLoading = false;
 
@@ -143,6 +147,8 @@ class _SignupScreenState extends State<SignupScreen> {
       password: _passwordController.text,
       nickname: _nicknameController.text.trim(),
       gender: _mapGenderToApiValue(_selectedGender),
+      // 하이픈 등 구분자는 제거하고 숫자만 전송 (서버 정책과 동일)
+      phoneNumber: _phoneNumberController.text.replaceAll(RegExp(r'[^0-9]'), ''),
     );
 
     if (!mounted) return;
@@ -186,6 +192,7 @@ class _SignupScreenState extends State<SignupScreen> {
     _passwordController.dispose();
     _passwordConfirmController.dispose();
     _nicknameController.dispose();
+    _phoneNumberController.dispose();
     super.dispose();
   }
 
@@ -311,6 +318,21 @@ class _SignupScreenState extends State<SignupScreen> {
                   status: _nicknameCheckStatus,
                   availableText: '사용 가능한 닉네임입니다.',
                   takenText: '이미 사용 중인 닉네임입니다.',
+                ),
+                const SizedBox(height: 20),
+
+                // 휴대폰 번호 — 아이디(이메일) 찾기에 사용
+                _buildTextField(
+                  controller: _phoneNumberController,
+                  label: '휴대폰 번호',
+                  hint: '숫자만 입력 (예: 01012345678)',
+                  keyboardType: TextInputType.phone,
+                  validator: (value) {
+                    final phone = (value ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+                    if (phone.isEmpty) return '휴대폰 번호를 입력해 주세요.';
+                    if (!_phoneRegex.hasMatch(phone)) return '올바른 휴대폰 번호 형식이 아닙니다.';
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 20),
 

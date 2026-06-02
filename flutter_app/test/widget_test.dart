@@ -14,7 +14,7 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: SignupScreen()));
   }
 
-  // 필드 순서: 이메일(0), 비밀번호(1), 비밀번호 확인(2), 닉네임(3)
+  // 필드 순서: 이메일(0), 비밀번호(1), 비밀번호 확인(2), 닉네임(3), 휴대폰 번호(4)
   Finder passwordField() => find.byType(TextFormField).at(1);
   Finder passwordConfirmField() => find.byType(TextFormField).at(2);
 
@@ -77,6 +77,7 @@ void main() {
     await tester.enterText(passwordField(), 'abcd1234!');
     await tester.enterText(passwordConfirmField(), 'abcd1234!');
     await tester.enterText(find.byType(TextFormField).at(3), '테스트닉네임');
+    await tester.enterText(find.byType(TextFormField).at(4), '01012345678');
 
     await tester.ensureVisible(find.byType(DropdownButtonFormField<String>));
     await tester.tap(find.byType(DropdownButtonFormField<String>));

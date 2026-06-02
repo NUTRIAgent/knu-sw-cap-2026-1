@@ -12,6 +12,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -38,11 +40,18 @@ public class AuthService {
                 return AuthResponse.failure("이미 사용 중인 닉네임입니다");
             }
 
+            // 휴대폰 번호 중복 체크 (아이디 찾기 키로 사용되므로 계정당 하나)
+            String phoneNumber = request.getPhoneNumber().trim();
+            if (userRepository.existsByPhoneNumber(phoneNumber)) {
+                return AuthResponse.failure("이미 등록된 휴대폰 번호입니다");
+            }
+
             // User 엔티티 생성
             User user = User.builder()
                     .email(email)
                     .password(passwordEncoder.encode(request.getPassword()))
                     .nickname(nickname)
+                    .phoneNumber(phoneNumber)
                     .gender(request.getGender())
                     .role(Role.USER) // 기본값 USER
                     .provider("local") // 직접 회원가입
@@ -67,7 +76,7 @@ public class AuthService {
         } catch (DataIntegrityViolationException e) {
             // 사전 중복 체크 이후 ~ 저장 사이에 동시 가입이 끼어든 경우(TOCTOU) DB unique 제약이 잡아준다
             log.warn("회원가입 unique 제약 위반 (동시 가입 추정): {}", e.getMessage());
-            return AuthResponse.failure("이미 사용 중인 이메일 또는 닉네임입니다");
+            return AuthResponse.failure("이미 사용 중인 이메일/닉네임/휴대폰 번호입니다");
         } catch (Exception e) {
             log.error("회원가입 중 오류 발생", e);
             return AuthResponse.failure("회원가입 중 알 수 없는 오류가 발생했습니다");
@@ -82,6 +91,27 @@ public class AuthService {
     @Transactional(readOnly = true)
     public boolean isNicknameTaken(String nickname) {
         return userRepository.existsByNickname(nickname.trim());
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isPhoneNumberTaken(String phoneNumber) {
+        return userRepository.existsByPhoneNumber(phoneNumber.trim());
+    }
+
+    // 아이디(이메일) 찾기 — 휴대폰 번호로 조회 후 마스킹된 이메일 반환
+    @Transactional(readOnly = true)
+    public Optional<String> findMaskedEmailByPhoneNumber(String phoneNumber) {
+        return userRepository.findByPhoneNumber(phoneNumber.trim())
+                .map(user -> maskEmail(user.getEmail()));
+    }
+
+    // 이메일 로컬 파트 마스킹 (예: mhy@smail.kongju.ac.kr → mh***@smail.kongju.ac.kr)
+    static String maskEmail(String email) {
+        int atIndex = email.indexOf('@');
+        String local = email.substring(0, atIndex);
+        String domain = email.substring(atIndex);
+        String visible = local.length() <= 2 ? local.substring(0, 1) : local.substring(0, 2);
+        return visible + "***" + domain;
     }
 
     @Transactional(readOnly = true)

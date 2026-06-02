@@ -79,6 +79,11 @@ class AuthService {
     return _checkExists('nickname', nickname);
   }
 
+  // 휴대폰 번호 중복확인 (true: 이미 사용 중, false: 사용 가능, null: 확인 실패)
+  static Future<bool?> checkPhoneNumberExists(String phoneNumber) {
+    return _checkExists('phoneNumber', phoneNumber);
+  }
+
   static Future<bool?> _checkExists(String paramName, String value) async {
     try {
       final url = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.apiVersion}/users/exists')
@@ -105,6 +110,7 @@ class AuthService {
     required String password,
     required String nickname,
     required String? gender,
+    String? phoneNumber,
   }) async {
     try {
       final url = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.apiVersion}/auth/signup');
@@ -113,6 +119,7 @@ class AuthService {
         email: email,
         password: password,
         nickname: nickname,
+        phoneNumber: phoneNumber,
         gender: gender,
       );
 
@@ -152,6 +159,70 @@ class AuthService {
         success: false,
         error: '회원가입 중 오류가 발생했습니다: $e',
       );
+    }
+  }
+
+  // 아이디(이메일) 찾기 — 가입 시 등록한 휴대폰 번호로 마스킹된 이메일 조회
+  static Future<FindEmailResult> findEmail(String phoneNumber) async {
+    try {
+      final url = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.apiVersion}/auth/find-email');
+
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'phoneNumber': phoneNumber}),
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw Exception('요청 시간 초과'),
+      );
+
+      final jsonResponse = jsonDecode(response.body);
+      if (jsonResponse['success'] == true) {
+        return FindEmailResult(maskedEmail: jsonResponse['data']?['maskedEmail']);
+      }
+      return FindEmailResult(error: jsonResponse['error'] ?? '아이디 찾기에 실패했습니다.');
+    } catch (e) {
+      return FindEmailResult(error: '아이디 찾기 중 오류가 발생했습니다: $e');
+    }
+  }
+
+  // 비밀번호 재설정 인증코드 발송 (null: 성공, 문자열: 에러 메시지)
+  static Future<String?> requestPasswordCode(String email) {
+    return _postPasswordApi('code', {'email': email});
+  }
+
+  // 비밀번호 재설정 인증코드 검증 (null: 성공, 문자열: 에러 메시지)
+  static Future<String?> verifyPasswordCode(String email, String code) {
+    return _postPasswordApi('verify', {'email': email, 'code': code});
+  }
+
+  // 비밀번호 재설정 (null: 성공, 문자열: 에러 메시지)
+  static Future<String?> resetPassword(String email, String code, String newPassword) {
+    return _postPasswordApi('reset', {
+      'email': email,
+      'code': code,
+      'newPassword': newPassword,
+    });
+  }
+
+  static Future<String?> _postPasswordApi(String path, Map<String, dynamic> body) async {
+    try {
+      final url = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.apiVersion}/auth/password/$path');
+
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw Exception('요청 시간 초과'),
+      );
+
+      final jsonResponse = jsonDecode(response.body);
+      if (jsonResponse['success'] == true) return null;
+      return jsonResponse['error'] ?? '요청에 실패했습니다.';
+    } catch (e) {
+      return '요청 중 오류가 발생했습니다: $e';
     }
   }
 

@@ -18,24 +18,25 @@ public class UserController {
     private final AuthService authService;
 
     /**
-     * 회원가입 화면의 이메일/닉네임 중복확인 API (비로그인 호출 허용)
-     * GET /api/v1/users/exists?email=... 또는 ?nickname=...
+     * 회원가입 화면의 이메일/닉네임/휴대폰 번호 중복확인 API (비로그인 호출 허용)
+     * GET /api/v1/users/exists?email=... 또는 ?nickname=... 또는 ?phoneNumber=...
      */
     @GetMapping("/exists")
     public ResponseEntity<ApiResponse<ExistsResponse>> exists(
             @RequestParam(required = false) String email,
-            @RequestParam(required = false) String nickname) {
-
-        if ((email == null || email.isBlank()) && (nickname == null || nickname.isBlank())) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.fail("email 또는 nickname 파라미터가 필요합니다"));
-        }
+            @RequestParam(required = false) String nickname,
+            @RequestParam(required = false) String phoneNumber) {
 
         boolean exists;
         if (email != null && !email.isBlank()) {
             exists = authService.isEmailTaken(email);
-        } else {
+        } else if (nickname != null && !nickname.isBlank()) {
             exists = authService.isNicknameTaken(nickname);
+        } else if (phoneNumber != null && !phoneNumber.isBlank()) {
+            exists = authService.isPhoneNumberTaken(phoneNumber);
+        } else {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.fail("email, nickname 또는 phoneNumber 파라미터가 필요합니다"));
         }
 
         return ResponseEntity.ok(ApiResponse.ok(new ExistsResponse(exists)));
