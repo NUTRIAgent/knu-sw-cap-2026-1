@@ -797,7 +797,7 @@ class _MyPageScreenState extends State<MyPageScreen>
                   filled: true,
                   fillColor: Colors.white,
                 ),
-                value: _selectedGender,
+                initialValue: _selectedGender,
                 onChanged: (v) => setState(() => _selectedGender = v!),
                 items: ['남성', '여성']
                     .map((s) => DropdownMenuItem(value: s, child: Text(s)))
@@ -846,7 +846,7 @@ class _MyPageScreenState extends State<MyPageScreen>
                   filled: true,
                   fillColor: Colors.white,
                 ),
-                value: _selectedVegType,
+                initialValue: _selectedVegType,
                 onChanged: (v) => setState(() => _selectedVegType = v!),
                 items: _vegOptions.entries
                     .map((e) =>
