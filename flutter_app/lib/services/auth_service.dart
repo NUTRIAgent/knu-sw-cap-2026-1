@@ -5,10 +5,16 @@ import 'token_storage.dart';
 
 // 백엔드 API 기본 설정
 class ApiConfig {
-  // TODO: 실제 서버 주소로 변경
-  static const String baseUrl = 'http://localhost:8080';
+  // 배포 환경에서는 빌드 시 --dart-define=API_BASE_URL=https://... 로 주입 (미지정 시 로컬 개발 기본값)
+  static const String baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://localhost:8080',
+  );
   static const String apiVersion = '/api/v1';
-  static const String aiBaseUrl = 'http://localhost:8000';
+  static const String aiBaseUrl = String.fromEnvironment(
+    'AI_BASE_URL',
+    defaultValue: 'http://localhost:8000',
+  );
 }
 
 // 인증 관련 API 서비스
@@ -102,21 +108,20 @@ class AuthService {
   }) async {
     try {
       final url = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.apiVersion}/auth/signup');
-      
+
+      final request = SignupRequest(
+        email: email,
+        password: password,
+        nickname: nickname,
+        gender: gender,
+      );
+
       final response = await http.post(
         url,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: jsonEncode({
-          'email': email,
-          'password': password,
-          'nickname': nickname,
-          'gender': gender,
-          'role': 'USER',
-          'provider': null,
-          'providerId': null,
-        }),
+        body: jsonEncode(request.toJson()),
       ).timeout(
         const Duration(seconds: 10),
         onTimeout: () => throw Exception('요청 시간 초과'),

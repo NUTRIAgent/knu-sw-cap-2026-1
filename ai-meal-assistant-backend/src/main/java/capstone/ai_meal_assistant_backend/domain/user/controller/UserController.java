@@ -1,8 +1,8 @@
 package capstone.ai_meal_assistant_backend.domain.user.controller;
 
+import capstone.ai_meal_assistant_backend.domain.user.dto.ExistsResponse;
 import capstone.ai_meal_assistant_backend.domain.user.service.AuthService;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
+import capstone.ai_meal_assistant_backend.global.dto.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -39,27 +39,5 @@ public class UserController {
         }
 
         return ResponseEntity.ok(ApiResponse.ok(new ExistsResponse(exists)));
-    }
-
-    @Getter
-    @AllArgsConstructor
-    private static class ExistsResponse {
-        private boolean exists;
-    }
-
-    @Getter
-    @AllArgsConstructor
-    private static class ApiResponse<T> {
-        private boolean success;
-        private T data;
-        private String error;
-
-        static <T> ApiResponse<T> ok(T data) {
-            return new ApiResponse<>(true, data, null);
-        }
-
-        static <T> ApiResponse<T> fail(String error) {
-            return new ApiResponse<>(false, null, error);
-        }
     }
 }

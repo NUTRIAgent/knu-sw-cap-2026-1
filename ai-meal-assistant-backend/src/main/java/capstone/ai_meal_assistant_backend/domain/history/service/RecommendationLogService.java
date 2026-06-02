@@ -41,9 +41,37 @@ public class RecommendationLogService {
                     newLog.setSelectedMenu(menu);
                     return newLog;
                 });
-        log.setFeedbackScore(feedbackScore);
-        log.setStarRating(starRating);
-        log.setFeedbackReason(feedbackReason);
+        if (feedbackScore != null) log.setFeedbackScore(feedbackScore);
+        if (starRating != null) log.setStarRating(starRating);
+        if (feedbackReason != null) log.setFeedbackReason(feedbackReason);
+        recommendationLogRepository.save(log);
+    }
+
+    @Transactional
+    public void clearAiPickFeedback(String email, Long logId) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        RecommendationLog log = recommendationLogRepository.findById(logId)
+                .orElseThrow(() -> new IllegalArgumentException("이력을 찾을 수 없습니다."));
+        if (!log.getUser().getId().equals(user.getId())) {
+            throw new SecurityException("권한이 없습니다.");
+        }
+        log.setStarRating(null);
+        log.setFeedbackReason(null);
+        log.setFeedbackScore(null);
+        recommendationLogRepository.save(log);
+    }
+
+    @Transactional
+    public void unsaveAiResult(String email, Long logId) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        RecommendationLog log = recommendationLogRepository.findById(logId)
+                .orElseThrow(() -> new IllegalArgumentException("이력을 찾을 수 없습니다."));
+        if (!log.getUser().getId().equals(user.getId())) {
+            throw new SecurityException("권한이 없습니다.");
+        }
+        log.setAiResultJson(null);
         recommendationLogRepository.save(log);
 
         // 별점+코멘트 피드백만 RAG(벡터DB) 적재 (커밋 후 비동기)
@@ -73,7 +101,7 @@ public class RecommendationLogService {
     }
 
     @Transactional
-    public void updateFeedback(String email, Long logId, Integer starRating, String feedbackReason) {
+    public void updateFeedback(String email, Long logId, Integer feedbackScore, Integer starRating, String feedbackReason) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
         RecommendationLog log = recommendationLogRepository.findById(logId)
@@ -81,8 +109,9 @@ public class RecommendationLogService {
         if (!log.getUser().getId().equals(user.getId())) {
             throw new SecurityException("권한이 없습니다.");
         }
-        log.setStarRating(starRating);
-        log.setFeedbackReason(feedbackReason);
+        if (feedbackScore != null) log.setFeedbackScore(feedbackScore);
+        if (starRating != null) log.setStarRating(starRating);
+        if (feedbackReason != null) log.setFeedbackReason(feedbackReason);
         recommendationLogRepository.save(log);
 
         // AI 픽 별점+코멘트 → RAG 적재 (커밋 후 비동기, 멱등). starRating null 시 스킵(NPE 방지)
@@ -124,6 +153,7 @@ public class RecommendationLogService {
                         .menuId(log.getSelectedMenu().getId())
                         .menuName(log.getSelectedMenu().getName())
                         .menuImageUrl(log.getSelectedMenu().getMainImageUrl())
+                        .feedbackScore(log.getFeedbackScore())
                         .starRating(log.getStarRating())
                         .feedbackReason(log.getFeedbackReason())
                         .aiResultJson(log.getAiResultJson())

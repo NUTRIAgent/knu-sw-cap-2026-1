@@ -99,7 +99,45 @@ public class RecommendationLogController {
 
         String email = jwtUtil.getEmailFromToken(authHeader.substring(7));
         try {
-            recommendationLogService.updateFeedback(email, id, request.getStarRating(), request.getFeedbackReason());
+            recommendationLogService.updateFeedback(email, id, request.getFeedbackScore(), request.getStarRating(), request.getFeedbackReason());
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body(Map.of("success", false, "error", e.getMessage()));
+        }
+    }
+
+    @PatchMapping("/{id}/clear-feedback")
+    public ResponseEntity<?> clearAiPickFeedback(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @PathVariable("id") Long id) {
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(401).body(Map.of("success", false, "error", "인증이 필요합니다."));
+        }
+
+        String email = jwtUtil.getEmailFromToken(authHeader.substring(7));
+        try {
+            recommendationLogService.clearAiPickFeedback(email, id);
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "error", e.getMessage()));
+        } catch (SecurityException e) {
+            return ResponseEntity.status(403).body(Map.of("success", false, "error", e.getMessage()));
+        }
+    }
+
+    @PatchMapping("/{id}/unsave")
+    public ResponseEntity<?> unsaveAiResult(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @PathVariable("id") Long id) {
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(401).body(Map.of("success", false, "error", "인증이 필요합니다."));
+        }
+
+        String email = jwtUtil.getEmailFromToken(authHeader.substring(7));
+        try {
+            recommendationLogService.unsaveAiResult(email, id);
             return ResponseEntity.ok(Map.of("success", true));
         } catch (SecurityException e) {
             return ResponseEntity.status(403).body(Map.of("success", false, "error", e.getMessage()));

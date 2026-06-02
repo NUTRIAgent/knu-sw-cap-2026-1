@@ -35,6 +35,7 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
   // ── 저장 상태 ──
   bool _saving = false;
   bool _saved = false;
+  int? _savedLogId;
 
   // ── 피드백 상태 ──
   int _feedbackRating = 0;
@@ -67,7 +68,8 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
     super.dispose();
   }
 
-  void _showFeedbackBottomSheet(int menuId) {
+  void _showFeedbackBottomSheet(RecommendationResult result) {
+    final menuId = result.menuId;
     _feedbackRating = 0;
     _feedbackController.clear();
     final messenger = ScaffoldMessenger.of(context);
@@ -155,6 +157,13 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
                             final rating = _feedbackRating;
                             final reason = _feedbackController.text;
                             Navigator.pop(ctx);
+                            // 미저장 상태면 AI 결과 먼저 저장 — mypage AI픽 탭 조회 조건(aiResultJson IS NOT NULL) 충족
+                            if (!_saved) {
+                              final id = await RecommendationService.saveAiResult(result, widget.jwt);
+                              if (mounted && id != null) {
+                                setState(() { _saved = true; _savedLogId = id; });
+                              }
+                            }
                             await RecommendationService.saveDetailedFeedback(
                                 menuId, rating, reason, widget.jwt);
                             messenger.showSnackBar(const SnackBar(
@@ -182,18 +191,26 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
     );
   }
 
-  Future<void> _saveAiResult(RecommendationResult result) async {
+  Future<void> _toggleSave(RecommendationResult result) async {
     if (_saving || widget.jwt == null) return;
     setState(() => _saving = true);
-    final id = await RecommendationService.saveAiResult(result, widget.jwt);
-    if (!mounted) return;
-    setState(() { _saving = false; _saved = id != null; });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+    if (_saved && _savedLogId != null) {
+      final ok = await RecommendationService.unsaveAiResult(_savedLogId!, widget.jwt);
+      if (!mounted) return;
+      setState(() { _saving = false; if (ok) { _saved = false; _savedLogId = null; } });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(ok ? '저장이 취소됐습니다' : '취소에 실패했습니다'),
+        duration: const Duration(seconds: 2),
+      ));
+    } else {
+      final id = await RecommendationService.saveAiResult(result, widget.jwt);
+      if (!mounted) return;
+      setState(() { _saving = false; _saved = id != null; _savedLogId = id; });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(id != null ? '추천 이력에 저장됐습니다' : '저장에 실패했습니다'),
         duration: const Duration(seconds: 2),
-      ),
-    );
+      ));
+    }
   }
 
   Future<void> _requestAiAnalysis() async {
@@ -264,37 +281,30 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         actions: shownAi != null && widget.jwt != null
             ? [
-                TextButton(
-                  onPressed: () =>
-                      _showFeedbackBottomSheet(shownAi.menuId),
-                  child: Text(
-                    '피드백',
-                    style: TextStyle(
-                        fontSize: 13, color: Colors.grey[600]),
-                  ),
+                IconButton(
+                  onPressed: () => _showFeedbackBottomSheet(shownAi),
+                  tooltip: 'AI 픽 별점',
+                  icon: const Icon(Icons.star_outline_rounded),
+                  color: Colors.grey[600],
                 ),
-                TextButton(
-                  onPressed:
-                      _saving ? null : () => _saveAiResult(shownAi),
-                  child: _saving
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
+                _saving
+                    ? const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
                           child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppTheme.primaryColor),
-                        )
-                      : Text(
-                          _saved ? '저장됨' : '저장',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: _saved
-                                ? AppTheme.primaryColor
-                                : Colors.grey[600],
-                          ),
+                              strokeWidth: 2, color: AppTheme.primaryColor),
                         ),
-                ),
+                      )
+                    : IconButton(
+                        onPressed: () => _toggleSave(shownAi),
+                        tooltip: _saved ? '저장 취소' : '추천 결과 저장',
+                        icon: Icon(_saved
+                            ? Icons.bookmark_rounded
+                            : Icons.bookmark_add_outlined),
+                        color: _saved ? AppTheme.primaryColor : Colors.grey[600],
+                      ),
                 const SizedBox(width: 4),
               ]
             : null,

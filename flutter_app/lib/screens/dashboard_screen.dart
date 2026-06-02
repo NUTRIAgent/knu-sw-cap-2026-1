@@ -531,11 +531,18 @@ class _DashboardScreenState extends State<DashboardScreen>
         Expanded(
           child: Text(
             item.menuName,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: item.isDisliked ? Colors.grey.shade400 : null,
+              decoration: item.isDisliked ? TextDecoration.lineThrough : null,
+            ),
             overflow: TextOverflow.ellipsis,
           ),
         ),
-        if (item.starRating != null)
+        if (item.isDisliked)
+          Icon(Icons.block_rounded, size: 14, color: Colors.grey.shade400)
+        else if (item.starRating != null)
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
