@@ -9,6 +9,12 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
+# 빌드 산출물(iOS SwiftPM 체크아웃 등)은 분석 대상에서 제외
+# build/ios/SourcePackages 안의 flutterfire 소스가 가짜 에러 수천 건을 만드는 문제 방지
+analyzer:
+  exclude:
+    - build/**
+
 linter:
   # The lint rules applied to this project can be customized in the
   # section below to disable rules from the `package:flutter_lints/flutter.yaml`

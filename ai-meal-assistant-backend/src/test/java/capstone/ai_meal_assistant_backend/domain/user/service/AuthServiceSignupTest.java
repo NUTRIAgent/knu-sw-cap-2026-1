@@ -38,6 +38,10 @@ class AuthServiceSignupTest {
     @Mock
     private JwtUtil jwtUtil;
 
+    // 로그인 잠금 의존성 — mock 기본 동작(잠금 0초, 잠기지 않음)이면 충분
+    @Mock
+    private LoginAttemptService loginAttemptService;
+
     @InjectMocks
     private AuthService authService;
 

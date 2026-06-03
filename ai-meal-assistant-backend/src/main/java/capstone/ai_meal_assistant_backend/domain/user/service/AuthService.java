@@ -3,6 +3,7 @@ package capstone.ai_meal_assistant_backend.domain.user.service;
 import capstone.ai_meal_assistant_backend.domain.user.dto.*;
 import capstone.ai_meal_assistant_backend.domain.user.entity.Role;
 import capstone.ai_meal_assistant_backend.domain.user.entity.User;
+import capstone.ai_meal_assistant_backend.domain.user.exception.AccountLockedException;
 import capstone.ai_meal_assistant_backend.domain.user.repository.UserRepository;
 import capstone.ai_meal_assistant_backend.global.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final LoginAttemptService loginAttemptService;
     
     @Transactional
     public AuthResponse signup(SignupRequest request) {
@@ -84,7 +86,9 @@ public class AuthService {
         return userRepository.existsByNickname(nickname.trim());
     }
 
-    @Transactional(readOnly = true)
+    // 실패 횟수/잠금 상태를 기록해야 하므로 쓰기 트랜잭션 사용.
+    // AccountLockedException 발생 시에도 실패 누적은 저장되도록 noRollbackFor 지정.
+    @Transactional(noRollbackFor = AccountLockedException.class)
     public AuthResponse login(LoginRequest request) {
         try {
             // 이메일로 사용자 조회 (가입 시와 동일하게 소문자 정규화)
@@ -95,12 +99,25 @@ public class AuthService {
             if (user == null) {
                 return AuthResponse.failure("이메일 또는 비밀번호가 일치하지 않습니다");
             }
-            
-            // 비밀번호 검증
+
+            // 계정 잠금 상태 확인 (잠겨 있으면 비밀번호 검증 없이 차단)
+            long remainingLockSeconds = loginAttemptService.getRemainingLockSeconds(user);
+            if (remainingLockSeconds > 0) {
+                throw new AccountLockedException(remainingLockSeconds, false);
+            }
+
+            // 비밀번호 검증 (실패 시 횟수 누적, 최대치 도달 시 계정 잠금)
             if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+                boolean lockedNow = loginAttemptService.onLoginFailure(user);
+                if (lockedNow) {
+                    throw new AccountLockedException(LoginAttemptService.LOCK_DURATION.getSeconds(), true);
+                }
                 return AuthResponse.failure("이메일 또는 비밀번호가 일치하지 않습니다");
             }
-            
+
+            // 로그인 성공 — 실패 기록 초기화
+            loginAttemptService.onLoginSuccess(user);
+
             // JWT 토큰 생성
             String accessToken = jwtUtil.generateAccessToken(user.getEmail());
             String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
@@ -114,6 +131,8 @@ public class AuthService {
 
             return AuthResponse.success(authData);
 
+        } catch (AccountLockedException e) {
+            throw e; // 423 응답은 AuthExceptionHandler에서 처리
         } catch (Exception e) {
             log.error("로그인 중 오류 발생", e);
             return AuthResponse.failure("로그인 중 알 수 없는 오류가 발생했습니다");
