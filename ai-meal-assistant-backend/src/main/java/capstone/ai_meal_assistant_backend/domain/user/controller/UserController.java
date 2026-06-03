@@ -6,6 +6,7 @@ import capstone.ai_meal_assistant_backend.domain.user.service.AuthService;
 import capstone.ai_meal_assistant_backend.global.dto.ApiResponse;
 import capstone.ai_meal_assistant_backend.global.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
@@ -61,11 +63,20 @@ public class UserController {
                     .body(ApiResponse.fail("유효하지 않은 인증 헤더입니다"));
         }
         String token = authHeader.substring(7);
-        if (!jwtUtil.validateToken(token)) {
+        // access 토큰만 허용 — refresh 토큰으로는 탈퇴 불가 (#188 type claim과 일관)
+        if (!jwtUtil.validateToken(token) || jwtUtil.isRefreshToken(token)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.fail("유효하지 않은 토큰입니다"));
         }
         String email = jwtUtil.getEmailFromToken(token);
-        return ResponseEntity.ok(accountDeletionService.deleteAccount(email));
+
+        // 트랜잭션 밖에서 예외를 잡아야 rollback-only 커밋 충돌 없이 사용자 안내 가능
+        // (추후 User 참조 테이블이 추가되고 정리 목록에서 누락되면 FK 위반이 여기서 잡힌다)
+        try {
+            return ResponseEntity.ok(accountDeletionService.deleteAccount(email));
+        } catch (Exception e) {
+            log.error("회원탈퇴 처리 중 오류 발생: email={}", email, e);
+            return ResponseEntity.ok(ApiResponse.fail("회원탈퇴 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요"));
+        }
     }
 }

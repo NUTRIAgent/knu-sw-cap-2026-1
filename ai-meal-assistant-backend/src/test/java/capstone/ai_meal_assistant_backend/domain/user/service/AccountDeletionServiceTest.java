@@ -9,6 +9,7 @@ import capstone.ai_meal_assistant_backend.domain.user.entity.Gender;
 import capstone.ai_meal_assistant_backend.domain.user.entity.Role;
 import capstone.ai_meal_assistant_backend.domain.user.entity.User;
 import capstone.ai_meal_assistant_backend.domain.user.repository.UserRepository;
+import capstone.ai_meal_assistant_backend.global.client.AiHistoryClient;
 import capstone.ai_meal_assistant_backend.global.dto.ApiResponse;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.RedisConnectionFailureException;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -52,6 +54,9 @@ class AccountDeletionServiceTest {
     @Mock
     private RefreshTokenService refreshTokenService;
 
+    @Mock
+    private AiHistoryClient aiHistoryClient;
+
     @InjectMocks
     private AccountDeletionService accountDeletionService;
 
@@ -68,15 +73,18 @@ class AccountDeletionServiceTest {
 
     @Test
     void 탈퇴하면_연관_데이터와_계정이_모두_삭제되고_토큰이_무효화된다() {
-        // Given
+        // Given — RAG에 적재된 피드백 로그 2건 보유
         User user = createUser();
         given(userRepository.findByEmail(EMAIL)).willReturn(Optional.of(user));
+        given(recommendationLogRepository.findIdsByUser(user)).willReturn(List.of(10L, 11L));
 
         // When
         ApiResponse<Void> response = accountDeletionService.deleteAccount(EMAIL);
 
-        // Then — cascade 미설정 자식 데이터 전부 정리 후 계정 삭제 + 세션 무효화
+        // Then — RAG 임베딩 + cascade 미설정 자식 데이터 전부 정리 후 계정 삭제 + 세션 무효화
         assertThat(response.isSuccess()).isTrue();
+        then(aiHistoryClient).should().deleteHistory(10L);
+        then(aiHistoryClient).should().deleteHistory(11L);
         then(userAllergyRepository).should().deleteByUser(user);
         then(userFavoriteIngredientRepository).should().deleteByUser(user);
         then(userDeviceTokenRepository).should().deleteByUser(user);
