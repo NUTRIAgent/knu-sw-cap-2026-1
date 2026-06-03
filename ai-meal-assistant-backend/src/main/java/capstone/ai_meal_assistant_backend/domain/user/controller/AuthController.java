@@ -2,6 +2,7 @@ package capstone.ai_meal_assistant_backend.domain.user.controller;
 
 import capstone.ai_meal_assistant_backend.domain.user.dto.AuthResponse;
 import capstone.ai_meal_assistant_backend.domain.user.dto.LoginRequest;
+import capstone.ai_meal_assistant_backend.domain.user.dto.RefreshRequest;
 import capstone.ai_meal_assistant_backend.domain.user.dto.SignupRequest;
 import capstone.ai_meal_assistant_backend.domain.user.service.AuthService;
 import jakarta.validation.Valid;
@@ -25,6 +26,12 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         AuthResponse response = authService.login(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshRequest request) {
+        AuthResponse response = authService.refresh(request);
         return ResponseEntity.ok(response);
     }
 }

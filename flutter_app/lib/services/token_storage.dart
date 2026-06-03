@@ -8,6 +8,7 @@ class TokenStorage {
   static const String _userNicknameKey = 'user_nickname';
   static const String _userGenderKey = 'user_gender';
   static const String _userIdKey = 'user_id';
+  static const String _autoLoginKey = 'auto_login';
 
   // 토큰 저장
   static Future<void> saveTokens({
@@ -84,6 +85,18 @@ class TokenStorage {
     return prefs.getString(_userNicknameKey);
   }
 
+  // 자동 로그인 여부 저장
+  static Future<void> saveAutoLogin(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_autoLoginKey, enabled);
+  }
+
+  // 자동 로그인 여부 조회 (저장된 값이 없으면 false)
+  static Future<bool> getAutoLogin() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_autoLoginKey) ?? false;
+  }
+
   // 로그아웃 (모든 토큰 및 사용자 정보 삭제)
   static Future<void> clearAll() async {
     final prefs = await SharedPreferences.getInstance();
@@ -91,8 +104,9 @@ class TokenStorage {
     await prefs.remove(_refreshTokenKey);
     await prefs.remove(_userEmailKey);
     await prefs.remove(_userNicknameKey);
-  await prefs.remove(_userGenderKey);
-  await prefs.remove(_userIdKey);
+    await prefs.remove(_userGenderKey);
+    await prefs.remove(_userIdKey);
+    await prefs.remove(_autoLoginKey);
   }
 
   // 토큰 존재 여부 확인

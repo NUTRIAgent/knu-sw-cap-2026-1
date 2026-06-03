@@ -69,6 +69,54 @@ class AuthService {
     }
   }
 
+  // 토큰 갱신 (자동 로그인용) — 저장된 리프레시 토큰으로 새 토큰을 발급받아 저장
+  static Future<bool> refreshTokens() async {
+    try {
+      final refreshToken = await TokenStorage.getRefreshToken();
+      if (refreshToken == null || refreshToken.isEmpty) return false;
+
+      final url = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.apiVersion}/auth/refresh');
+
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'refreshToken': refreshToken,
+        }),
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw Exception('요청 시간 초과'),
+      );
+
+      final jsonResponse = jsonDecode(response.body);
+      final authResponse = AuthResponse.fromJson(jsonResponse);
+
+      // 성공 시 새 토큰 저장
+      if (authResponse.success && authResponse.data?.accessToken != null) {
+        await TokenStorage.saveTokens(
+          accessToken: authResponse.data!.accessToken!,
+          refreshToken: authResponse.data?.refreshToken,
+        );
+        // 유저 정보도 갱신 저장 (자동 로그인 시 마이페이지 성별 등이 비지 않도록)
+        if (authResponse.data?.user != null) {
+          await TokenStorage.saveUserInfo(
+            email: authResponse.data!.user!.email,
+            nickname: authResponse.data!.user!.nickname,
+            gender: authResponse.data!.user!.gender,
+            userId: authResponse.data!.user!.id,
+          );
+        }
+        return true;
+      }
+
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
   // 이메일 중복확인 (true: 이미 사용 중, false: 사용 가능, null: 확인 실패)
   static Future<bool?> checkEmailExists(String email) {
     return _checkExists('email', email);
