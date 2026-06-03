@@ -7,9 +7,11 @@ import lombok.Getter;
 public class AccountLockedException extends RuntimeException {
 
     private final long remainingSeconds; // 남은 잠금 시간(초)
+    private final boolean lockedNow;     // true: 이번 실패로 잠김 / false: 이미 잠긴 상태에서 재시도
 
-    public AccountLockedException(long remainingSeconds) {
+    public AccountLockedException(long remainingSeconds, boolean lockedNow) {
         super("계정이 잠겨 있습니다");
         this.remainingSeconds = remainingSeconds;
+        this.lockedNow = lockedNow;
     }
 }

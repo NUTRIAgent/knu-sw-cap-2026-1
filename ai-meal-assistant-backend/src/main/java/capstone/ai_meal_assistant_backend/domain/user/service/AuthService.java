@@ -103,14 +103,14 @@ public class AuthService {
             // 계정 잠금 상태 확인 (잠겨 있으면 비밀번호 검증 없이 차단)
             long remainingLockSeconds = loginAttemptService.getRemainingLockSeconds(user);
             if (remainingLockSeconds > 0) {
-                throw new AccountLockedException(remainingLockSeconds);
+                throw new AccountLockedException(remainingLockSeconds, false);
             }
 
             // 비밀번호 검증 (실패 시 횟수 누적, 최대치 도달 시 계정 잠금)
             if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
                 boolean lockedNow = loginAttemptService.onLoginFailure(user);
                 if (lockedNow) {
-                    throw new AccountLockedException(LoginAttemptService.LOCK_DURATION.getSeconds());
+                    throw new AccountLockedException(LoginAttemptService.LOCK_DURATION.getSeconds(), true);
                 }
                 return AuthResponse.failure("이메일 또는 비밀번호가 일치하지 않습니다");
             }

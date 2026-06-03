@@ -38,8 +38,11 @@ public class AuthExceptionHandler {
     @ExceptionHandler(AccountLockedException.class)
     public ResponseEntity<AuthResponse> handleAccountLocked(AccountLockedException e) {
         long remainingMinutes = Math.max(1, (e.getRemainingSeconds() + 59) / 60); // 올림, 최소 1분으로 표기
-        String message = "로그인이 " + LoginAttemptService.MAX_FAILED_ATTEMPTS
-                + "회 실패하여 계정이 잠겼습니다. 약 " + remainingMinutes + "분 후 다시 시도해 주세요";
+        // 이번 실패로 잠긴 경우와 이미 잠긴 상태에서 재시도한 경우를 구분해 안내
+        String message = e.isLockedNow()
+                ? "로그인이 " + LoginAttemptService.MAX_FAILED_ATTEMPTS
+                        + "회 실패하여 계정이 잠겼습니다. 약 " + remainingMinutes + "분 후 다시 시도해 주세요"
+                : "계정이 잠겨 있습니다. 약 " + remainingMinutes + "분 후 다시 시도해 주세요";
         return ResponseEntity.status(HttpStatus.LOCKED).body(AuthResponse.failure(message));
     }
 }
