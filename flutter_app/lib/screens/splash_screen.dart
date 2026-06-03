@@ -75,7 +75,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 return AppTheme.aiGradient.createShader(bounds);
               },
               child: const Text(
-                'NUTRI Agent',
+                'Memeal',
                 style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.w900,

@@ -48,7 +48,7 @@ class NutriAgentApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'NUTRI Agent',
+      title: '매밀',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       // 💡 앱 시작 시 자동 로그인 여부를 판단하는 스플래시 화면으로 진입

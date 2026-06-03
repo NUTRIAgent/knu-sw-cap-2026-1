@@ -239,14 +239,31 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     },
                   ),
                   const SizedBox(height: 32),
-                  SizedBox(
+                  // 로그인 버튼과 동일한 그라데이션 캡슐형 디자인
+                  Container(
+                    width: double.infinity,
                     height: 56,
+                    decoration: BoxDecoration(
+                      color: _isLoading ? Colors.grey.shade400 : null,
+                      gradient: _isLoading ? null : AppTheme.aiGradient,
+                      borderRadius: BorderRadius.circular(30),
+                      boxShadow: [
+                        if (!_isLoading)
+                          BoxShadow(
+                            color: AppTheme.primaryColor.withValues(alpha: 0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                      ],
+                    ),
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _resetPassword,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryColor,
+                        backgroundColor: Colors.transparent, // 뒤쪽 그라데이션 노출
+                        shadowColor: Colors.transparent,
                         foregroundColor: Colors.white,
                         shape: const StadiumBorder(),
+                        padding: EdgeInsets.zero,
                       ),
                       child: _isLoading
                           ? const SizedBox(
@@ -259,7 +276,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                             )
                           : const Text(
                               '비밀번호 재설정',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white),
                             ),
                     ),
                   ),
