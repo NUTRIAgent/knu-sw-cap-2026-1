@@ -352,11 +352,14 @@ class _MyPageScreenState extends State<MyPageScreen>
   }
 
   Future<void> _confirmDeleteAiPick(AiPickItem item) async {
+    final content = item.isDisliked
+        ? '"${item.menuName}" AI 피드백을 삭제할까요?\n삭제 시 다음 추천에서 제외가 해제됩니다.'
+        : '"${item.menuName}" AI 피드백을 삭제할까요?';
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogCtx) => AlertDialog(
         title: const Text('AI 피드백 삭제'),
-        content: Text('"${item.menuName}" AI 피드백을 삭제할까요?'),
+        content: Text(content),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogCtx, false),
@@ -371,12 +374,16 @@ class _MyPageScreenState extends State<MyPageScreen>
     );
     if (confirmed != true || !mounted) return;
     final jwt = await TokenStorage.getAccessToken();
-    final success = await RecommendationService.deleteFeedback(item.id, jwt);
+    final success = await RecommendationService.clearAiPickFeedback(item.id, jwt);
     if (!mounted) return;
     if (success) {
-      setState(() => _aiPickFeedbackItems.removeWhere((i) => i.id == item.id));
+      setState(() {
+        _aiPickFeedbackItems.removeWhere((i) => i.id == item.id);
+        // feedbackScore도 null 처리되므로 피드백 탭(좋아요/싫어요)에서도 제거
+        _feedbackItems.removeWhere((i) => i.menuId == item.menuId);
+      });
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('이력이 삭제되었습니다.')));
+          .showSnackBar(const SnackBar(content: Text('AI 피드백이 삭제되었습니다.')));
     } else {
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('삭제에 실패했습니다.')));
@@ -851,7 +858,7 @@ class _MyPageScreenState extends State<MyPageScreen>
                   filled: true,
                   fillColor: Colors.white,
                 ),
-                value: _selectedGender,
+                initialValue: _selectedGender,
                 onChanged: (v) => setState(() => _selectedGender = v!),
                 items: ['남성', '여성']
                     .map((s) => DropdownMenuItem(value: s, child: Text(s)))
@@ -900,7 +907,7 @@ class _MyPageScreenState extends State<MyPageScreen>
                   filled: true,
                   fillColor: Colors.white,
                 ),
-                value: _selectedVegType,
+                initialValue: _selectedVegType,
                 onChanged: (v) => setState(() => _selectedVegType = v!),
                 items: _vegOptions.entries
                     .map((e) =>

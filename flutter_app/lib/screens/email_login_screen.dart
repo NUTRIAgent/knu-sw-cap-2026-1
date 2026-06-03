@@ -22,8 +22,9 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _autoLogin = true; // 자동 로그인 여부 (기본 활성화)
 
-    void _submitLogin() async {
+  void _submitLogin() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
         _isLoading = true;
@@ -38,30 +39,28 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
       if (!mounted) return;
 
       if (response.success) {
+        // 자동 로그인 설정 저장 (체크 시 앱 재실행 때 로그인 유지)
+        await TokenStorage.saveAutoLogin(_autoLogin);
+
         // FCM 토큰 백엔드 등록 (실패해도 로그인 흐름에 영향 없음)
         final jwt = await TokenStorage.getAccessToken();
         PriceAlertService.registerToken(jwt);
 
         // 💡 2. 토큰이 저장되었으니, 프로필 정보를 찔러서 온보딩 필요 여부 확인
         final profileResponse = await UserProfileService.getProfile();
-        
+
         if (!mounted) return;
-        
+
         setState(() {
           _isLoading = false;
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('로그인 성공!')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('로그인 성공!')));
 
-        // 💡 3. 필수 데이터(예: 키, 몸무게)가 없으면 온보딩 대상으로 간주
-        // 백엔드에서 아직 프로필이 안 만들어졌거나, height가 null인 경우
-        // 💡 키 값이 null이거나, 백엔드 초기값인 999(또는 999.0)인 경우 온보딩으로 보냅니다
-        bool needsOnboarding = profileResponse.data == null || 
-                              profileResponse.data?.height == null || 
-                              profileResponse.data?.height == 999 || 
-                              profileResponse.data?.height == 999.0;
+        // 💡 3. 필수 프로필(키 등)이 없으면 온보딩 대상 — 판정 기준은 UserProfileService.needsOnboarding 참고
+        final needsOnboarding = UserProfileService.needsOnboarding(profileResponse);
 
         if (needsOnboarding) {
           // 첫 로그인 유저 -> 온보딩 화면으로 이동 (뒤로 가기 방지)
@@ -114,8 +113,12 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Text(
-                  '다시 오신 것을 환영합니다!\n계정 정보를 입력해 주세요.', 
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, height: 1.4)
+                  '당신을 위한 맞춤 식단이 기다리고 있어요.\n로그인해 주세요.',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    height: 1.4,
+                  ),
                 ),
                 const SizedBox(height: 40),
 
@@ -127,9 +130,13 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
                     filled: true,
                     fillColor: Colors.grey.shade100,
                     // 💡 입력창 모서리를 글로벌 테마와 동일하게 16px로 맞춤
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
                   ),
-                  validator: (value) => (value == null || value.isEmpty) ? '이메일을 입력해 주세요.' : null,
+                  validator: (value) =>
+                      (value == null || value.isEmpty) ? '이메일을 입력해 주세요.' : null,
                 ),
                 const SizedBox(height: 20),
 
@@ -141,11 +148,43 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
                     filled: true,
                     fillColor: Colors.grey.shade100,
                     // 💡 입력창 모서리를 글로벌 테마와 동일하게 16px로 맞춤
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
                   ),
-                  validator: (value) => (value == null || value.isEmpty) ? '비밀번호를 입력해 주세요.' : null,
+                  validator: (value) => (value == null || value.isEmpty)
+                      ? '비밀번호를 입력해 주세요.'
+                      : null,
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 12),
+
+                // 💡 자동 로그인 체크박스 (체크 시 앱 재실행 때 로그인 유지)
+                Row(
+                  children: [
+                    Checkbox(
+                      value: _autoLogin,
+                      activeColor: AppTheme.primaryColor,
+                      onChanged: (value) {
+                        setState(() {
+                          _autoLogin = value ?? false;
+                        });
+                      },
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _autoLogin = !_autoLogin;
+                        });
+                      },
+                      child: const Text(
+                        '자동 로그인',
+                        style: TextStyle(fontSize: 15),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
 
                 // 💡 로그인 버튼에 그라데이션 및 캡슐형 디자인 적용
                 Container(
@@ -168,8 +207,9 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _submitLogin,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent, // 투명하게 처리해 뒤쪽 그라데이션 노출
-                      shadowColor: Colors.transparent,     // 기본 그림자 제거
+                      backgroundColor:
+                          Colors.transparent, // 투명하게 처리해 뒤쪽 그라데이션 노출
+                      shadowColor: Colors.transparent, // 기본 그림자 제거
                       shape: const StadiumBorder(),
                       padding: EdgeInsets.zero,
                     ),
@@ -179,12 +219,18 @@ class _EmailLoginScreenState extends State<EmailLoginScreen> {
                             width: 24,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           )
                         : const Text(
                             '로그인하기',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
                           ),
                   ),
                 ),

@@ -54,6 +54,13 @@ class UserProfileService {
     }
   }
 
+  // 온보딩(필수 프로필 입력) 필요 여부 판정 — 로그인/스플래시 화면이 공용으로 사용
+  // 프로필이 아직 없거나, height가 비어 있거나 백엔드 초기값(999)인 경우 온보딩 대상으로 간주
+  static bool needsOnboarding(UserProfileResponse response) {
+    final height = response.data?.height;
+    return response.data == null || height == null || height == 999 || height == 999.0;
+  }
+
   static Future<UserProfileResponse> saveProfile({
     required UserProfileRequest request,
   }) async {

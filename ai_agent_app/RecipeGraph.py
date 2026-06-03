@@ -185,7 +185,9 @@ class RecipeGraphBuilder:
         static_data = ProcessDynamicInputs.build_static_data(recipe)
 
         try:
-            llm_input = ProcessDynamicInputs.build_llm_input(recipe, state["user_query"])
+            llm_input = ProcessDynamicInputs.build_llm_input(
+                recipe, state["user_query"], state.get("history_texts", [])
+            )
             llm_data = await self.chain.ainvoke(llm_input)
         except Exception as e:
             llm_data = {"error": str(e)}
