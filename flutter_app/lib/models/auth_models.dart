@@ -23,6 +23,7 @@ class SignupRequest {
   final String email;
   final String password;
   final String nickname;
+  final String? gender;
   final String role;
   final String? provider;
   final String? providerId;
@@ -31,6 +32,7 @@ class SignupRequest {
     required this.email,
     required this.password,
     required this.nickname,
+    this.gender,
     this.role = 'USER',
     this.provider,
     this.providerId,
@@ -41,6 +43,7 @@ class SignupRequest {
       'email': email,
       'password': password,
       'nickname': nickname,
+      'gender': gender,
       'role': role,
       'provider': provider,
       'providerId': providerId,

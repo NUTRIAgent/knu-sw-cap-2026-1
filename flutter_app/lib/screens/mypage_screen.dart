@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_app/models/recommendation_models.dart';
 import 'package:flutter_app/models/user_profile_models.dart';
+import 'package:flutter_app/notifiers.dart';
 import 'package:flutter_app/services/recommendation_service.dart';
 import 'package:flutter_app/services/user_profile_service.dart';
 import 'package:flutter_app/screens/price_alert_screen.dart';
@@ -65,10 +66,12 @@ class _MyPageScreenState extends State<MyPageScreen>
 
   // ── 피드백 탭 상태 ──────────────────────────────
   List<FeedbackHistoryItem> _feedbackItems = [];
+  List<AiPickItem> _aiPickFeedbackItems = [];
   bool _feedbackLoading = false;
+  bool _feedbackPending = false;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  bool _showLiked = true;
+  int _feedbackTab = 0; // 0=좋아요, 1=싫어요, 2=AI피드백
 
   // ── 옵션 상수 ────────────────────────────────────
   final List<String> _healthConditionOptions = [
@@ -100,8 +103,13 @@ class _MyPageScreenState extends State<MyPageScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
-      if (!_tabController.indexIsChanging) setState(() {});
+      if (!_tabController.indexIsChanging) {
+        setState(() {});
+        // 피드백 탭으로 전환될 때 최신 데이터 로드
+        if (_tabController.index == 1) _loadFeedbacks();
+      }
     });
+    feedbackRefreshNotifier.addListener(_loadFeedbacks);
     _loadProfile();
     _loadBasicUserInfoFromLocal();
     _loadFeedbacks();
@@ -109,6 +117,7 @@ class _MyPageScreenState extends State<MyPageScreen>
 
   @override
   void dispose() {
+    feedbackRefreshNotifier.removeListener(_loadFeedbacks);
     _tabController.dispose();
     _nicknameController.dispose();
     _heightController.dispose();
@@ -318,30 +327,82 @@ class _MyPageScreenState extends State<MyPageScreen>
   // ── 피드백 탭 로직 ────────────────────────────────
 
   Future<void> _loadFeedbacks() async {
+    if (_feedbackLoading) {
+      _feedbackPending = true; // 로딩 중 재요청 — 완료 후 한 번 더 실행
+      return;
+    }
+    _feedbackPending = false;
     setState(() => _feedbackLoading = true);
     try {
       final jwt = await TokenStorage.getAccessToken();
-      final items = await RecommendationService.fetchMyFeedbacks(jwt);
+      final feedbackFuture = RecommendationService.fetchMyFeedbacks(jwt);
+      final aiPickFuture = RecommendationService.fetchMyAiPicks(jwt);
+      final feedbacks = await feedbackFuture;
+      final aiPicks = await aiPickFuture;
       if (!mounted) return;
-      setState(() => _feedbackItems = items);
+      setState(() {
+        _feedbackItems = feedbacks;
+        _aiPickFeedbackItems =
+            aiPicks.where((i) => i.starRating != null || i.isDisliked).toList();
+      });
     } finally {
       if (mounted) setState(() => _feedbackLoading = false);
+      if (_feedbackPending) _loadFeedbacks();
+    }
+  }
+
+  Future<void> _confirmDeleteAiPick(AiPickItem item) async {
+    final content = item.isDisliked
+        ? '"${item.menuName}" AI 피드백을 삭제할까요?\n삭제 시 다음 추천에서 제외가 해제됩니다.'
+        : '"${item.menuName}" AI 피드백을 삭제할까요?';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('AI 피드백 삭제'),
+        content: Text(content),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            child: const Text('삭제', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final jwt = await TokenStorage.getAccessToken();
+    final success = await RecommendationService.clearAiPickFeedback(item.id, jwt);
+    if (!mounted) return;
+    if (success) {
+      setState(() {
+        _aiPickFeedbackItems.removeWhere((i) => i.id == item.id);
+        // feedbackScore도 null 처리되므로 피드백 탭(좋아요/싫어요)에서도 제거
+        _feedbackItems.removeWhere((i) => i.menuId == item.menuId);
+      });
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('AI 피드백이 삭제되었습니다.')));
+    } else {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('삭제에 실패했습니다.')));
     }
   }
 
   Future<void> _confirmDeleteFeedback(FeedbackHistoryItem item) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         title: const Text('피드백 삭제'),
         content: Text('"${item.menuName}" 피드백을 삭제할까요?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () => Navigator.pop(dialogCtx, false),
             child: const Text('취소'),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(dialogCtx, true),
             child: const Text('삭제', style: TextStyle(color: Colors.red)),
           ),
         ],
@@ -1000,22 +1061,40 @@ class _MyPageScreenState extends State<MyPageScreen>
       return const Center(child: CircularProgressIndicator());
     }
 
-    final filtered = _searchQuery.isEmpty
-        ? _feedbackItems
-        : _feedbackItems
-            .where((item) => item.menuName.contains(_searchQuery))
-            .toList();
-
-    final liked = filtered.where((i) => i.feedbackScore == 1).toList();
-    final disliked = filtered.where((i) => i.feedbackScore == -1).toList();
-    final activeItems = _showLiked ? liked : disliked;
-
-    final likedTotal = _feedbackItems.where((i) => i.feedbackScore == 1).length;
+    final likedTotal =
+        _feedbackItems.where((i) => i.feedbackScore == 1).length;
     final dislikedTotal =
         _feedbackItems.where((i) => i.feedbackScore == -1).length;
+    final aiTotal = _aiPickFeedbackItems.length;
+
+    // 현재 탭에 맞는 목록 계산
+    List<Widget> listItems;
+    if (_feedbackTab == 2) {
+      final filtered = _searchQuery.isEmpty
+          ? _aiPickFeedbackItems
+          : _aiPickFeedbackItems
+              .where((i) => i.menuName.contains(_searchQuery))
+              .toList();
+      listItems = filtered.isEmpty
+          ? [_buildFeedbackEmpty()]
+          : filtered.map(_buildAiPickFeedbackItem).toList();
+    } else {
+      final targetScore = _feedbackTab == 0 ? 1 : -1;
+      final filtered = (_searchQuery.isEmpty
+              ? _feedbackItems
+              : _feedbackItems
+                  .where((i) => i.menuName.contains(_searchQuery))
+                  .toList())
+          .where((i) => i.feedbackScore == targetScore)
+          .toList();
+      listItems = filtered.isEmpty
+          ? [_buildFeedbackEmpty()]
+          : filtered.map(_buildFeedbackItem).toList();
+    }
 
     return Column(
       children: [
+        // ── 검색 바 ──
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
           child: TextField(
@@ -1040,6 +1119,7 @@ class _MyPageScreenState extends State<MyPageScreen>
             ),
           ),
         ),
+        // ── 3-버튼 토글 ──
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
@@ -1049,9 +1129,9 @@ class _MyPageScreenState extends State<MyPageScreen>
                   label: '좋아요',
                   count: likedTotal,
                   icon: Icons.thumb_up,
-                  isActive: _showLiked,
+                  isActive: _feedbackTab == 0,
                   activeColor: AppTheme.primaryColor,
-                  onTap: () => setState(() => _showLiked = true),
+                  onTap: () => setState(() => _feedbackTab = 0),
                 ),
               ),
               const SizedBox(width: 8),
@@ -1060,40 +1140,48 @@ class _MyPageScreenState extends State<MyPageScreen>
                   label: '싫어요',
                   count: dislikedTotal,
                   icon: Icons.thumb_down,
-                  isActive: !_showLiked,
+                  isActive: _feedbackTab == 1,
                   activeColor: Colors.redAccent,
-                  onTap: () => setState(() => _showLiked = false),
+                  onTap: () => setState(() => _feedbackTab = 1),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildToggleButton(
+                  label: 'AI피드백',
+                  count: aiTotal,
+                  icon: Icons.auto_awesome_rounded,
+                  isActive: _feedbackTab == 2,
+                  activeColor: AppTheme.primaryColor,
+                  activeGradient: AppTheme.aiGradient,
+                  onTap: () => setState(() => _feedbackTab = 2),
                 ),
               ),
             ],
           ),
         ),
+        // ── 목록 ──
         Expanded(
           child: RefreshIndicator(
             onRefresh: _loadFeedbacks,
-            child: activeItems.isEmpty
-                ? ListView(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(top: 80),
-                        child: Center(
-                          child: Text(
-                            _searchQuery.isEmpty
-                                ? '아직 피드백한 메뉴가 없습니다.'
-                                : '검색 결과가 없습니다.',
-                            style: TextStyle(color: Colors.grey.shade500),
-                          ),
-                        ),
-                      ),
-                    ],
-                  )
-                : ListView.builder(
-                    itemCount: activeItems.length,
-                    itemBuilder: (_, i) => _buildFeedbackItem(activeItems[i]),
-                  ),
+            child: ListView(
+              children: [...listItems, const SizedBox(height: 16)],
+            ),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildFeedbackEmpty() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 60),
+      child: Center(
+        child: Text(
+          _searchQuery.isEmpty ? '아직 피드백한 메뉴가 없습니다.' : '검색 결과가 없습니다.',
+          style: TextStyle(color: Colors.grey.shade500),
+        ),
+      ),
     );
   }
 
@@ -1103,47 +1191,291 @@ class _MyPageScreenState extends State<MyPageScreen>
     required IconData icon,
     required bool isActive,
     required Color activeColor,
+    LinearGradient? activeGradient,
     required VoidCallback onTap,
   }) {
+    final useGradient = isActive && activeGradient != null;
+    final contentColor = useGradient ? activeGradient.colors.last : activeColor;
+
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: isActive
-              ? activeColor.withValues(alpha: 0.1)
-              : Colors.grey.shade100,
+          gradient: useGradient
+              ? LinearGradient(
+                  colors: activeGradient.colors
+                      .map((c) => c.withValues(alpha: 0.15))
+                      .toList(),
+                  begin: activeGradient.begin,
+                  end: activeGradient.end,
+                )
+              : null,
+          color: useGradient
+              ? null
+              : isActive
+                  ? activeColor.withValues(alpha: 0.1)
+                  : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: isActive ? activeColor : Colors.grey.shade300,
+            color: isActive ? contentColor : Colors.grey.shade300,
             width: isActive ? 1.5 : 1,
           ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon,
-                size: 16,
-                color: isActive ? activeColor : Colors.grey.shade500),
+            useGradient
+                ? ShaderMask(
+                    blendMode: BlendMode.srcIn,
+                    shaderCallback: (b) => activeGradient.createShader(b),
+                    child: Icon(icon, size: 16),
+                  )
+                : Icon(icon,
+                    size: 16,
+                    color: isActive ? activeColor : Colors.grey.shade500),
             const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: isActive ? activeColor : Colors.grey.shade500,
-              ),
-            ),
+            useGradient
+                ? ShaderMask(
+                    blendMode: BlendMode.srcIn,
+                    shaderCallback: (b) => activeGradient.createShader(b),
+                    child: Text(
+                      label,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  )
+                : Text(
+                    label,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: isActive ? activeColor : Colors.grey.shade500,
+                    ),
+                  ),
             const SizedBox(width: 4),
             Text(
               '$count',
               style: TextStyle(
                 fontSize: 12,
-                color: isActive ? activeColor : Colors.grey.shade400,
+                color: isActive ? contentColor : Colors.grey.shade400,
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _showAiPickEditSheet(AiPickItem item) async {
+    int starRating = item.starRating ?? 0;
+    final reasonController =
+        TextEditingController(text: item.feedbackReason ?? '');
+    bool submitting = false; // 빌더 밖에서 선언 — rebuild 시 리셋 방지
+    bool? result;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (_, setSheetState) {
+          return Padding(
+            padding: EdgeInsets.fromLTRB(
+                24, 20, 24, MediaQuery.of(sheetCtx).viewInsets.bottom + 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40, height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(item.menuName,
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w700),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 4),
+                Text('이 추천은 어떠셨나요?',
+                    style: TextStyle(fontSize: 13, color: Colors.grey[500])),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(
+                    5,
+                    (i) => IconButton(
+                      icon: Icon(
+                        i < starRating
+                            ? Icons.star_rounded
+                            : Icons.star_outline_rounded,
+                        size: 38,
+                        color: i < starRating ? Colors.amber : Colors.grey[300],
+                      ),
+                      onPressed: () =>
+                          setSheetState(() => starRating = i + 1),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: reasonController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: '한 줄 코멘트 (선택)',
+                    hintStyle:
+                        TextStyle(color: Colors.grey[400], fontSize: 14),
+                    filled: true,
+                    fillColor: Colors.grey.shade100,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: submitting || starRating == 0
+                        ? null
+                        : () async {
+                            setSheetState(() => submitting = true);
+                            final jwt = await TokenStorage.getAccessToken();
+                            final ok =
+                                await RecommendationService.updateFeedback(
+                              item.id,
+                              starRating,
+                              reasonController.text.trim(),
+                              jwt,
+                            );
+                            result = ok;
+                            if (sheetCtx.mounted) Navigator.pop(sheetCtx);
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: submitting
+                        ? const SizedBox(
+                            width: 20, height: 20,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white))
+                        : const Text('피드백 저장',
+                            style: TextStyle(
+                                fontSize: 15, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => reasonController.dispose());
+    if (!mounted) return;
+    if (result == true) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('피드백이 수정됐습니다')));
+      await _loadFeedbacks();
+    } else if (result == false) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('저장에 실패했습니다')));
+    }
+  }
+
+  Widget _buildAiPickFeedbackItem(AiPickItem item) {
+    return ListTile(
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      onTap: item.isDisliked ? null : () => _showAiPickEditSheet(item),
+      leading: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: item.menuImageUrl != null && item.menuImageUrl!.isNotEmpty
+            ? Image.network(
+                item.menuImageUrl!,
+                width: 48,
+                height: 48,
+                fit: BoxFit.cover,
+                errorBuilder: (_, e, s) => _defaultMenuIcon(),
+              )
+            : _defaultMenuIcon(),
+      ),
+      title: Text(item.menuName,
+          style: const TextStyle(fontWeight: FontWeight.w500)),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 2),
+          if (item.isDisliked)
+            Row(
+              children: [
+                Icon(Icons.block_rounded, size: 13, color: Colors.red.shade300),
+                const SizedBox(width: 4),
+                Text(
+                  '다시 추천 안함',
+                  style: TextStyle(fontSize: 12, color: Colors.red.shade300),
+                ),
+              ],
+            )
+          else
+            Row(
+              children: List.generate(
+                5,
+                (i) => Icon(
+                  i < (item.starRating ?? 0)
+                      ? Icons.star_rounded
+                      : Icons.star_outline_rounded,
+                  size: 14,
+                  color: Colors.amber,
+                ),
+              ),
+            ),
+          if (!item.isDisliked &&
+              item.feedbackReason != null &&
+              item.feedbackReason!.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(
+              item.feedbackReason!,
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          if (item.createdAt != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              item.createdAt!,
+              style: TextStyle(fontSize: 11, color: Colors.grey.shade400),
+            ),
+          ],
+        ],
+      ),
+      isThreeLine: true,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (!item.isDisliked)
+            Icon(Icons.edit_outlined, size: 16, color: Colors.grey.shade400),
+          if (!item.isDisliked) const SizedBox(width: 8),
+          GestureDetector(
+            onTap: () => _confirmDeleteAiPick(item),
+            child: Icon(Icons.delete_outline_rounded,
+                size: 16, color: Colors.grey.shade400),
+          ),
+        ],
       ),
     );
   }

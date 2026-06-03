@@ -168,6 +168,38 @@ class RecommendationService {
     }
   }
 
+  static Future<bool> clearAiPickFeedback(int logId, String? jwt) async {
+    if (jwt == null || jwt.isEmpty) return false;
+    final uri = Uri.parse(
+        '${ApiConfig.baseUrl}/api/recommendation-logs/$logId/clear-feedback');
+    try {
+      final response = await http
+          .patch(uri, headers: {'Authorization': 'Bearer $jwt'})
+          .timeout(const Duration(seconds: 10));
+      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      return json['success'] == true;
+    } catch (e) {
+      debugPrint('AI픽 피드백 삭제 실패: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> unsaveAiResult(int logId, String? jwt) async {
+    if (jwt == null || jwt.isEmpty) return false;
+    final uri = Uri.parse(
+        '${ApiConfig.baseUrl}/api/recommendation-logs/$logId/unsave');
+    try {
+      final response = await http
+          .patch(uri, headers: {'Authorization': 'Bearer $jwt'})
+          .timeout(const Duration(seconds: 10));
+      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      return json['success'] == true;
+    } catch (e) {
+      debugPrint('저장 취소 실패: $e');
+      return false;
+    }
+  }
+
   static Future<bool> deleteFeedback(int logId, String? jwt) async {
     if (jwt == null || jwt.isEmpty) return false;
     final uri =
@@ -238,6 +270,30 @@ class RecommendationService {
       return json['success'] == true;
     } catch (e) {
       debugPrint('피드백 업데이트 실패: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> updateAiPickFeedbackScore(
+      int logId, int feedbackScore, String? jwt) async {
+    if (jwt == null || jwt.isEmpty) return false;
+    final uri = Uri.parse(
+        '${ApiConfig.baseUrl}/api/recommendation-logs/$logId/feedback');
+    try {
+      final response = await http
+          .patch(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $jwt',
+            },
+            body: jsonEncode({'feedbackScore': feedbackScore}),
+          )
+          .timeout(const Duration(seconds: 10));
+      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      return json['success'] == true;
+    } catch (e) {
+      debugPrint('AI픽 피드백 업데이트 실패: $e');
       return false;
     }
   }
