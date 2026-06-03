@@ -62,21 +62,22 @@ class AuthServiceRefreshTest {
                 .build();
 
         given(jwtUtil.validateToken(refreshToken)).willReturn(true);
+        given(jwtUtil.isRefreshToken(refreshToken)).willReturn(true);
         given(jwtUtil.getEmailFromToken(refreshToken)).willReturn("test@example.com");
         given(userRepository.findByEmail("test@example.com")).willReturn(Optional.of(user));
-        given(refreshTokenService.matches("test@example.com", refreshToken)).willReturn(true);
         given(jwtUtil.generateAccessToken("test@example.com")).willReturn("new-access-token");
         given(jwtUtil.generateRefreshToken("test@example.com")).willReturn("new-refresh-token");
+        given(refreshTokenService.rotate("test@example.com", refreshToken, "new-refresh-token"))
+                .willReturn(true);
 
         // When
         AuthResponse response = authService.refresh(createRequest(refreshToken));
 
-        // Then — 새 토큰 발급 + 저장소 갱신(회전)
+        // Then — 새 토큰 발급 + 원자적 교체(회전)
         assertThat(response.isSuccess()).isTrue();
         assertThat(response.getData().getAccessToken()).isEqualTo("new-access-token");
         assertThat(response.getData().getRefreshToken()).isEqualTo("new-refresh-token");
         assertThat(response.getData().getUser().getEmail()).isEqualTo("test@example.com");
-        then(refreshTokenService).should().store("test@example.com", "new-refresh-token");
     }
 
     @Test
@@ -91,17 +92,51 @@ class AuthServiceRefreshTest {
                 .build();
 
         given(jwtUtil.validateToken(oldToken)).willReturn(true);
+        given(jwtUtil.isRefreshToken(oldToken)).willReturn(true);
         given(jwtUtil.getEmailFromToken(oldToken)).willReturn("test@example.com");
         given(userRepository.findByEmail("test@example.com")).willReturn(Optional.of(user));
-        given(refreshTokenService.matches("test@example.com", oldToken)).willReturn(false);
+        given(jwtUtil.generateAccessToken("test@example.com")).willReturn("new-access-token");
+        given(jwtUtil.generateRefreshToken("test@example.com")).willReturn("new-refresh-token");
+        given(refreshTokenService.rotate("test@example.com", oldToken, "new-refresh-token"))
+                .willReturn(false);
 
         // When
         AuthResponse response = authService.refresh(createRequest(oldToken));
 
-        // Then — 서명이 유효해도 저장소 불일치면 거부, 새 토큰도 발급하지 않는다
+        // Then — 서명이 유효해도 CAS 교체 실패(저장소 불일치)면 거부
         assertThat(response.isSuccess()).isFalse();
         assertThat(response.getError()).isEqualTo("유효하지 않은 리프레시 토큰입니다");
-        then(refreshTokenService).should(never()).store(anyString(), anyString());
+    }
+
+    @Test
+    void access_토큰으로는_refresh할_수_없다() {
+        // Given — 서명은 유효하지만 type이 refresh가 아님
+        String accessToken = "valid-access-token";
+        given(jwtUtil.validateToken(accessToken)).willReturn(true);
+        given(jwtUtil.isRefreshToken(accessToken)).willReturn(false);
+
+        // When
+        AuthResponse response = authService.refresh(createRequest(accessToken));
+
+        // Then
+        assertThat(response.isSuccess()).isFalse();
+        assertThat(response.getError()).isEqualTo("유효하지 않은 리프레시 토큰입니다");
+        then(refreshTokenService).should(never()).rotate(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void access_토큰으로는_로그아웃해도_무효화하지_않는다() {
+        // Given — access 토큰의 logout 오용 차단 (응답은 멱등 성공)
+        String accessToken = "valid-access-token";
+        given(jwtUtil.validateToken(accessToken)).willReturn(true);
+        given(jwtUtil.isRefreshToken(accessToken)).willReturn(false);
+
+        // When
+        AuthResponse response = authService.logout(createRequest(accessToken));
+
+        // Then
+        assertThat(response.isSuccess()).isTrue();
+        then(refreshTokenService).should(never()).invalidate(anyString());
     }
 
     @Test
@@ -109,6 +144,7 @@ class AuthServiceRefreshTest {
         // Given
         String refreshToken = "valid-refresh-token";
         given(jwtUtil.validateToken(refreshToken)).willReturn(true);
+        given(jwtUtil.isRefreshToken(refreshToken)).willReturn(true);
         given(jwtUtil.getEmailFromToken(refreshToken)).willReturn("test@example.com");
 
         // When
@@ -153,6 +189,7 @@ class AuthServiceRefreshTest {
         // Given
         String refreshToken = "valid-refresh-token";
         given(jwtUtil.validateToken(refreshToken)).willReturn(true);
+        given(jwtUtil.isRefreshToken(refreshToken)).willReturn(true);
         given(jwtUtil.getEmailFromToken(refreshToken)).willReturn("ghost@example.com");
         given(userRepository.findByEmail("ghost@example.com")).willReturn(Optional.empty());
 

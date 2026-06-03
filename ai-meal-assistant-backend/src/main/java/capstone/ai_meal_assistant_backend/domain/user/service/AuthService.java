@@ -178,8 +178,8 @@ public class AuthService {
         try {
             String refreshToken = request.getRefreshToken();
 
-            // 리프레시 토큰 유효성 검증 (서명/만료)
-            if (!jwtUtil.validateToken(refreshToken)) {
+            // 리프레시 토큰 유효성 검증 (서명/만료 + type — access 토큰의 refresh 오용 차단)
+            if (!jwtUtil.validateToken(refreshToken) || !jwtUtil.isRefreshToken(refreshToken)) {
                 return AuthResponse.failure("유효하지 않은 리프레시 토큰입니다");
             }
 
@@ -192,15 +192,13 @@ public class AuthService {
                 return AuthResponse.failure("존재하지 않는 사용자입니다");
             }
 
-            // 서버(Redis)에 저장된 최신 토큰과 일치해야 함 — 회전된 구 토큰/로그아웃된 토큰 차단
-            if (!refreshTokenService.matches(email, refreshToken)) {
-                return AuthResponse.failure("유효하지 않은 리프레시 토큰입니다");
-            }
-
-            // 새 토큰 발급 후 저장소 갱신 — 구 refresh token은 이 시점부터 즉시 무효 (진짜 회전)
+            // 새 토큰 발급 후 원자적 비교+교체(CAS) — 저장된 최신 토큰과 일치할 때만 성공.
+            // 같은 구 토큰으로 동시 refresh가 들어와도 한쪽만 성공해, 회전된 토큰 재사용을 확실히 차단한다
             String accessToken = jwtUtil.generateAccessToken(user.getEmail());
             String newRefreshToken = jwtUtil.generateRefreshToken(user.getEmail());
-            refreshTokenService.store(user.getEmail(), newRefreshToken);
+            if (!refreshTokenService.rotate(email, refreshToken, newRefreshToken)) {
+                return AuthResponse.failure("유효하지 않은 리프레시 토큰입니다");
+            }
 
             // UserInfo 생성
             UserInfo userInfo = new UserInfo(user.getEmail(), user.getNickname(),
@@ -222,7 +220,8 @@ public class AuthService {
     public AuthResponse logout(RefreshRequest request) {
         try {
             String refreshToken = request.getRefreshToken();
-            if (jwtUtil.validateToken(refreshToken)) {
+            // type 검증 포함 — access 토큰으로는 refresh 무효화 불가
+            if (jwtUtil.validateToken(refreshToken) && jwtUtil.isRefreshToken(refreshToken)) {
                 String email = jwtUtil.getEmailFromToken(refreshToken);
                 refreshTokenService.invalidate(email);
             }

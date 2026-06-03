@@ -4,15 +4,20 @@ import capstone.ai_meal_assistant_backend.global.security.JwtUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.core.script.RedisScript;
 
 import java.time.Duration;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.lenient;
@@ -53,25 +58,31 @@ class RefreshTokenServiceTest {
     }
 
     @Test
-    void 저장된_토큰과_일치하면_true를_반환한다() {
-        // Given
-        given(valueOperations.get(KEY)).willReturn("token-1");
+    void 저장된_토큰과_일치하면_원자적으로_교체하고_true를_반환한다() {
+        // Given — CAS 스크립트가 1(교체 성공)을 반환
+        given(jwtUtil.getRefreshTokenValidity()).willReturn(Duration.ofDays(7));
+        given(redisTemplate.execute(
+                ArgumentMatchers.<RedisScript<Long>>any(),
+                eq(List.of(KEY)),
+                eq("token-1"), eq("token-2"), anyString()))
+                .willReturn(1L);
 
         // When & Then
-        assertThat(refreshTokenService.matches(EMAIL, "token-1")).isTrue();
+        assertThat(refreshTokenService.rotate(EMAIL, "token-1", "token-2")).isTrue();
     }
 
     @Test
-    void 저장된_토큰과_다르거나_없으면_false를_반환한다() {
-        // Given — 회전으로 교체된 구 토큰 또는 로그아웃 후
-        given(valueOperations.get(KEY)).willReturn("token-2");
+    void 저장된_토큰과_다르면_교체하지_않고_false를_반환한다() {
+        // Given — 이미 회전됐거나 로그아웃된 구 토큰 (스크립트가 0 반환)
+        given(jwtUtil.getRefreshTokenValidity()).willReturn(Duration.ofDays(7));
+        given(redisTemplate.execute(
+                ArgumentMatchers.<RedisScript<Long>>any(),
+                eq(List.of(KEY)),
+                eq("stale-token"), eq("token-2"), anyString()))
+                .willReturn(0L);
 
         // When & Then
-        assertThat(refreshTokenService.matches(EMAIL, "token-1")).isFalse();
-
-        // Given — 저장된 토큰 자체가 없는 경우
-        given(valueOperations.get(KEY)).willReturn(null);
-        assertThat(refreshTokenService.matches(EMAIL, "token-1")).isFalse();
+        assertThat(refreshTokenService.rotate(EMAIL, "stale-token", "token-2")).isFalse();
     }
 
     @Test

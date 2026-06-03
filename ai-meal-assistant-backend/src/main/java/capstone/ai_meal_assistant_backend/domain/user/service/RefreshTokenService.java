@@ -3,7 +3,10 @@ package capstone.ai_meal_assistant_backend.domain.user.service;
 import capstone.ai_meal_assistant_backend.global.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 /**
  * Refresh token 서버 측 저장소 (Redis).
@@ -17,6 +20,13 @@ public class RefreshTokenService {
 
     private static final String KEY_PREFIX = "refresh:token:";
 
+    // 비교+교체(CAS)를 단일 스크립트로 원자 처리 — 같은 구 토큰으로 동시 refresh가 들어와도 한쪽만 성공
+    private static final RedisScript<Long> ROTATE_SCRIPT = RedisScript.of(
+            "if redis.call('GET', KEYS[1]) == ARGV[1] then "
+                    + "redis.call('SET', KEYS[1], ARGV[2], 'PX', ARGV[3]) return 1 "
+                    + "else return 0 end",
+            Long.class);
+
     private final StringRedisTemplate redisTemplate;
     private final JwtUtil jwtUtil;
 
@@ -26,10 +36,13 @@ public class RefreshTokenService {
                 .set(KEY_PREFIX + email, refreshToken, jwtUtil.getRefreshTokenValidity());
     }
 
-    // 제시된 토큰이 서버에 저장된 최신 토큰과 일치하는지 확인
-    public boolean matches(String email, String refreshToken) {
-        String saved = redisTemplate.opsForValue().get(KEY_PREFIX + email);
-        return saved != null && saved.equals(refreshToken);
+    // 저장된 토큰이 oldToken과 일치할 때만 newToken으로 원자적 교체. 교체 성공 여부를 반환
+    public boolean rotate(String email, String oldToken, String newToken) {
+        Long result = redisTemplate.execute(
+                ROTATE_SCRIPT,
+                List.of(KEY_PREFIX + email),
+                oldToken, newToken, String.valueOf(jwtUtil.getRefreshTokenValidity().toMillis()));
+        return Long.valueOf(1L).equals(result);
     }
 
     // 로그아웃 — 저장된 토큰 삭제로 이후 refresh 불가 처리
