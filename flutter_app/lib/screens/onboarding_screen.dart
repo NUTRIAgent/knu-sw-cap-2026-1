@@ -184,7 +184,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     fillColor: Colors.white,
                     // 💡 theme.dart의 16px 라운딩이 자동으로 적용됨
                   ),
-                  value: _selectedVegType,
+                  initialValue: _selectedVegType,
                   onChanged: (v) => setState(() => _selectedVegType = v!),
                   items: _vegOptions.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
                 ),
