@@ -64,9 +64,18 @@ class AuthServiceFindEmailTest {
     }
 
     @Test
-    void 로컬_파트가_2자_이하인_이메일은_첫_글자만_남기고_마스킹한다() {
-        // Given & When
+    void 로컬_파트가_2자_이상인_이메일은_앞_2글자를_남기고_마스킹한다() {
+        // Given & When — 2글자 로컬도 사용자가 자신의 이메일을 인식할 수 있도록 2글자 노출
         String masked = AuthService.maskEmail("ab@example.com");
+
+        // Then
+        assertThat(masked).isEqualTo("ab***@example.com");
+    }
+
+    @Test
+    void 로컬_파트가_1자인_이메일은_첫_글자만_남기고_마스킹한다() {
+        // Given & When
+        String masked = AuthService.maskEmail("a@example.com");
 
         // Then
         assertThat(masked).isEqualTo("a***@example.com");

@@ -165,10 +165,11 @@ class PasswordResetServiceTest {
         // When
         ApiResponse<Void> response = passwordResetService.resetPassword(EMAIL, "123456", "newPass1!");
 
-        // Then
+        // Then — 사용한 코드와 실패 횟수 키 모두 정리
         assertThat(response.isSuccess()).isTrue();
         assertThat(user.getPassword()).isEqualTo("new-encoded");
         then(redisTemplate).should().delete(CODE_KEY);
+        then(redisTemplate).should().delete(ATTEMPT_KEY);
     }
 
     @Test

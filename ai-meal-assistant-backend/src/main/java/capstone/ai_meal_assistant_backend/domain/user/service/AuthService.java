@@ -106,11 +106,12 @@ public class AuthService {
     }
 
     // 이메일 로컬 파트 마스킹 (예: mhy@smail.kongju.ac.kr → mh***@smail.kongju.ac.kr)
+    // 로컬 파트가 2글자 이상이면 앞 2글자, 1글자면 1글자만 노출 ("***"가 실제 길이를 가리므로 전체 노출은 아님)
     static String maskEmail(String email) {
         int atIndex = email.indexOf('@');
         String local = email.substring(0, atIndex);
         String domain = email.substring(atIndex);
-        String visible = local.length() <= 2 ? local.substring(0, 1) : local.substring(0, 2);
+        String visible = local.length() < 2 ? local.substring(0, 1) : local.substring(0, 2);
         return visible + "***" + domain;
     }
 

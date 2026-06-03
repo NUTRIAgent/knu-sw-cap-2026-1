@@ -109,6 +109,7 @@ public class PasswordResetService {
 
             user.changePassword(passwordEncoder.encode(newPassword));
             redisTemplate.delete(CODE_KEY_PREFIX + email);
+            redisTemplate.delete(ATTEMPT_KEY_PREFIX + email); // 사용한 코드의 실패 횟수도 함께 정리
 
             return ApiResponse.ok(null);
 
