@@ -815,7 +815,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       shaderCallback: (Rect bounds) =>
                           AppTheme.aiGradient.createShader(bounds),
                       child: const Text(
-                        'Memeal',
+                        'MeMeAI',
                         style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
                       ),
                     ),

@@ -19,7 +19,25 @@ class LoginScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Spacer(flex: 2),
-              
+
+              // 브랜드 타이틀 (스플래시와 동일한 그라데이션 스타일)
+              ShaderMask(
+                blendMode: BlendMode.srcIn,
+                shaderCallback: (Rect bounds) {
+                  return AppTheme.aiGradient.createShader(bounds);
+                },
+                child: const Text(
+                  '메밀-MeMeAI',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
               // 💡 타이틀 문구에 그라데이션 적용 (ShaderMask 활용)
               ShaderMask(
                 blendMode: BlendMode.srcIn,

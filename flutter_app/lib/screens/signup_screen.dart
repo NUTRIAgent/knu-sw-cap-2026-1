@@ -215,7 +215,7 @@ class _SignupScreenState extends State<SignupScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const Text(
-                  '메밀(Memeal) 가입을 위해\n정보를 입력해 주세요.',
+                  '메밀(MeMeAI) 가입을 위해\n정보를 입력해 주세요.',
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, height: 1.4)
                 ),
                 const SizedBox(height: 40),
@@ -655,10 +655,10 @@ class _AgreementRow extends StatelessWidget {
   }
 }
 
-// 서비스 이용약관 (메밀(Memeal) — AI 식단/레시피 추천 서비스)
+// 서비스 이용약관 (메밀(MeMeAI) — AI 식단/레시피 추천 서비스)
 const String _serviceTermsContent = '''
 제1조 (목적)
-본 약관은 메밀(Memeal)(이하 "서비스")가 제공하는 AI 기반 식단·레시피 추천 서비스의 이용 조건 및 절차를 규정합니다.
+본 약관은 메밀(MeMeAI)(이하 "서비스")가 제공하는 AI 기반 식단·레시피 추천 서비스의 이용 조건 및 절차를 규정합니다.
 
 제2조 (회원의 의무)
 1. 회원은 가입 시 본인의 정확한 정보를 제공해야 하며, 타인의 정보를 도용할 수 없습니다.

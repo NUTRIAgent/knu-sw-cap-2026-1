@@ -59,7 +59,7 @@ public class PasswordResetService {
             boolean sent = mailService.send(
                     email,
                     "[메밀] 비밀번호 재설정 인증코드 안내",
-                    "안녕하세요, 메밀(Memeal)입니다.\n\n"
+                    "안녕하세요, 메밀(MeMeAI)입니다.\n\n"
                             + "비밀번호 재설정을 위한 인증코드를 보내드려요.\n\n"
                             + "인증코드: " + code + "\n\n"
                             + "이 코드는 " + CODE_TTL.toMinutes() + "분 동안만 유효해요. 시간이 지났다면 인증코드를 다시 요청해 주세요.\n\n"
