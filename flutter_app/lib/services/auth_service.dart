@@ -301,4 +301,34 @@ class AuthService {
   static Future<bool> isLoggedIn() async {
     return await TokenStorage.hasToken();
   }
+
+  // 회원탈퇴 — 성공 시 로컬 토큰까지 정리. 반환값: null=성공, 그 외=에러 메시지
+  static Future<String?> deleteAccount() async {
+    try {
+      final accessToken = await TokenStorage.getAccessToken();
+      if (accessToken == null || accessToken.isEmpty) {
+        return '로그인 정보가 없습니다. 다시 로그인해 주세요.';
+      }
+
+      final url = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.apiVersion}/users/me');
+      final response = await http.delete(
+        url,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+        },
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw Exception('요청 시간 초과'),
+      );
+
+      final jsonResponse = jsonDecode(response.body);
+      if (jsonResponse['success'] == true) {
+        await TokenStorage.clearAll();
+        return null;
+      }
+      return jsonResponse['error'] ?? '회원탈퇴에 실패했습니다.';
+    } catch (e) {
+      return '요청 중 오류가 발생했습니다: $e';
+    }
+  }
 }

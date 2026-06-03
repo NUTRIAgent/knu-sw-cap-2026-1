@@ -16,4 +16,7 @@ public interface UserDeviceTokenRepository extends JpaRepository<UserDeviceToken
     List<UserDeviceToken> findByUser(User user);
 
     void deleteByUserAndFcmToken(User user, String fcmToken);
+
+    // 회원탈퇴 시 일괄 삭제
+    void deleteByUser(User user);
 }

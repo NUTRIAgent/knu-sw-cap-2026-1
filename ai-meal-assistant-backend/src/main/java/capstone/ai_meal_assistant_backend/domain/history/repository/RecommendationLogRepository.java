@@ -25,4 +25,7 @@ public interface RecommendationLogRepository extends JpaRepository<Recommendatio
     List<RecommendationLog> findAiPicksByUser(@Param("user") User user);
 
     Optional<RecommendationLog> findByUserAndSelectedMenu(User user, Menu menu);
+
+    // 회원탈퇴 시 일괄 삭제
+    void deleteByUser(User user);
 }
