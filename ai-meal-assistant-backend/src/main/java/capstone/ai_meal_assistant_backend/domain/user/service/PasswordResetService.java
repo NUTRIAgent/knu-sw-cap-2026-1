@@ -25,8 +25,10 @@ public class PasswordResetService {
 
     public static final Duration CODE_TTL = Duration.ofMinutes(5);      // 인증코드 유효시간
     public static final Duration RESEND_COOLDOWN = Duration.ofMinutes(1); // 재발송 제한 간격
+    public static final int MAX_VERIFY_ATTEMPTS = 5;                    // 검증 실패 허용 횟수 — 도달 시 코드 폐기 (무차별 대입 방지)
     private static final String CODE_KEY_PREFIX = "pwreset:code:";
     private static final String COOLDOWN_KEY_PREFIX = "pwreset:cooldown:";
+    private static final String ATTEMPT_KEY_PREFIX = "pwreset:attempts:";
 
     private final UserRepository userRepository;
     private final StringRedisTemplate redisTemplate;
@@ -52,6 +54,7 @@ public class PasswordResetService {
 
             String code = String.format("%06d", secureRandom.nextInt(1_000_000));
             redisTemplate.opsForValue().set(CODE_KEY_PREFIX + email, code, CODE_TTL);
+            redisTemplate.delete(ATTEMPT_KEY_PREFIX + email); // 새 코드 발급 시 실패 횟수 초기화
 
             boolean sent = mailService.send(
                     email,
@@ -112,8 +115,24 @@ public class PasswordResetService {
     }
 
     private boolean isCodeValid(String rawEmail, String code) {
-        String saved = redisTemplate.opsForValue().get(CODE_KEY_PREFIX + normalize(rawEmail));
-        return saved != null && saved.equals(code);
+        String email = normalize(rawEmail);
+        String saved = redisTemplate.opsForValue().get(CODE_KEY_PREFIX + email);
+        if (saved == null) {
+            return false;
+        }
+        if (saved.equals(code)) {
+            return true;
+        }
+
+        // 검증 실패 횟수 누적 — 한도 도달 시 코드 즉시 폐기 (6자리 코드 무차별 대입 방지)
+        Long attempts = redisTemplate.opsForValue().increment(ATTEMPT_KEY_PREFIX + email);
+        redisTemplate.expire(ATTEMPT_KEY_PREFIX + email, CODE_TTL);
+        if (attempts != null && attempts >= MAX_VERIFY_ATTEMPTS) {
+            redisTemplate.delete(CODE_KEY_PREFIX + email);
+            redisTemplate.delete(ATTEMPT_KEY_PREFIX + email);
+            log.warn("인증코드 검증 실패 한도 초과로 코드 폐기: email={}", email);
+        }
+        return false;
     }
 
     // 로그인/가입과 동일한 이메일 정규화

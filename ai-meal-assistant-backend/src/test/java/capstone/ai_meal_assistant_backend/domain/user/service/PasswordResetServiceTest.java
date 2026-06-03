@@ -52,6 +52,7 @@ class PasswordResetServiceTest {
     private static final String EMAIL = "test@example.com";
     private static final String CODE_KEY = "pwreset:code:" + EMAIL;
     private static final String COOLDOWN_KEY = "pwreset:cooldown:" + EMAIL;
+    private static final String ATTEMPT_KEY = "pwreset:attempts:" + EMAIL;
 
     @BeforeEach
     void setUp() {
@@ -184,10 +185,57 @@ class PasswordResetServiceTest {
         then(passwordEncoder).should(never()).encode(anyString());
     }
 
-    // CODE_TTL/RESEND_COOLDOWN 상수가 의도대로인지 고정 (정책 변경 시 테스트도 함께 갱신)
+    @Test
+    void 검증_실패_횟수가_한도_미만이면_코드를_유지한다() {
+        // Given — 4번째 실패
+        given(valueOperations.get(CODE_KEY)).willReturn("123456");
+        given(valueOperations.increment(ATTEMPT_KEY))
+                .willReturn((long) PasswordResetService.MAX_VERIFY_ATTEMPTS - 1);
+
+        // When
+        ApiResponse<Void> response = passwordResetService.verifyCode(EMAIL, "999999");
+
+        // Then — 실패는 하지만 코드는 폐기하지 않음
+        assertThat(response.isSuccess()).isFalse();
+        then(redisTemplate).should(never()).delete(CODE_KEY);
+    }
+
+    @Test
+    void 검증_실패가_한도에_도달하면_코드를_폐기한다() {
+        // Given — 5번째 실패 (무차별 대입 방지)
+        given(valueOperations.get(CODE_KEY)).willReturn("123456");
+        given(valueOperations.increment(ATTEMPT_KEY))
+                .willReturn((long) PasswordResetService.MAX_VERIFY_ATTEMPTS);
+
+        // When
+        ApiResponse<Void> response = passwordResetService.verifyCode(EMAIL, "999999");
+
+        // Then — 코드와 실패 횟수 키 모두 폐기
+        assertThat(response.isSuccess()).isFalse();
+        then(redisTemplate).should().delete(CODE_KEY);
+        then(redisTemplate).should().delete(ATTEMPT_KEY);
+    }
+
+    @Test
+    void 새_코드를_발급하면_실패_횟수가_초기화된다() {
+        // Given
+        given(userRepository.existsByEmail(EMAIL)).willReturn(true);
+        given(valueOperations.setIfAbsent(eq(COOLDOWN_KEY), anyString(), eq(PasswordResetService.RESEND_COOLDOWN)))
+                .willReturn(true);
+        given(mailService.send(eq(EMAIL), anyString(), anyString())).willReturn(true);
+
+        // When
+        passwordResetService.sendCode(EMAIL);
+
+        // Then
+        then(redisTemplate).should().delete(ATTEMPT_KEY);
+    }
+
+    // CODE_TTL/RESEND_COOLDOWN/MAX_VERIFY_ATTEMPTS 상수가 의도대로인지 고정 (정책 변경 시 테스트도 함께 갱신)
     @Test
     void 인증코드_정책_상수를_확인한다() {
         assertThat(PasswordResetService.CODE_TTL).isEqualTo(Duration.ofMinutes(5));
         assertThat(PasswordResetService.RESEND_COOLDOWN).isEqualTo(Duration.ofMinutes(1));
+        assertThat(PasswordResetService.MAX_VERIFY_ATTEMPTS).isEqualTo(5);
     }
 }
