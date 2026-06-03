@@ -68,6 +68,16 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            // 앱 로고 + 그 아래 브랜드 타이틀
+            ClipRRect(
+              borderRadius: BorderRadius.circular(28),
+              child: Image.asset(
+                'assets/icon/app-logo.png',
+                width: 120,
+                height: 120,
+              ),
+            ),
+            const SizedBox(height: 20),
             // 💡 앱 타이틀에 그라데이션 적용 (login_screen과 동일한 스타일)
             ShaderMask(
               blendMode: BlendMode.srcIn,
@@ -75,7 +85,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 return AppTheme.aiGradient.createShader(bounds);
               },
               child: const Text(
-                'NUTRI Agent',
+                '메밀-MeMeAI',
                 style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.w900,

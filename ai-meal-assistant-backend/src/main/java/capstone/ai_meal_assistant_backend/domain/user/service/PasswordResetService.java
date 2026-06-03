@@ -58,14 +58,14 @@ public class PasswordResetService {
 
             boolean sent = mailService.send(
                     email,
-                    "[NUTRI Agent] 비밀번호 재설정 인증코드 안내",
-                    "안녕하세요, NUTRI Agent입니다.\n\n"
+                    "[메밀] 비밀번호 재설정 인증코드 안내",
+                    "안녕하세요, 메밀(MeMeAI)입니다.\n\n"
                             + "비밀번호 재설정을 위한 인증코드를 보내드려요.\n\n"
                             + "인증코드: " + code + "\n\n"
                             + "이 코드는 " + CODE_TTL.toMinutes() + "분 동안만 유효해요. 시간이 지났다면 인증코드를 다시 요청해 주세요.\n\n"
                             + "본인이 요청하지 않으셨다면 이 메일은 무시하셔도 괜찮아요. 비밀번호는 변경되지 않으니 안심하세요.\n\n"
                             + "오늘도 건강한 식사 되세요!\n"
-                            + "NUTRI Agent 드림"
+                            + "메밀 드림"
             );
             if (!sent) {
                 return ApiResponse.fail("메일 발송에 실패했습니다. 잠시 후 다시 시도해 주세요");

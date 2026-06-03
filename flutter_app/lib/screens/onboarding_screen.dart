@@ -142,7 +142,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'NUTRI Agent에 오신 것을 환영합니다!\nAI가 완벽한 맞춤 식단을 추천해 드릴 수 있도록\n아래 정보를 정확하게 입력해 주세요.',
+                  '메밀(MeMeAI)에 오신 것을 환영합니다!\nAI가 완벽한 맞춤 식단을 추천해 드릴 수 있도록\n아래 정보를 정확하게 입력해 주세요.',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, height: 1.5),
                 ),
                 const SizedBox(height: 32),
