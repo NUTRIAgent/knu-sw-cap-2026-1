@@ -42,6 +42,9 @@ class AuthServiceSignupTest {
     @Mock
     private LoginAttemptService loginAttemptService;
 
+    @Mock
+    private RefreshTokenService refreshTokenService;
+
     @InjectMocks
     private AuthService authService;
 

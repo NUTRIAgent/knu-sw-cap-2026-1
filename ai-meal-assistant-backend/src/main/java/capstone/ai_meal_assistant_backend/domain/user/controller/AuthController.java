@@ -43,6 +43,13 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
+    // 로그아웃 — 서버에 저장된 refresh token 무효화 (멱등)
+    @PostMapping("/logout")
+    public ResponseEntity<AuthResponse> logout(@Valid @RequestBody RefreshRequest request) {
+        AuthResponse response = authService.logout(request);
+        return ResponseEntity.ok(response);
+    }
+
     // 아이디(이메일) 찾기 — 가입 시 등록한 휴대폰 번호로 마스킹된 이메일 조회
     @PostMapping("/find-email")
     public ResponseEntity<ApiResponse<FindEmailResponse>> findEmail(@Valid @RequestBody FindEmailRequest request) {

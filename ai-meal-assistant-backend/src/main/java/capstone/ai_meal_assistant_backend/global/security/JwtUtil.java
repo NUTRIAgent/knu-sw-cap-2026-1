@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Date;
 
 @Component
@@ -30,6 +31,11 @@ public class JwtUtil {
                 .compact();
     }
     
+    // Refresh 토큰 유효기간 — 서버 측 저장소(Redis) TTL과 동기화용
+    public Duration getRefreshTokenValidity() {
+        return Duration.ofMillis(refreshTokenExpiration);
+    }
+
     // Refresh Token 생성
     public String generateRefreshToken(String email) {
         return Jwts.builder()

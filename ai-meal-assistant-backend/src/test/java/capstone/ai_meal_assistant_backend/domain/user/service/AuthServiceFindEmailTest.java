@@ -29,6 +29,12 @@ class AuthServiceFindEmailTest {
     @Mock
     private JwtUtil jwtUtil;
 
+    @Mock
+    private LoginAttemptService loginAttemptService;
+
+    @Mock
+    private RefreshTokenService refreshTokenService;
+
     @InjectMocks
     private AuthService authService;
 
