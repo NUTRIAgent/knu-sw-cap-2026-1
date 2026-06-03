@@ -24,6 +24,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final LoginAttemptService loginAttemptService;
+    private final RefreshTokenService refreshTokenService;
     
     @Transactional
     public AuthResponse signup(SignupRequest request) {
@@ -62,9 +63,10 @@ public class AuthService {
             // 저장 — unique 제약 위반을 이 메서드 안에서 잡을 수 있도록 즉시 flush
             userRepository.saveAndFlush(user);
 
-            // JWT 토큰 생성
+            // JWT 토큰 생성 — refresh token은 서버(Redis)에도 저장 (회전/로그아웃 무효화용)
             String accessToken = jwtUtil.generateAccessToken(user.getEmail());
             String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
+            refreshTokenService.store(user.getEmail(), refreshToken);
 
             // UserInfo 생성
             UserInfo userInfo = new UserInfo(user.getEmail(), user.getNickname(),
@@ -149,10 +151,11 @@ public class AuthService {
             // 로그인 성공 — 실패 기록 초기화
             loginAttemptService.onLoginSuccess(user);
 
-            // JWT 토큰 생성
+            // JWT 토큰 생성 — refresh token은 서버(Redis)에도 저장 (회전/로그아웃 무효화용)
             String accessToken = jwtUtil.generateAccessToken(user.getEmail());
             String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
-            
+            refreshTokenService.store(user.getEmail(), refreshToken);
+
             // UserInfo 생성
             UserInfo userInfo = new UserInfo(user.getEmail(), user.getNickname(),
                     user.getGender() != null ? user.getGender().name() : null);
@@ -175,8 +178,8 @@ public class AuthService {
         try {
             String refreshToken = request.getRefreshToken();
 
-            // 리프레시 토큰 유효성 검증 (서명/만료)
-            if (!jwtUtil.validateToken(refreshToken)) {
+            // 리프레시 토큰 유효성 검증 (서명/만료 + type — access 토큰의 refresh 오용 차단)
+            if (!jwtUtil.validateToken(refreshToken) || !jwtUtil.isRefreshToken(refreshToken)) {
                 return AuthResponse.failure("유효하지 않은 리프레시 토큰입니다");
             }
 
@@ -189,12 +192,13 @@ public class AuthService {
                 return AuthResponse.failure("존재하지 않는 사용자입니다");
             }
 
-            // 새 토큰 발급
-            // ⚠️ 한계: JWT는 stateless라 기존 refreshToken을 서버에서 무효화(revoke)할 수 없음.
-            //    새 토큰을 발급해도 구 토큰은 만료(7일) 전까지 계속 유효하다.
-            //    진짜 회전(rotation)은 서버 측 토큰 저장소 도입 시 가능 — Redis 도입(#176)에서 처리 예정.
+            // 새 토큰 발급 후 원자적 비교+교체(CAS) — 저장된 최신 토큰과 일치할 때만 성공.
+            // 같은 구 토큰으로 동시 refresh가 들어와도 한쪽만 성공해, 회전된 토큰 재사용을 확실히 차단한다
             String accessToken = jwtUtil.generateAccessToken(user.getEmail());
             String newRefreshToken = jwtUtil.generateRefreshToken(user.getEmail());
+            if (!refreshTokenService.rotate(email, refreshToken, newRefreshToken)) {
+                return AuthResponse.failure("유효하지 않은 리프레시 토큰입니다");
+            }
 
             // UserInfo 생성
             UserInfo userInfo = new UserInfo(user.getEmail(), user.getNickname(),
@@ -208,6 +212,23 @@ public class AuthService {
         } catch (Exception e) {
             log.error("토큰 갱신 중 오류 발생", e);
             return AuthResponse.failure("토큰 갱신 중 알 수 없는 오류가 발생했습니다");
+        }
+    }
+
+    // 로그아웃 — 서버에 저장된 refresh token 무효화.
+    // 토큰이 이미 만료/무효여도 성공으로 처리(멱등) — 클라이언트는 항상 로컬 토큰을 비우면 된다.
+    public AuthResponse logout(RefreshRequest request) {
+        try {
+            String refreshToken = request.getRefreshToken();
+            // type 검증 포함 — access 토큰으로는 refresh 무효화 불가
+            if (jwtUtil.validateToken(refreshToken) && jwtUtil.isRefreshToken(refreshToken)) {
+                String email = jwtUtil.getEmailFromToken(refreshToken);
+                refreshTokenService.invalidate(email);
+            }
+            return AuthResponse.success(null);
+        } catch (Exception e) {
+            log.error("로그아웃 처리 중 오류 발생", e);
+            return AuthResponse.success(null); // 멱등 — 서버 오류여도 클라이언트 로그아웃은 진행
         }
     }
 }

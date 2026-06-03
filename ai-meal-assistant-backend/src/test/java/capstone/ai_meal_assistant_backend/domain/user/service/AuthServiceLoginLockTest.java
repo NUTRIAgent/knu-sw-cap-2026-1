@@ -42,13 +42,16 @@ class AuthServiceLoginLockTest {
     @Mock
     private JwtUtil jwtUtil;
 
+    @Mock
+    private RefreshTokenService refreshTokenService;
+
     private AuthService authService;
 
     @BeforeEach
     void setUp() {
         // LoginAttemptService가 UserRepository를 필요로 하므로 직접 조립
         LoginAttemptService loginAttemptService = new LoginAttemptService(userRepository);
-        authService = new AuthService(userRepository, passwordEncoder, jwtUtil, loginAttemptService);
+        authService = new AuthService(userRepository, passwordEncoder, jwtUtil, loginAttemptService, refreshTokenService);
     }
 
     private LoginRequest createRequest(String email, String password) {

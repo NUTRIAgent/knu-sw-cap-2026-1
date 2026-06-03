@@ -274,8 +274,26 @@ class AuthService {
     }
   }
 
-  // 로그아웃
+  // 로그아웃 — 서버에 저장된 refresh token 무효화 후 로컬 토큰 정리
   static Future<void> logout() async {
+    // 서버 무효화는 best-effort: 네트워크 오류여도 로컬 로그아웃은 항상 완료돼야 한다
+    try {
+      final refreshToken = await TokenStorage.getRefreshToken();
+      if (refreshToken != null && refreshToken.isNotEmpty) {
+        final url = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.apiVersion}/auth/logout');
+        await http.post(
+          url,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'refreshToken': refreshToken,
+          }),
+        ).timeout(const Duration(seconds: 5));
+      }
+    } catch (_) {
+      // 무시 — 서버 측 토큰은 TTL(7일)로 결국 만료된다
+    }
     await TokenStorage.clearAll();
   }
 
