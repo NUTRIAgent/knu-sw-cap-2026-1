@@ -8,6 +8,7 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.data.redis.core.script.RedisScript;
@@ -20,6 +21,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
@@ -92,5 +94,16 @@ class RefreshTokenServiceTest {
 
         // Then
         then(redisTemplate).should().delete(KEY);
+    }
+
+    @Test
+    void Redis_장애_시_저장을_생략하고_예외를_전파하지_않는다() {
+        // Given — fail-open: 토큰 저장 실패가 로그인을 막지 않는다 (미저장 토큰은 refresh에서 거부 → 재로그인)
+        given(jwtUtil.getRefreshTokenValidity()).willReturn(Duration.ofDays(7));
+        willThrow(new RedisConnectionFailureException("redis down"))
+                .given(valueOperations).set(KEY, "token-1", Duration.ofDays(7));
+
+        // When & Then — 예외 없이 종료
+        refreshTokenService.store(EMAIL, "token-1");
     }
 }

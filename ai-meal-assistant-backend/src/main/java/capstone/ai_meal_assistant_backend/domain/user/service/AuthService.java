@@ -119,9 +119,8 @@ public class AuthService {
         return visible + "***" + domain;
     }
 
-    // 실패 횟수/잠금 상태를 기록해야 하므로 쓰기 트랜잭션 사용.
-    // AccountLockedException 발생 시에도 실패 누적은 저장되도록 noRollbackFor 지정.
-    @Transactional(noRollbackFor = AccountLockedException.class)
+    // 실패 횟수/잠금 상태는 Redis에 기록되므로 DB 트랜잭션은 조회 전용이면 충분
+    @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest request) {
         try {
             // 이메일로 사용자 조회 (가입 시와 동일하게 소문자 정규화)
@@ -134,14 +133,14 @@ public class AuthService {
             }
 
             // 계정 잠금 상태 확인 (잠겨 있으면 비밀번호 검증 없이 차단)
-            long remainingLockSeconds = loginAttemptService.getRemainingLockSeconds(user);
+            long remainingLockSeconds = loginAttemptService.getRemainingLockSeconds(email);
             if (remainingLockSeconds > 0) {
                 throw new AccountLockedException(remainingLockSeconds, false);
             }
 
             // 비밀번호 검증 (실패 시 횟수 누적, 최대치 도달 시 계정 잠금)
             if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-                boolean lockedNow = loginAttemptService.onLoginFailure(user);
+                boolean lockedNow = loginAttemptService.onLoginFailure(email);
                 if (lockedNow) {
                     throw new AccountLockedException(LoginAttemptService.LOCK_DURATION.getSeconds(), true);
                 }
@@ -149,7 +148,7 @@ public class AuthService {
             }
 
             // 로그인 성공 — 실패 기록 초기화
-            loginAttemptService.onLoginSuccess(user);
+            loginAttemptService.onLoginSuccess(email);
 
             // JWT 토큰 생성 — refresh token은 서버(Redis)에도 저장 (회전/로그아웃 무효화용)
             String accessToken = jwtUtil.generateAccessToken(user.getEmail());
