@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_app/models/recommendation_models.dart';
 import 'package:flutter_app/models/user_profile_models.dart';
 import 'package:flutter_app/notifiers.dart';
+import 'package:flutter_app/services/auth_service.dart';
 import 'package:flutter_app/services/recommendation_service.dart';
 import 'package:flutter_app/services/user_profile_service.dart';
+import 'package:flutter_app/screens/login_screen.dart';
 import 'package:flutter_app/screens/price_alert_screen.dart';
 import 'package:flutter_app/screens/recommendation_history_screen.dart';
 import 'package:flutter_app/services/token_storage.dart';
@@ -586,10 +588,110 @@ class _MyPageScreenState extends State<MyPageScreen>
             _buildHistoryButton(),
             const SizedBox(height: 10),
             _buildPriceAlertButton(),
+            const SizedBox(height: 24),
+            _buildLogoutButton(),
+            const SizedBox(height: 8),
+            _buildDeleteAccountButton(),
             const SizedBox(height: 32),
           ],
         ),
       ),
+    );
+  }
+
+  // ── 로그아웃 / 회원탈퇴 ──────────────────────────
+
+  Widget _buildLogoutButton() {
+    return GestureDetector(
+      onTap: () async {
+        await AuthService.logout();
+        if (!mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (route) => false,
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.logout_rounded, size: 20, color: Colors.grey[600]),
+            const SizedBox(width: 12),
+            Text(
+              '로그아웃',
+              style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[800]),
+            ),
+            const Spacer(),
+            Icon(Icons.chevron_right_rounded,
+                color: Colors.grey[400], size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDeleteAccountButton() {
+    return Center(
+      child: TextButton(
+        onPressed: _confirmDeleteAccount,
+        child: Text(
+          '회원탈퇴',
+          style: TextStyle(
+            fontSize: 13,
+            color: Colors.grey[500],
+            decoration: TextDecoration.underline,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 회원탈퇴 확인 다이얼로그 — 모든 데이터가 삭제됨을 명확히 안내
+  Future<void> _confirmDeleteAccount() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('회원탈퇴'),
+        content: const Text(
+            '탈퇴하면 프로필, AI 추천 이력, 즐겨찾기 등 모든 데이터가 삭제되며 되돌릴 수 없습니다.\n정말 탈퇴하시겠어요?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('탈퇴하기', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final error = await AuthService.deleteAccount();
+    if (!mounted) return;
+
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+      return;
+    }
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (route) => false,
     );
   }
 

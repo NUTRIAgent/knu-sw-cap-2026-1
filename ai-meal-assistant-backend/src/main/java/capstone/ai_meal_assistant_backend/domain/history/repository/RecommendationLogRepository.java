@@ -25,4 +25,11 @@ public interface RecommendationLogRepository extends JpaRepository<Recommendatio
     List<RecommendationLog> findAiPicksByUser(@Param("user") User user);
 
     Optional<RecommendationLog> findByUserAndSelectedMenu(User user, Menu menu);
+
+    // 회원탈퇴 시 RAG(ChromaDB) 임베딩 정리용 — 사용자의 모든 로그 ID 조회
+    @Query("SELECT r.id FROM RecommendationLog r WHERE r.user = :user")
+    List<Long> findIdsByUser(@Param("user") User user);
+
+    // 회원탈퇴 시 일괄 삭제
+    void deleteByUser(User user);
 }

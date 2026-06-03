@@ -21,6 +21,9 @@ public interface UserIngredientAlertRepository extends JpaRepository<UserIngredi
 
     void deleteByUserAndKamisItemCode(User user, String kamisItemCode);
 
+    // 회원탈퇴 시 일괄 삭제
+    void deleteByUser(User user);
+
     /** 특정 KAMIS 코드를 팔로우 중인 모든 사용자의 FCM 토큰 조회 */
     @Query("""
             SELECT t.fcmToken
