@@ -2,6 +2,8 @@ package capstone.ai_meal_assistant_backend.domain.user.service;
 
 import capstone.ai_meal_assistant_backend.global.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Service;
@@ -14,6 +16,7 @@ import java.util.List;
  * 로그아웃 시 즉시 무효화를 가능하게 한다.
  * 이메일당 토큰 1개만 저장하는 단일 세션 정책 — 새 로그인/회전 시 이전 토큰은 즉시 무효.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RefreshTokenService {
@@ -31,9 +34,14 @@ public class RefreshTokenService {
     private final JwtUtil jwtUtil;
 
     // 발급한 refresh token 저장 — 기존 토큰은 덮어써서 즉시 무효화 (TTL은 토큰 만료와 동일)
+    // fail-open: Redis 장애 시 저장을 건너뛰고 로그인은 허용 (미저장 토큰은 이후 refresh에서 거부 → 재로그인)
     public void store(String email, String refreshToken) {
-        redisTemplate.opsForValue()
-                .set(KEY_PREFIX + email, refreshToken, jwtUtil.getRefreshTokenValidity());
+        try {
+            redisTemplate.opsForValue()
+                    .set(KEY_PREFIX + email, refreshToken, jwtUtil.getRefreshTokenValidity());
+        } catch (DataAccessException e) {
+            log.warn("Redis 장애 — refresh token 저장 생략(fail-open): email={}", email, e);
+        }
     }
 
     // 저장된 토큰이 oldToken과 일치할 때만 newToken으로 원자적 교체. 교체 성공 여부를 반환

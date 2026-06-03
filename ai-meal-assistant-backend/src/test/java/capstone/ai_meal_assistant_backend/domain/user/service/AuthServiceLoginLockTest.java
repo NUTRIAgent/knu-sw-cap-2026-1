@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -26,6 +27,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.never;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
@@ -133,6 +135,25 @@ class AuthServiceLoginLockTest {
         assertThat(response.isSuccess()).isTrue();
         then(redisTemplate).should().delete(FAIL_KEY);
         then(redisTemplate).should().delete(LOCK_KEY);
+    }
+
+    @Test
+    void Redis_장애_시에도_로그인이_가능하다() {
+        // Given — fail-open: 잠금 검사/기록이 모두 Redis 예외를 던지는 전면 장애 상황
+        given(userRepository.findByEmail(EMAIL)).willReturn(Optional.of(createUser()));
+        given(redisTemplate.getExpire(LOCK_KEY))
+                .willThrow(new RedisConnectionFailureException("redis down"));
+        willThrow(new RedisConnectionFailureException("redis down"))
+                .given(redisTemplate).delete(FAIL_KEY);
+        given(passwordEncoder.matches(anyString(), anyString())).willReturn(true);
+        given(jwtUtil.generateAccessToken(EMAIL)).willReturn("access-token");
+        given(jwtUtil.generateRefreshToken(EMAIL)).willReturn("refresh-token");
+
+        // When
+        AuthResponse response = authService.login(createRequest(EMAIL, "password1!"));
+
+        // Then — 가용성 우선: 로그인은 성공한다
+        assertThat(response.isSuccess()).isTrue();
     }
 
     @Test
