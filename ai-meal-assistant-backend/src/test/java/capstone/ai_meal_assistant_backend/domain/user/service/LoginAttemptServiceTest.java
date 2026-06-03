@@ -59,7 +59,7 @@ class LoginAttemptServiceTest {
 
         // Then — 원자적 증가 후 잠금 처리
         assertThat(locked).isTrue();
-        then(userRepository).should().incrementFailedLoginCount(USER_ID);
+        then(userRepository).should().recordLoginFailure(eq(USER_ID), any(LocalDateTime.class));
         then(userRepository).should().lockUntil(eq(USER_ID), any(LocalDateTime.class));
     }
 
@@ -75,7 +75,7 @@ class LoginAttemptServiceTest {
 
         // Then
         assertThat(locked).isFalse();
-        then(userRepository).should().incrementFailedLoginCount(USER_ID);
+        then(userRepository).should().recordLoginFailure(eq(USER_ID), any(LocalDateTime.class));
         then(userRepository).should(never()).lockUntil(eq(USER_ID), any(LocalDateTime.class));
     }
 
@@ -94,7 +94,7 @@ class LoginAttemptServiceTest {
 
     @Test
     void 잠금_만료_후_실패하면_횟수를_초기화하고_다시_카운트한다() {
-        // Given — 잠금 시간이 지난 상태에서 다시 실패
+        // Given — 잠금 시간이 지난 상태에서 다시 실패 (초기화+증가는 recordLoginFailure 단일 쿼리가 처리)
         User user = createUser(LoginAttemptService.MAX_FAILED_ATTEMPTS,
                 LocalDateTime.now().minusSeconds(1));
         given(userRepository.findFailedLoginCountById(USER_ID)).willReturn(1);
@@ -102,10 +102,10 @@ class LoginAttemptServiceTest {
         // When
         boolean locked = loginAttemptService.onLoginFailure(user);
 
-        // Then — 초기화 후 1부터 다시 시작하므로 잠기지 않는다
+        // Then — 초기화 후 1부터 다시 시작하므로 잠기지 않는다. 별도 리셋 쿼리는 사용하지 않는다
         assertThat(locked).isFalse();
-        then(userRepository).should().resetLoginFailure(USER_ID);
-        then(userRepository).should().incrementFailedLoginCount(USER_ID);
+        then(userRepository).should().recordLoginFailure(eq(USER_ID), any(LocalDateTime.class));
+        then(userRepository).should(never()).resetLoginFailure(USER_ID);
     }
 
     @Test

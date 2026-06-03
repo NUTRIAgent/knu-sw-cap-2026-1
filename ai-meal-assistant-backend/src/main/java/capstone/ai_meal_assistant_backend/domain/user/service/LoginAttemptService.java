@@ -38,12 +38,9 @@ public class LoginAttemptService {
 
     // 로그인 실패 처리 — 실패 횟수 원자적 누적, 최대치 도달 시 잠금. 이번 실패로 잠겼는지 여부를 반환
     public boolean onLoginFailure(User user) {
-        // 만료된 잠금 기록이 남아 있으면 초기화 후 1부터 다시 카운트
-        if (user.getLockedUntil() != null && getRemainingLockSeconds(user) == 0) {
-            userRepository.resetLoginFailure(user.getId());
-        }
-
-        userRepository.incrementFailedLoginCount(user.getId());
+        // 잠금 만료 시 초기화(1부터)와 증가(+1)를 단일 쿼리로 처리 —
+        // stale 엔티티 기준의 별도 리셋이 없어 만료 직후 동시 실패가 몰려도 카운트가 덮어써지지 않는다
+        userRepository.recordLoginFailure(user.getId(), LocalDateTime.now());
         int failedCount = userRepository.findFailedLoginCountById(user.getId());
 
         if (failedCount >= MAX_FAILED_ATTEMPTS) {
