@@ -13,8 +13,10 @@ import java.util.Optional;
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
+    Optional<User> findByPhoneNumber(String phoneNumber);
     boolean existsByEmail(String email);
     boolean existsByNickname(String nickname);
+    boolean existsByPhoneNumber(String phoneNumber);
 
     // --- 로그인 브루트포스 방지: 동시 로그인 시도에도 카운트가 누락되지 않도록(lost update 방지) DB 원자적 갱신 사용 ---
 

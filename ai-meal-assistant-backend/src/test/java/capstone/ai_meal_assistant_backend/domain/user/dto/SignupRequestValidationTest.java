@@ -36,7 +36,14 @@ class SignupRequestValidationTest {
         ReflectionTestUtils.setField(request, "email", email);
         ReflectionTestUtils.setField(request, "password", password);
         ReflectionTestUtils.setField(request, "nickname", nickname);
+        ReflectionTestUtils.setField(request, "phoneNumber", "01012345678");
         ReflectionTestUtils.setField(request, "gender", gender);
+        return request;
+    }
+
+    private SignupRequest createRequestWithPhone(String phoneNumber) {
+        SignupRequest request = createRequest("test@example.com", "abcd1234!", "닉네임", Gender.MALE);
+        ReflectionTestUtils.setField(request, "phoneNumber", phoneNumber);
         return request;
     }
 
@@ -136,5 +143,39 @@ class SignupRequestValidationTest {
         assertThat(violations)
                 .extracting(ConstraintViolation::getMessage)
                 .contains("올바른 이메일 형식이 아닙니다");
+    }
+
+    @Test
+    @DisplayName("하이픈이 포함된 휴대폰 번호는 거부된다 (숫자만 허용)")
+    void phoneNumberWithHyphen() {
+        SignupRequest request = createRequestWithPhone("010-1234-5678");
+
+        Set<ConstraintViolation<SignupRequest>> violations = validator.validate(request);
+
+        assertThat(violations)
+                .extracting(ConstraintViolation::getMessage)
+                .contains("올바른 휴대폰 번호 형식이 아닙니다 (숫자만 입력, 예: 01012345678)");
+    }
+
+    @Test
+    @DisplayName("휴대폰 번호가 없으면 거부된다")
+    void phoneNumberRequired() {
+        SignupRequest request = createRequestWithPhone(null);
+
+        Set<ConstraintViolation<SignupRequest>> violations = validator.validate(request);
+
+        assertThat(violations)
+                .extracting(ConstraintViolation::getMessage)
+                .contains("휴대폰 번호는 필수입니다");
+    }
+
+    @Test
+    @DisplayName("휴대폰 번호 자릿수가 맞지 않으면 거부된다")
+    void phoneNumberWrongLength() {
+        SignupRequest request = createRequestWithPhone("0101234");
+
+        Set<ConstraintViolation<SignupRequest>> violations = validator.validate(request);
+
+        assertThat(violations).isNotEmpty();
     }
 }
